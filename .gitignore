@@ -1,0 +1,47 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# ============================================================
+# IDE
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ============================================================
+# Scratch / paste files (often contain pasted secrets — never commit)
+# ============================================================
+open.txt
+paste.txt
+scratch.txt
+tmp.txt
+*.scratch
+*.paste
+NOTES.local.md
+TODO.local.md

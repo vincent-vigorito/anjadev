@@ -1,0 +1,11 @@
+project:
+  id: "{{TOKEN}}"
+  name: "{{NAME}}"
+  type: "{{TYPE}}"
+  created: "{{CREATED}}"
+  tags: []
+  description: ""
+
+anja:
+  schema_version: "0.1.0"
+  init_mode: "{{INIT_MODE}}"
