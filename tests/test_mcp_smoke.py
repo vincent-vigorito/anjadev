@@ -168,6 +168,7 @@ def run_smoke_tests() -> tuple[int, int]:
         {"name": "wiki.log_append", "args": {"type": "note", "description": "smoke test log entry"}},
         {"name": "wiki.delete", "args": {"slug": "test-entity", "confirm": False}},
         {"name": "wiki.index_update", "args": {"category": "Entities", "entries": ["- [[test-entity]] — smoke entry"]}},
+        {"name": "wiki.export", "args": {"format": "json"}},
         # roadmap group
         {"name": "roadmap.list", "args": {}},
         # sessions group

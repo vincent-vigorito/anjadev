@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.6.2 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.7.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
 
 ## Cosa fa, in 5 punti
 
@@ -72,19 +72,19 @@ Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Res
 | `/anja-init` | Scaffolda `.anjawiki/` (cold) o analizza codebase (analyze mode) |
 | `/anja-ingest <path\|url>` | Ingerisci fonte nel wiki strutturato |
 | `/anja-query <question>` | Interroga wiki, opzionale filing come analysis page |
-| `/anja-refresh` | Reconcile wiki ↔ codebase diff (in progress) |
+| `/anja-refresh` | Reconcile wiki ↔ codebase: diff vs last snapshot + update entity toccate |
 | `/anja-lint` | Health check: orfani, broken links, frontmatter, stale |
 | `/anja-status` | Riepilogo identità + counts + ultimo log |
 | `/anja-task add\|list\|done\|triage` | Gestione roadmap.md |
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
 
-## MCP tools (28 totali via `mcp_memory_server`)
+## MCP tools (30 totali via `mcp_memory_server`)
 
 Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS`.
 
-### Gruppo `wiki` (14 tool)
-`wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`
+### Gruppo `wiki` (16 tool)
+`wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
 
 ### Gruppo `roadmap` (6 tool)
 `roadmap.list`, `roadmap.add`, `roadmap.update`, `roadmap.complete`, `roadmap.block`, `roadmap.archive`
@@ -191,6 +191,14 @@ python3 anja/tests/test_mcp_smoke.py
 
 ## Changelog
 
+- **0.7.0** (2026-05-19) — 5 nuove feature roadmap-complete:
+  - Onboarding nudge in `session_start.py`: suggerimento `/anja-init` in progetti senza `.anjawiki/` (idempotente via marker `~/.anja-nudged/`)
+  - Validation soft in `wiki.upsert_*`: `_warnings` array per sezioni canoniche mancanti (entity: Sintesi/Dettagli/Apparizioni/Connessioni, concept: Definizione/Perché conta/Esempi/Riferimenti, ecc.)
+  - `/anja-refresh` workflow completo: slash command + skill + diff vs last codebase-snapshot
+  - `wiki.export` MCP tool: format md (zip)/json (dump strutturato)/html (static site con wikilinks risolti)
+  - `wiki.attach_image` MCP tool: copia/scarica immagine in raw/ + append markdown link nella page
+  - mcp_memory_server 1.8.0 → 1.9.0 (30 tool totali: +export +attach_image)
+  - Smoke test 16/16 verde
 - **0.6.2** (2026-05-19) — `code.search` description prescrittiva (USE/SKIP trigger pattern) per autoselect vs Grep
 - **0.6.1** (2026-05-19) — fix `session_end` hook: skip SessionEnd con `reason=other` (compact/resume CC interni); fix README install URL HTTPS
 - **0.6.0** (2026-05-18) — Initial commit: estrazione plugin da AnjaHub monorepo (MIT). 9 slash command + 28 MCP tool

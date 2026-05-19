@@ -97,9 +97,40 @@ def _load_roadmap_focus(wiki_root: Path) -> list[str]:
     return lines
 
 
+def _suggest_anja_init(cwd: Path) -> None:
+    """Print onboarding nudge se cwd è un progetto plausibile (git repo o code presence)
+    senza .anjawiki/. Idempotente per cwd: marker in ~/.anja-nudged/.
+
+    Skip se:
+    - cwd è $HOME o root dir
+    - già nudgato per quel cwd
+    - non sembra un progetto (no .git, no file di codice)
+    """
+    import hashlib
+    cwd = cwd.resolve()
+    if cwd == Path.home() or str(cwd) == "/":
+        return
+    # Indicatori "progetto reale": git repo o file di codice
+    if not ((cwd / ".git").exists() or any(
+        cwd.glob(f"*.{ext}") for ext in ("py", "ts", "tsx", "js", "go", "rs", "java")
+    )):
+        return
+    nudge_dir = Path.home() / ".anja-nudged"
+    nudge_dir.mkdir(exist_ok=True)
+    cwd_hash = hashlib.sha1(str(cwd).encode()).hexdigest()[:12]
+    marker = nudge_dir / cwd_hash
+    if marker.exists():
+        return
+    marker.write_text(str(cwd) + "\n", encoding="utf-8")
+    print(f"[anja] Questo progetto ({cwd.name}) non ha ancora un wiki anja.", file=sys.stderr)
+    print(f"[anja] Per inizializzarlo: /anja-init --type dev", file=sys.stderr)
+    print(f"[anja] (suggerimento mostrato 1 volta sola — marker in ~/.anja-nudged/)", file=sys.stderr)
+
+
 def main() -> None:
     found = find_anja_root(Path.cwd())
     if found is None:
+        _suggest_anja_init(Path.cwd())
         sys.exit(0)
     root, kind, log_file = found
 
