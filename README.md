@@ -2,13 +2,13 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.6.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.6.2 — usable in production. Estratto da AnjaHub monorepo. License MIT.
 
 ## Cosa fa, in 5 punti
 
 1. **Wiki strutturato per progetto** in `.anjawiki/wiki/` (entities, concepts, sources, analysis, sessions) mantenuto dall'agent via tool MCP CRUD + lint + rename + backlinks.
 2. **Memoria identitaria** in 4 layer: wiki semantico + user profile + soul agent + sessions journal.
-3. **Ricerca semantica del codice** (`code.search`): hybrid 3-livelli (ripgrep → LLM rerank → vector embedding sqlite-vec). Provider pluggable (OpenRouter default, Voyage AI, OpenAI, local sentence-transformers).
+3. **Ricerca semantica del codice** (`code.search`): hybrid 3-livelli (ripgrep → LLM rerank → vector embedding sqlite-vec). Provider pluggable (OpenRouter default, Voyage AI, OpenAI, local sentence-transformers). Description con trigger prescrittivi USE/SKIP così l'agent sceglie autonomamente vs `Grep` in base alla natura della query (semantica/concettuale → code.search, nome esatto → Grep).
 4. **Roadmap task come 4° file speciale**: `roadmap.md` con priority/owner/est, 6 tool MCP, slash command `/anja-task`, focus top-5 P0/P1 al SessionStart per continuity multi-agent.
 5. **Auto-summary di sessione** in background allo SessionEnd (subprocess detached, non blocca `/exit`).
 
@@ -188,6 +188,12 @@ python3 anja/tests/test_mcp_smoke.py
 - Solo stdlib nel core. Eccezioni motivate: `sqlite-vec`, `httpx` (opt-in per code search)
 - File <500 LOC per pezzo, eccetto `mcp_memory_server.py` (dispatcher centrale, motivato)
 - Tool MCP: handler `def tool_<group>_<name>(args: dict) -> dict`, return JSON-serializable, errors come `{"error": "msg", "hint": "..."}`
+
+## Changelog
+
+- **0.6.2** (2026-05-19) — `code.search` description prescrittiva (USE/SKIP trigger pattern) per autoselect vs Grep
+- **0.6.1** (2026-05-19) — fix `session_end` hook: skip SessionEnd con `reason=other` (compact/resume CC interni); fix README install URL HTTPS
+- **0.6.0** (2026-05-18) — Initial commit: estrazione plugin da AnjaHub monorepo (MIT). 9 slash command + 28 MCP tool
 
 ## Rapporto con AnjaHub
 

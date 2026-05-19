@@ -1,6 +1,6 @@
 {
   "name": "anja",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Wiki strutturato + memoria identitaria + ricerca semantica del codice per progetti dev. 9 slash command + 28 MCP tool (wiki CRUD/maintenance + roadmap + code search hybrid 3-livelli ripgrep/LLM-rerank/vector sqlite-vec + sessions + memory). Provider embedding pluggable (OpenRouter/Voyage/OpenAI/local). Auto-summary bg + roadmap focus SessionStart. Schema .anjawiki/ wire format pubblico (SCHEMA.md).",
   "keywords": [
     "wiki",
