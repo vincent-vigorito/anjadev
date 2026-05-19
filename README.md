@@ -25,7 +25,7 @@
 Dentro Claude Code in un progetto qualunque:
 
 ```
-/plugin marketplace add github:vincent-vigorito/anjadev
+/plugin marketplace add https://github.com/vincent-vigorito/anjadev.git
 /plugin install anja@anjadev
 ```
 
@@ -35,7 +35,7 @@ CC clona automaticamente il repo in `~/.claude/plugins/marketplaces/anjadev/`. A
 /plugin update anja@anjadev
 ```
 
-Per dev locale del plugin (contributor only): clone manuale in `~/Documents/anjadev/` e `marketplace add` su path locale invece di `github:...`.
+Per dev locale del plugin (contributor only): clone manuale in `~/Documents/anjadev/` e `marketplace add /Users/$(whoami)/Documents/anjadev` su path locale.
 
 ### Setup primo progetto
 
