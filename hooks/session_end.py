@@ -347,6 +347,15 @@ def spawn_bg_summarize(session_file: Path) -> None:
 def main() -> None:
     session_meta = parse_stdin()
 
+    # CC emette SessionEnd con reason=other anche per eventi interni (context compact,
+    # resume, stream blip). Una singola chat utente può generare N file di sessione
+    # consecutivi, uno per ogni boundary di compact. Scrivere solo su terminazioni
+    # esplicite dell'utente: clear, logout, prompt_input_exit. "other" → skip.
+    reason = session_meta.get("reason", "")
+    if reason == "other":
+        print(f"[anja] SessionEnd reason=other (likely compact/resume), skip", file=sys.stderr)
+        sys.exit(0)
+
     found = find_anja_root(Path.cwd())
     if found is None:
         sys.exit(0)
