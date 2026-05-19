@@ -4366,11 +4366,18 @@ TOOLS = [
     {
         "name": "code.search",
         "description": (
-            "🔎 CODE: ricerca nel codebase del progetto ospitante. 3 livelli: "
-            "0=ripgrep + smart ranking (filename/func boost + git recency), "
-            "1=ripgrep top-50 + LLM haiku rerank semantico, "
-            "2=vector search via sqlite-vec + embed provider (richiede `code.reindex`). "
-            "Default auto-detect: index disponibile→2, codebase <5k LOC→0, altrimenti→1. "
+            "🔎 CODE.SEARCH: ricerca nel codebase del progetto ospitante. "
+            "USE PRIMA di Grep/Glob quando la query è SEMANTICA/CONCETTUALE: "
+            "'dove gestiamo l'autenticazione', 'logica di retry', 'qualcosa "
+            "che fa X', 'il code che parla con il DB', 'trova pattern simili'. "
+            "USE quando l'utente cerca 'il codice che fa X' senza conoscere "
+            "nomi esatti, o per codebase >5k LOC dove Grep porterebbe troppi hit. "
+            "SKIP (usa Grep) quando la query è un NOME ESATTO di funzione/"
+            "variabile/classe (es. 'trova authenticate()', 'usi di FOO_CONST'). "
+            "3 livelli: 0=ripgrep+smart ranking (filename/func boost + git "
+            "recency), 1=ripgrep top-50 + LLM haiku rerank semantico, 2=vector "
+            "via sqlite-vec + embed provider (richiede `code.reindex`). "
+            "Auto-detect: index disponibile→2, <5k LOC→0, altrimenti→1. "
             "Graceful fallback se livello superiore non disponibile."
         ),
         "inputSchema": {
