@@ -110,6 +110,169 @@ def _connected_components(nodes: set[str], edges: list[tuple[str, str]]) -> dict
 # Main report builder
 # ============================================================
 
+def _compute_code_graph(
+    code_db,
+    db,
+    limit: int,
+    granularity: str = "file",
+) -> tuple[list[dict], list[dict], dict]:
+    """Carica code chunks + edges via k-NN. Threshold adattivo P85.
+
+    `granularity`:
+      - "file" (default): 1 nodo per file_path (aggregato), edges file↔file con
+        max similarity tra i chunks. Ridurre nodi 10-50× → browser-friendly.
+      - "chunk": 1 nodo per chunk individuale (può essere migliaia → hairball).
+
+    Ritorna (nodes, edges, stats).
+    """
+    from pathlib import Path as _P
+
+    rows = db.execute(
+        "SELECT id, file_path, func_name, line_start, line_end, lang FROM chunks "
+        "WHERE kind = 'code' LIMIT ?",
+        (limit,),
+    ).fetchall()
+
+    if granularity == "file":
+        # 1 nodo per file_path
+        files: dict[str, dict] = {}
+        chunk_to_file: dict[int, str] = {}
+        for r in rows:
+            fp = r["file_path"]
+            chunk_to_file[r["id"]] = fp
+            if fp not in files:
+                parts = fp.split("/")
+                cluster_dir = "/".join(parts[:2]) if len(parts) >= 2 else parts[0]
+                files[fp] = {
+                    "id": f"code::{fp}",
+                    "label": _P(fp).name,
+                    "kind": "code",
+                    "file_path": fp,
+                    "func_name": "",
+                    "line_range": [],
+                    "lang": r["lang"],
+                    "cluster_dir": cluster_dir,
+                    "chunk_count": 0,
+                }
+            files[fp]["chunk_count"] += 1
+        nodes = list(files.values())
+
+        # k-NN: per ogni chunk, top-3 vicini. Aggreghiamo per coppia (file_a, file_b)
+        # tenendo il MAX score osservato.
+        file_scores: dict[tuple[str, str], float] = {}
+        all_scores: list[float] = []
+        for r in rows:
+            chunk_id = r["id"]
+            file_a = chunk_to_file[chunk_id]
+            vec = code_db.get_embedding_vector(db, chunk_id)
+            if not vec:
+                continue
+            neighbors = code_db.vector_search(
+                db, query_vec=vec, limit=4, kind_filter="code", exclude_id=chunk_id,
+            )
+            for nb in neighbors:
+                file_b = chunk_to_file.get(nb["id"])
+                if not file_b or file_b == file_a:
+                    continue
+                score = 1.0 - float(nb["distance"])
+                all_scores.append(score)
+                pair = tuple(sorted([file_a, file_b]))
+                if pair not in file_scores or score > file_scores[pair]:
+                    file_scores[pair] = score
+
+        if all_scores:
+            scores_sorted = sorted(all_scores)
+            idx = int(len(scores_sorted) * 0.85)
+            adaptive_threshold = scores_sorted[min(idx, len(scores_sorted) - 1)]
+        else:
+            adaptive_threshold = 0.5
+
+        edges = []
+        for (file_a, file_b), score in file_scores.items():
+            if score < adaptive_threshold:
+                continue
+            edges.append({
+                "source": f"code::{file_a}",
+                "target": f"code::{file_b}",
+                "score": round(score, 4),
+                "edge_kind": "code_strong" if score >= adaptive_threshold + 0.1 else "code_medium",
+            })
+
+        return nodes, edges, {
+            "code_chunks": len(rows),
+            "code_files": len(nodes),
+            "code_edges": len(edges),
+            "adaptive_threshold": round(adaptive_threshold, 4),
+            "granularity": "file",
+        }
+
+    # chunk-level granularity (alta densità — usa solo per debug/dataset piccoli)
+    nodes = []
+    id_by_chunk: dict[int, str] = {}
+    for r in rows:
+        chunk_id = r["id"]
+        file_path = r["file_path"]
+        cyto_id = f"code::{file_path}"
+        if r["line_start"]:
+            cyto_id = f"{cyto_id}::{r['line_start']}-{r['line_end']}"
+        parts = file_path.split("/")
+        cluster_dir = "/".join(parts[:2]) if len(parts) >= 2 else parts[0]
+        label = _P(file_path).name + (f" :: {r['func_name']}" if r["func_name"] else "")
+        nodes.append({
+            "id": cyto_id, "label": label, "kind": "code",
+            "file_path": file_path, "func_name": r["func_name"] or "",
+            "line_range": [r["line_start"], r["line_end"]],
+            "lang": r["lang"], "cluster_dir": cluster_dir, "chunk_id": chunk_id,
+        })
+        id_by_chunk[chunk_id] = cyto_id
+
+    all_scores = []
+    raw_edges = []
+    for n in nodes:
+        chunk_id = n["chunk_id"]
+        vec = code_db.get_embedding_vector(db, chunk_id)
+        if not vec:
+            continue
+        neighbors = code_db.vector_search(
+            db, query_vec=vec, limit=4, kind_filter="code", exclude_id=chunk_id,
+        )
+        for nb in neighbors:
+            score = 1.0 - float(nb["distance"])
+            all_scores.append(score)
+            raw_edges.append((chunk_id, nb["id"], score))
+
+    if all_scores:
+        scores_sorted = sorted(all_scores)
+        idx = int(len(scores_sorted) * 0.85)
+        adaptive_threshold = scores_sorted[min(idx, len(scores_sorted) - 1)]
+    else:
+        adaptive_threshold = 0.6
+
+    seen_pairs = set()
+    edges = []
+    for a_id, b_id, score in raw_edges:
+        if score < adaptive_threshold:
+            continue
+        a_cyto = id_by_chunk.get(a_id)
+        b_cyto = id_by_chunk.get(b_id)
+        if not a_cyto or not b_cyto:
+            continue
+        pair = tuple(sorted([a_cyto, b_cyto]))
+        if pair in seen_pairs:
+            continue
+        seen_pairs.add(pair)
+        edge_kind = "code_strong" if score >= adaptive_threshold + 0.1 else "code_medium"
+        edges.append({"source": pair[0], "target": pair[1],
+                      "score": round(score, 4), "edge_kind": edge_kind})
+
+    return nodes, edges, {
+        "code_chunks": len(nodes),
+        "code_edges": len(edges),
+        "adaptive_threshold": round(adaptive_threshold, 4),
+        "granularity": "chunk",
+    }
+
+
 def build_report(
     root: Path,
     top_n_god: int = 8,
@@ -117,6 +280,9 @@ def build_report(
     anchor_threshold: float = 0.6,
     k_per_node: int = 5,
     include_sessions: bool = False,
+    include_all_code: bool = False,
+    code_limit: int = 2000,
+    code_granularity: str = "file",
 ) -> dict:
     """Computa il report completo. Ritorna dict; non scrive file (vedi `write_report`).
 
@@ -280,7 +446,16 @@ def build_report(
                 })
         named_clusters.sort(key=lambda c: -c["size"])
 
-        # 7. Stats summary
+        # 7. Code graph (opt-in): tutti i code chunks + edges k-NN code↔code
+        code_nodes: list[dict] = []
+        code_edges: list[dict] = []
+        code_stats: dict = {}
+        if include_all_code:
+            code_nodes, code_edges, code_stats = _compute_code_graph(
+                code_db, db, limit=code_limit, granularity=code_granularity,
+            )
+
+        # 8. Stats summary
         stats = {
             "wiki_pages": len(pages),
             "explicit_edges": len(explicit_edges),
@@ -290,6 +465,9 @@ def build_report(
             "wiki_code_anchors_count": sum(len(v) for v in wiki_code_anchors.values()),
             "orphans_count": len(orphans),
             "clusters_count": len(named_clusters),
+            "code_chunks_total": code_stats.get("code_chunks", 0),
+            "code_edges_total": code_stats.get("code_edges", 0),
+            "code_adaptive_threshold": code_stats.get("adaptive_threshold"),
             "embed_provider": provider.name,
             "embed_model": provider.model,
             "embed_dim": provider.dim,
@@ -305,6 +483,8 @@ def build_report(
             "clusters": named_clusters,
             "semantic_neighbors": semantic_neighbors,
             "explicit_edges": [{"from": a, "to": b} for a, b in explicit_edges],
+            "code_nodes": code_nodes,
+            "code_edges": code_edges,
         }
     finally:
         db.close()
@@ -461,10 +641,18 @@ if __name__ == "__main__":
     ap.add_argument("--anchor-threshold", type=float, default=0.6)
     ap.add_argument("--k-per-node", type=int, default=5)
     ap.add_argument("--include-sessions", action="store_true")
+    ap.add_argument("--include-all-code", action="store_true", help="Load all code chunks + compute k-NN code↔code graph")
+    ap.add_argument("--code-limit", type=int, default=2000)
     ap.add_argument("--no-write", action="store_true", help="Print JSON, don't write GRAPH_REPORT.md")
     args = ap.parse_args()
 
     root = Path(args.root).expanduser().resolve()
+    try:
+        import secrets_loader
+        secrets_loader.load_secrets(root)
+    except ImportError:
+        pass
+
     report = build_report(
         root,
         top_n_god=args.top_god,
@@ -472,6 +660,8 @@ if __name__ == "__main__":
         anchor_threshold=args.anchor_threshold,
         k_per_node=args.k_per_node,
         include_sessions=args.include_sessions,
+        include_all_code=args.include_all_code,
+        code_limit=args.code_limit,
     )
     if "error" in report:
         print(json.dumps(report, indent=2))

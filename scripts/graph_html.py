@@ -85,6 +85,7 @@ def _build_cytoscape_elements(report: dict) -> dict:
                 }
 
     code_nodes: dict[str, dict] = {}
+    # Da wiki_code_anchors (alta similarity → ancore visualizzate come anchor edges)
     for slug, anchors in (report.get("wiki_code_anchors") or {}).items():
         for a in anchors:
             cid = f"code::{a['file_path']}"
@@ -93,11 +94,26 @@ def _build_cytoscape_elements(report: dict) -> dict:
             label = Path(a["file_path"]).name
             if a.get("func_name"):
                 label = f"{label} :: {a['func_name']}"
+            parts = a["file_path"].split("/")
+            cluster_dir = "/".join(parts[:2]) if len(parts) >= 2 else parts[0]
             code_nodes[cid] = {
                 "id": cid, "label": label, "kind": "code",
                 "file_path": a["file_path"], "lang": a.get("lang", ""),
                 "func_name": a.get("func_name", ""), "line_range": a.get("line_range", []),
+                "cluster_dir": cluster_dir,
             }
+
+    # Da include_all_code: tutti i code chunks come nodi indipendenti (anche senza anchor)
+    for n in report.get("code_nodes") or []:
+        if n["id"] not in code_nodes:
+            code_nodes[n["id"]] = {
+                "id": n["id"], "label": n["label"], "kind": "code",
+                "file_path": n["file_path"], "lang": n.get("lang", ""),
+                "func_name": n.get("func_name", ""), "line_range": n.get("line_range", []),
+                "cluster_dir": n.get("cluster_dir", ""),
+            }
+        elif "cluster_dir" not in code_nodes[n["id"]] or not code_nodes[n["id"]].get("cluster_dir"):
+            code_nodes[n["id"]]["cluster_dir"] = n.get("cluster_dir", "")
 
     nodes = [{"data": n} for n in wiki_nodes.values()] + [{"data": n} for n in code_nodes.values()]
 
@@ -133,6 +149,14 @@ def _build_cytoscape_elements(report: dict) -> dict:
             edges.append({"data": {"id": f"e{eid}", "source": slug, "target": cid,
                                    "edge_kind": edge_kind, "score": score}})
 
+    # Edges code↔code (k-NN sopra threshold adattivo)
+    for e in report.get("code_edges") or []:
+        eid += 1
+        edges.append({"data": {
+            "id": f"e{eid}", "source": e["source"], "target": e["target"],
+            "edge_kind": e.get("edge_kind", "code_medium"), "score": e.get("score"),
+        }})
+
     return {"nodes": nodes, "edges": edges, "stats": report.get("stats", {})}
 
 
@@ -154,10 +178,25 @@ def write_html(root: Path, report: dict, target: Optional[Path] = None) -> Path:
     return target
 
 
-def build_and_write_html(root: Path, target: Optional[Path] = None) -> dict:
-    """One-shot: build report (full) + write html. Helper per il tool MCP."""
+def build_and_write_html(
+    root: Path,
+    target: Optional[Path] = None,
+    include_all_code: bool = True,
+    code_limit: int = 2000,
+    code_granularity: str = "file",
+) -> dict:
+    """One-shot: build report (full + opt. all code) + write html. Helper per il tool MCP.
+
+    Default granularity='file' per ridurre drasticamente i nodi (chunks → file).
+    """
     gr = _load("graph_report")
-    report = gr.build_report(root, include_sessions=False)
+    report = gr.build_report(
+        root,
+        include_sessions=False,
+        include_all_code=include_all_code,
+        code_limit=code_limit,
+        code_granularity=code_granularity,
+    )
     if "error" in report:
         return report
     path = write_html(root, report, target=target)
@@ -177,6 +216,12 @@ if __name__ == "__main__":
     ap.add_argument("--target", help="output path override")
     args = ap.parse_args()
     root = Path(args.root).expanduser().resolve()
+    try:
+        import secrets_loader
+        secrets_loader.load_secrets(root)
+    except ImportError:
+        pass
+
     target = Path(args.target).expanduser().resolve() if args.target else None
     result = build_and_write_html(root, target=target)
     print(json.dumps(result, indent=2, default=str))

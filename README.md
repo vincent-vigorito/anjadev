@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.9.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.9.1 — usable in production. Estratto da AnjaHub monorepo. License MIT.
 
 ## Cosa fa, in 7 punti
 
@@ -81,7 +81,7 @@ Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Res
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
 
-## MCP tools (78 totali via `mcp_memory_server`)
+## MCP tools (81 totali via `mcp_memory_server`)
 
 Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 
@@ -92,11 +92,12 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 **Read-side (Level 0/1/2)**: `skill.list`, `skill.load`, `skill.read_file`
 **Write-side (agent-managed)**: `skill.save`, `skill.patch` (find/replace mirato), `skill.edit`, `skill.delete`, `skill.write_file`, `skill.remove_file`
 
-### Gruppo `graph` (4 tool) — v0.9.0
+### Gruppo `graph` (7 tool) — v0.9.0 + v0.9.1
 **Embedding pipeline**: `wiki.embed` (incremental, dirty-check, multi-trigger inline+hook+session-end).
-**Query cross-kind**: `graph.semantic_neighbors` (k-NN nello spazio condiviso wiki+code, threshold + filter per kind).
+**Query by ID (cross-kind)**: `graph.semantic_neighbors` (k-NN dato source slug o file path, filter per kind).
+**Query by text** (v0.9.1): `graph.search_text` (embedda query libera → k-NN cross-kind), `wiki.search_semantic` (sugar wiki-only), `sessions.search_semantic` (sugar session journals).
 **Report agent-friendly**: `graph.report` (scrive `GRAPH_REPORT.md` con god nodes + cluster + surprise edges + wiki↔code anchors + orphans).
-**Visualizer standalone**: `graph.html` (Cytoscape single-file con sidebar search + filtri + dettagli on-click, apri nel browser).
+**Visualizer standalone**: `graph.html` (Cytoscape single-file Obsidian-style, file-aggregated, hover-focus mode, sidebar search/filtri, apri nel browser).
 
 ### Gruppo `roadmap` (6 tool)
 `roadmap.list`, `roadmap.add`, `roadmap.update`, `roadmap.complete`, `roadmap.block`, `roadmap.archive`

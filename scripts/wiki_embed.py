@@ -332,6 +332,14 @@ if __name__ == "__main__":
     args = ap.parse_args()
 
     root = Path(args.root).expanduser().resolve()
+
+    # Auto-load .secrets.env BEFORE embed_providers viene importato
+    try:
+        import secrets_loader
+        secrets_loader.load_secrets(root)
+    except ImportError:
+        pass
+
     if args.single:
         md_path = Path(args.single).expanduser().resolve()
         result = embed_single_page(root, md_path)

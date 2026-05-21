@@ -180,25 +180,46 @@ const cy = cytoscape({
         'border-color': '#555', 'border-style': 'dashed',
     }},
     { selector: 'node[kind="code"]', style: {
-        'background-color': '#ff7b7b', 'shape': 'round-rectangle',
-        'label': 'data(label)', 'color': '#e6e8eb', 'font-size': 10,
-        'text-valign': 'bottom', 'text-margin-y': 4, 'width': 30, 'height': 14,
+        'background-color': function(ele) {
+          // Color groups per cluster_dir (top-level directory)
+          const dir = (ele.data('cluster_dir') || '').toLowerCase();
+          if (dir.startsWith('anja-hub/webapp')) return '#ff8b66';
+          if (dir.startsWith('anja-hub/scripts')) return '#ffa64d';
+          if (dir.startsWith('anja-hub')) return '#ffb380';
+          if (dir.startsWith('anja-routines')) return '#66d6ff';
+          if (dir.startsWith('scripts')) return '#7fffd4';
+          if (dir.startsWith('hooks')) return '#ff66d6';
+          if (dir.startsWith('commands')) return '#d6a3ff';
+          if (dir.startsWith('agents')) return '#ffd966';
+          if (dir.startsWith('skills')) return '#d4ff7f';
+          return '#ff7b7b';
+        },
+        'shape': 'ellipse',
+        'label': 'data(label)', 'color': '#bcc4d2', 'font-size': 9,
+        'text-valign': 'bottom', 'text-margin-y': 3,
+        'width': 14, 'height': 14, 'border-width': 0,
     }},
+    { selector: 'edge[edge_kind^="code"]', style: {
+        'line-color': '#ff9d66', 'width': 1, 'opacity': 0.35, 'curve-style': 'bezier',
+    }},
+    { selector: 'edge[edge_kind="code_strong"]', style: { 'opacity': 0.55, 'width': 1.3 }},
+    { selector: '.dimmed', style: { 'opacity': 0.1 }},
+    { selector: '.focus', style: { 'opacity': 1 }},
+    { selector: 'edge.focus', style: { 'width': 2.5, 'opacity': 1 }},
     { selector: 'edge[edge_kind="explicit"]', style: {
-        'line-color': '#6aa9ff', 'width': 2, 'target-arrow-shape': 'triangle',
-        'target-arrow-color': '#6aa9ff', 'curve-style': 'bezier',
+        'line-color': '#6aa9ff', 'width': 1, 'opacity': 0.4, 'curve-style': 'bezier',
     }},
     { selector: 'edge[edge_kind="semantic_strong"]', style: {
-        'line-color': '#a366ff', 'width': 2, 'line-style': 'dashed', 'curve-style': 'bezier',
+        'line-color': '#a366ff', 'width': 1.3, 'line-style': 'dashed', 'opacity': 0.6, 'curve-style': 'bezier',
     }},
     { selector: 'edge[edge_kind="semantic_medium"]', style: {
-        'line-color': '#a366ff', 'width': 1.5, 'line-style': 'dashed', 'opacity': 0.55, 'curve-style': 'bezier',
+        'line-color': '#a366ff', 'width': 1, 'line-style': 'dashed', 'opacity': 0.4, 'curve-style': 'bezier',
     }},
     { selector: 'edge[edge_kind="semantic_weak"]', style: {
-        'line-color': '#a366ff', 'width': 1, 'line-style': 'dashed', 'opacity': 0.3, 'curve-style': 'bezier',
+        'line-color': '#a366ff', 'width': 0.8, 'line-style': 'dashed', 'opacity': 0.2, 'curve-style': 'bezier',
     }},
     { selector: 'edge[edge_kind^="anchor"]', style: {
-        'line-color': '#7cd6a3', 'width': 1.5, 'line-style': 'dotted', 'opacity': 0.7, 'curve-style': 'bezier',
+        'line-color': '#7cd6a3', 'width': 1, 'line-style': 'dotted', 'opacity': 0.5, 'curve-style': 'bezier',
     }},
     { selector: 'node:selected', style: { 'border-width': 3, 'border-color': '#ffb547', 'border-style': 'solid' }},
   ],
@@ -327,6 +348,22 @@ function showDetails(n) {
 cy.on('tap', 'node', function(evt) { showDetails(evt.target); });
 cy.on('tap', function(evt) {
   if (evt.target === cy) document.getElementById('details').classList.remove('open');
+});
+
+// Obsidian-style hover-focus: highlight nodo + neighbors, dim del resto
+let hoverTimeout = null;
+cy.on('mouseover', 'node', function(evt) {
+  if (hoverTimeout) clearTimeout(hoverTimeout);
+  const n = evt.target;
+  const neighborhood = n.closedNeighborhood();
+  cy.elements().addClass('dimmed');
+  neighborhood.removeClass('dimmed').addClass('focus');
+});
+cy.on('mouseout', 'node', function() {
+  if (hoverTimeout) clearTimeout(hoverTimeout);
+  hoverTimeout = setTimeout(function() {
+    cy.elements().removeClass('dimmed focus');
+  }, 100);
 });
 </script>
 </body>

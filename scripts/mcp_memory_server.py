@@ -56,50 +56,16 @@ ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
 
 
 def _load_secrets_env() -> int:
-    """Auto-load `.secrets.env` dello scope all'avvio del server.
-
-    Pattern dotenv minimale (`KEY=value` per riga, supporta quoted values e #
-    commenti). Priorità a env shell esistente (non override).
-
-    Locations cercate (prima vince):
-      project: `<ROOT>/.anjawiki/.secrets.env`
-      hub:     `<ROOT>/.secrets.env`
-      agent:   `<ROOT>/.secrets.env` (sotto agents/<name>/)
-
-    Restituisce count di variabili caricate (per logging).
-    """
-    candidates = []
-    if SCOPE == "project":
-        candidates.append(ROOT / ".anjawiki" / ".secrets.env")
-        candidates.append(ROOT / ".secrets.env")  # backward-compat
-    else:
-        candidates.append(ROOT / ".secrets.env")
-
-    loaded = 0
-    for path in candidates:
-        if not path.is_file():
-            continue
-        try:
-            for raw_line in path.read_text(encoding="utf-8").splitlines():
-                line = raw_line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" not in line:
-                    continue
-                k, _, v = line.partition("=")
-                k = k.strip()
-                v = v.strip()
-                # Strip wrapping quotes
-                if len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'"):
-                    v = v[1:-1]
-                if k and k not in os.environ:
-                    os.environ[k] = v
-                    loaded += 1
-        except Exception:
-            pass
-        if loaded > 0:
-            break  # first non-empty file wins
-    return loaded
+    """Auto-load `.secrets.env` via secrets_loader (modulo condiviso con CLI scripts)."""
+    try:
+        import importlib.util
+        sp = Path(__file__).resolve().parent / "secrets_loader.py"
+        spec = importlib.util.spec_from_file_location("secrets_loader", sp)
+        sl = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sl)
+        return sl.load_secrets(ROOT, scope=SCOPE)
+    except Exception:
+        return 0
 
 
 _SECRETS_LOADED = _load_secrets_env()
@@ -3824,6 +3790,146 @@ def tool_graph_report(args: dict) -> dict:
     return report
 
 
+def tool_graph_search_text(args: dict) -> dict:
+    """Search semantico cross-kind via query libera.
+
+    Embedda la query con il provider corrente e fa k-NN nello spazio condiviso
+    wiki + code. Filtri opzionali: kind (wiki|code|all), page_type per sotto-filtrare
+    pagine wiki (entity|concept|source|analysis|session).
+
+    args:
+      query: str (required)
+      filter: 'wiki' | 'code' | 'sessions' | 'all' = 'all'
+      k: int = 10
+      min_score: float = 0.5
+      page_type: str — filtro extra per pagine wiki (es. 'entity', 'session')
+    """
+    query = (args.get("query") or "").strip()
+    if not query:
+        return {"error": "query required"}
+
+    filter_kind = (args.get("filter") or "all").strip()
+    page_type = (args.get("page_type") or "").strip() or None
+    k = int(args.get("k", 10))
+    min_score = float(args.get("min_score", 0.5))
+
+    try:
+        import sys as _sys
+        here = Path(__file__).resolve().parent
+        if str(here) not in _sys.path:
+            _sys.path.insert(0, str(here))
+        import code_db
+        import embed_providers
+    except ImportError as e:
+        return {"error": f"module missing: {e}"}
+
+    provider = embed_providers.get_provider()
+    if provider is None:
+        return {"error": "no embed provider configured (set ANJA_EMBED_PROVIDER + API key)"}
+
+    anjawiki = ROOT / ".anjawiki"
+    if not (anjawiki / "code-index.db").exists():
+        return {"error": "index not built — run code.reindex and/or wiki.embed first"}
+
+    # Embedda la query (1 call al provider)
+    try:
+        vecs = provider.embed([query])
+    except Exception as e:
+        return {"error": f"embedding failed: {e}"}
+    if not vecs:
+        return {"error": "empty embedding response"}
+    query_vec = vecs[0]
+
+    try:
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+    except Exception as e:
+        return {"error": f"db open failed: {e}"}
+
+    try:
+        # Filter → kind_filter + page_type post-filter
+        if filter_kind == "sessions":
+            kind_filter = "wiki"
+            page_type_required = "session"
+        elif filter_kind == "all":
+            kind_filter = None
+            page_type_required = page_type
+        elif filter_kind in ("wiki", "code"):
+            kind_filter = filter_kind
+            page_type_required = page_type if filter_kind == "wiki" else None
+        else:
+            return {"error": f"invalid filter: {filter_kind}"}
+
+        # Over-fetch per consentire post-filter su page_type
+        raw = code_db.vector_search(
+            db, query_vec=query_vec, limit=k * 3, kind_filter=kind_filter,
+        )
+
+        results = []
+        for r in raw:
+            if page_type_required and r["lang"] != page_type_required:
+                continue
+            score = 1.0 - float(r["distance"])
+            if score < min_score:
+                continue
+            item = {
+                "kind": r["kind"],
+                "score": round(score, 4),
+                "preview": (r["content"] or "")[:200].replace("\n", " ").strip(),
+            }
+            if r["kind"] == "wiki":
+                item["slug"] = r["func_name"]
+                item["page_type"] = r["lang"]
+                item["file_path"] = r["file_path"]
+            else:
+                item["file_path"] = r["file_path"]
+                item["func_name"] = r["func_name"]
+                item["line_range"] = [r["line_start"], r["line_end"]]
+                item["lang"] = r["lang"]
+            results.append(item)
+            if len(results) >= k:
+                break
+
+        return {
+            "query": query,
+            "filter": filter_kind,
+            "page_type": page_type,
+            "results": results,
+            "count": len(results),
+        }
+    finally:
+        db.close()
+
+
+def tool_wiki_search_semantic(args: dict) -> dict:
+    """Sugar wrapper: semantic search ristretto al wiki (escluse sessions di default).
+
+    args identici a graph.search_text ma filter è forzato a 'wiki'.
+    """
+    forced = dict(args)
+    forced["filter"] = "wiki"
+    # Esclude sessions di default a meno che non si chieda esplicitamente
+    if not forced.get("page_type") and not forced.get("include_sessions"):
+        # Strategia: prima passata sopra-filter, poi escludi session in Python
+        # Lo facciamo via _SOURCE_FILTER post-process per semplicità
+        forced["_exclude_session_default"] = True
+    result = tool_graph_search_text(forced)
+    if "_exclude_session_default" in forced and "results" in result:
+        result["results"] = [r for r in result["results"] if r.get("page_type") != "session"]
+        result["count"] = len(result["results"])
+    return result
+
+
+def tool_sessions_search_semantic(args: dict) -> dict:
+    """Sugar wrapper: semantic search ristretto a session journals.
+
+    USE FOR: 'ricorda di cosa abbiamo parlato', 'session passata su X', 'quando
+    ho discusso Y'. Richiede embed di sessions abilitato (default in wiki.embed).
+    """
+    forced = dict(args)
+    forced["filter"] = "sessions"
+    return tool_graph_search_text(forced)
+
+
 def tool_graph_html(args: dict) -> dict:
     """Genera `<wiki>/graph.html` standalone Cytoscape visualizer.
 
@@ -4241,7 +4347,10 @@ TOOL_GROUPS = {
     # F-CodeSearch — ricerca nel codebase ospitante (3 livelli: ripgrep/LLM rerank/vector)
     "code": ["code.search", "code.reindex", "code.status"],
     # Wiki embedding + semantic graph (cross-kind k-NN wiki ↔ code) + report + html viz
-    "graph": ["wiki.embed", "graph.semantic_neighbors", "graph.report", "graph.html"],
+    "graph": [
+        "wiki.embed", "graph.semantic_neighbors", "graph.report", "graph.html",
+        "graph.search_text", "wiki.search_semantic", "sessions.search_semantic",
+    ],
 }
 
 
@@ -5461,6 +5570,64 @@ TOOLS = [
         },
     },
     {
+        "name": "graph.search_text",
+        "description": (
+            "🔗 GRAPH: semantic search cross-kind via query libera. Embedda la query "
+            "nello stesso spazio del wiki+code → k-NN. USE FOR: 'trova pagine/file su X', "
+            "domande senza nomi esatti, ricerca per intenzione. Filter: 'wiki' | 'code' | "
+            "'sessions' | 'all'. Score = 1 - cosine_distance."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Query libera (lingua naturale)"},
+                "filter": {"type": "string", "enum": ["wiki", "code", "sessions", "all"], "default": "all"},
+                "k": {"type": "integer", "default": 10},
+                "min_score": {"type": "number", "default": 0.5},
+                "page_type": {"type": "string", "description": "Filtro extra wiki: 'entity' | 'concept' | 'source' | 'analysis' | 'session'"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "wiki.search_semantic",
+        "description": (
+            "📚 WIKI: semantic search del wiki (sessions escluse di default). "
+            "Sugar di graph.search_text con filter='wiki'. USE FOR: 'pagine sul concetto X', "
+            "'dove abbiamo discusso Y nel wiki'. Complementare a wiki.search (FTS testuale): "
+            "wiki.search trova match esatti di parole, wiki.search_semantic trova affinità "
+            "concettuale anche con vocabolario diverso."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "k": {"type": "integer", "default": 10},
+                "min_score": {"type": "number", "default": 0.5},
+                "page_type": {"type": "string", "description": "'entity' | 'concept' | 'source' | 'analysis'"},
+                "include_sessions": {"type": "boolean", "default": False},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "sessions.search_semantic",
+        "description": (
+            "🧠 SESSIONS: semantic search nelle session journal. USE FOR: 'ricorda di cosa "
+            "abbiamo parlato', 'session passata su X', 'quando ho discusso Y'. Richiede che "
+            "wiki.embed sia stato fatto con include_sessions=True (default)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "k": {"type": "integer", "default": 10},
+                "min_score": {"type": "number", "default": 0.5},
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "graph.html",
         "description": (
             "🔗 GRAPH: genera `<wiki>/graph.html` standalone visualizer (Cytoscape). "
@@ -5584,6 +5751,9 @@ TOOL_HANDLERS = {
     "graph.semantic_neighbors": tool_graph_semantic_neighbors,
     "graph.report": tool_graph_report,
     "graph.html": tool_graph_html,
+    "graph.search_text": tool_graph_search_text,
+    "wiki.search_semantic": tool_wiki_search_semantic,
+    "sessions.search_semantic": tool_sessions_search_semantic,
 }
 
 
