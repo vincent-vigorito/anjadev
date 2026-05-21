@@ -2385,6 +2385,9 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
     target_file.write_text(new_text, encoding="utf-8")
 
+    # Trigger re-embed in background (fire-and-forget) — abilita semantic graph k-NN
+    _trigger_wiki_embed_bg(target_file)
+
     # Validation soft: warning se mancano sezioni canoniche post-write (no block)
     final_sections = [k for k in sections.keys() if k]
     warnings = _compute_canonical_warnings(final_sections, page_type)
@@ -2399,6 +2402,30 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     if warnings:
         result["_warnings"] = warnings
     return result
+
+
+def _trigger_wiki_embed_bg(md_path: Path) -> None:
+    """Fire-and-forget background re-embed di una singola pagina wiki.
+
+    Pattern identico a hooks/session_end.py:spawn_bg_summarize. Detach via
+    start_new_session=True così il subprocess sopravvive al tool dispatch.
+    Skip silenzioso se ANJA_WIKI_EMBED=0 (opt-out).
+    """
+    if os.environ.get("ANJA_WIKI_EMBED", "1") == "0":
+        return
+    script = Path(__file__).resolve().parent / "wiki_embed.py"
+    if not script.is_file():
+        return
+    try:
+        subprocess.Popen(
+            [sys.executable, str(script), str(ROOT), "--single", str(md_path)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
 
 
 def tool_wiki_upsert_entity(args: dict) -> dict:
@@ -2472,6 +2499,7 @@ def tool_wiki_update_overview(args: dict) -> dict:
 
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
     overview_file.write_text(new_text, encoding="utf-8")
+    _trigger_wiki_embed_bg(overview_file)
 
     return {
         "path": str(overview_file.relative_to(ROOT)),
@@ -3717,6 +3745,234 @@ def tool_code_status(args: dict) -> dict:
     return s
 
 
+# ============================================================
+# Wiki embedding + semantic graph tools
+# ============================================================
+
+def _wiki_embed_module():
+    """Lazy import wiki_embed.py locale al plugin."""
+    import importlib.util
+    sp = Path(__file__).resolve().parent / "wiki_embed.py"
+    spec = importlib.util.spec_from_file_location("wiki_embed", sp)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def tool_wiki_embed(args: dict) -> dict:
+    """Embed incrementale delle pagine wiki del progetto corrente.
+
+    args:
+      force: bool = False        — re-embed tutto, ignora dirty check
+      include_sessions: bool = True
+      single_page: str = ""      — path assoluto a una singola .md (più rapido)
+
+    Ritorna stats: scanned, embedded, skipped_unchanged, deleted_orphans, errors, ms.
+    """
+    try:
+        we = _wiki_embed_module()
+    except Exception as e:
+        return {"error": f"wiki_embed module unavailable: {e}"}
+
+    single = (args.get("single_page") or "").strip()
+    if single:
+        return we.embed_single_page(ROOT, Path(single))
+
+    return we.embed_wiki(
+        ROOT,
+        force=bool(args.get("force", False)),
+        include_sessions=bool(args.get("include_sessions", True)),
+    )
+
+
+def tool_graph_report(args: dict) -> dict:
+    """Compute knowledge graph report e scrivi GRAPH_REPORT.md nel wiki.
+
+    args:
+      top_god: int = 8                   — top-N god nodes
+      surprise_threshold: float = 0.72   — similarity sopra → candidato surprise edge
+      anchor_threshold: float = 0.6      — similarity wiki→code per "anchor"
+      k_per_node: int = 5                — neighbors per pagina
+      include_sessions: bool = False     — include wiki/sessions/ nel grafo
+      write: bool = True                 — scrive GRAPH_REPORT.md (False=ritorna solo dict)
+    """
+    import importlib.util
+    sp = Path(__file__).resolve().parent / "graph_report.py"
+    spec = importlib.util.spec_from_file_location("graph_report", sp)
+    gr = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gr)
+
+    report = gr.build_report(
+        ROOT,
+        top_n_god=int(args.get("top_god", 8)),
+        surprise_threshold=float(args.get("surprise_threshold", 0.72)),
+        anchor_threshold=float(args.get("anchor_threshold", 0.6)),
+        k_per_node=int(args.get("k_per_node", 5)),
+        include_sessions=bool(args.get("include_sessions", False)),
+    )
+    if "error" in report:
+        return report
+
+    if args.get("write", True):
+        target = gr.write_report(ROOT, report)
+        report["report_path"] = str(target.relative_to(ROOT))
+
+    # Compact response: skip i field grossi se non richiesti
+    if not args.get("verbose", False):
+        report.pop("semantic_neighbors", None)
+        report.pop("explicit_edges", None)
+    return report
+
+
+def tool_graph_html(args: dict) -> dict:
+    """Genera `<wiki>/graph.html` standalone Cytoscape visualizer.
+
+    Single-file output (Cytoscape da CDN + dati embedded). Apri nel browser.
+    Sidebar sx con search + filtri kind/type/edge, pannello dx dettagli su click.
+    """
+    import importlib.util
+    sp = Path(__file__).resolve().parent / "graph_html.py"
+    spec = importlib.util.spec_from_file_location("graph_html", sp)
+    gh = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gh)
+
+    target = args.get("target")
+    target_path = Path(target).expanduser() if target else None
+    return gh.build_and_write_html(ROOT, target=target_path)
+
+
+def tool_graph_semantic_neighbors(args: dict) -> dict:
+    """k-NN cross-kind nello spazio embedding condiviso (wiki + code).
+
+    args:
+      source: str (required)     — slug pagina wiki (es. 'auth-service' o 'entities:auth-service')
+                                   oppure file path codice (es. 'src/auth.py')
+      kind: 'auto'|'wiki'|'code' = 'auto' — kind del source per lookup
+      filter: 'all'|'wiki'|'code' = 'all' — quali neighbors ritornare
+      k: int = 10
+      min_score: float = 0.55    — cosine similarity threshold (0.0 = niente filter)
+
+    Ritorna: {query: {...}, neighbors: [...], stats: {...}}
+    Score = 1 - cosine_distance (1.0 = identico, 0.0 = ortogonale).
+    """
+    source = (args.get("source") or "").strip()
+    if not source:
+        return {"error": "source required"}
+    kind = (args.get("kind") or "auto").strip()
+    filter_kind = (args.get("filter") or "all").strip()
+    k = int(args.get("k", 10))
+    min_score = float(args.get("min_score", 0.55))
+
+    try:
+        import sys as _sys
+        here = Path(__file__).resolve().parent
+        if str(here) not in _sys.path:
+            _sys.path.insert(0, str(here))
+        import code_db
+        import embed_providers
+    except ImportError as e:
+        return {"error": f"module missing: {e}"}
+
+    provider = embed_providers.get_provider()
+    if provider is None:
+        return {"error": "no embed provider available (set ANJA_EMBED_PROVIDER + API key)"}
+
+    anjawiki = ROOT / ".anjawiki"
+    if not (anjawiki / "code-index.db").exists():
+        return {"error": "index not built yet — run code.reindex and/or wiki.embed first"}
+
+    try:
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+    except Exception as e:
+        return {"error": f"db open failed: {e}"}
+
+    try:
+        # 1. Lookup source — può essere slug (wiki, esatto o con prefisso) o file_path (code)
+        candidates = []
+        if kind in ("auto", "wiki"):
+            # Wiki slug: try exact match first, then suffix match (entities:foo vs foo)
+            row = db.execute(
+                "SELECT id, file_path, func_name, kind FROM chunks "
+                "WHERE kind = 'wiki' AND (func_name = ? OR func_name LIKE ?) LIMIT 1",
+                (source, f"%:{source}"),
+            ).fetchone()
+            if row:
+                candidates.append(dict(row))
+        if kind in ("auto", "code") and not candidates:
+            row = db.execute(
+                "SELECT id, file_path, func_name, kind FROM chunks "
+                "WHERE kind = 'code' AND file_path = ? LIMIT 1",
+                (source,),
+            ).fetchone()
+            if row:
+                candidates.append(dict(row))
+
+        if not candidates:
+            return {"error": f"source '{source}' not found in index (kind={kind})"}
+
+        self_row = candidates[0]
+        self_vec = code_db.get_embedding_vector(db, self_row["id"])
+        if self_vec is None:
+            return {"error": "embedding vector missing for source"}
+
+        # 2. k-NN cross-kind
+        kind_filter = None if filter_kind == "all" else filter_kind
+        results = code_db.vector_search(
+            db,
+            query_vec=self_vec,
+            limit=k + 1,  # +1 perché probabilmente self è in top
+            kind_filter=kind_filter,
+            exclude_id=self_row["id"],
+        )
+
+        # 3. Score = 1 - distance + filter min_score + preview
+        neighbors = []
+        for r in results:
+            score = 1.0 - float(r["distance"])
+            if score < min_score:
+                continue
+            edge_type = "semantic_strong" if score >= 0.8 else (
+                "semantic_medium" if score >= 0.65 else "semantic_weak"
+            )
+            preview = (r["content"] or "")[:200].replace("\n", " ").strip()
+            item = {
+                "kind": r["kind"],
+                "score": round(score, 4),
+                "edge_type": edge_type,
+                "preview": preview,
+            }
+            if r["kind"] == "wiki":
+                item["slug"] = r["func_name"]
+                item["page_type"] = r["lang"]
+                item["file_path"] = r["file_path"]
+            else:
+                item["file_path"] = r["file_path"]
+                item["func_name"] = r["func_name"]
+                item["line_range"] = [r["line_start"], r["line_end"]]
+                item["lang"] = r["lang"]
+            neighbors.append(item)
+            if len(neighbors) >= k:
+                break
+
+        return {
+            "query": {
+                "source": source,
+                "kind": self_row["kind"],
+                "resolved_path": self_row["file_path"],
+                "self_id": self_row["id"],
+            },
+            "neighbors": neighbors,
+            "stats": {
+                "candidates_scanned": len(results),
+                "above_threshold": len(neighbors),
+                "min_score": min_score,
+                "filter": filter_kind,
+            },
+        }
+    finally:
+        db.close()
+
+
 def tool_kanban_search(args: dict) -> dict:
     hub = _hub_root_from_scope()
     if not hub:
@@ -3984,6 +4240,8 @@ TOOL_GROUPS = {
     ],
     # F-CodeSearch — ricerca nel codebase ospitante (3 livelli: ripgrep/LLM rerank/vector)
     "code": ["code.search", "code.reindex", "code.status"],
+    # Wiki embedding + semantic graph (cross-kind k-NN wiki ↔ code) + report + html viz
+    "graph": ["wiki.embed", "graph.semantic_neighbors", "graph.report", "graph.html"],
 }
 
 
@@ -5162,6 +5420,82 @@ TOOLS = [
         ),
         "inputSchema": {"type": "object", "properties": {}},
     },
+    # Wiki embedding + semantic graph cross-kind (wiki ↔ code)
+    {
+        "name": "wiki.embed",
+        "description": (
+            "🔗 GRAPH: embed incrementale delle pagine wiki nello stesso spazio vettoriale "
+            "del code-index → abilita k-NN cross-kind (wiki ↔ code) via "
+            "graph.semantic_neighbors. Dirty detection via content hash: re-run è no-op "
+            "se nulla cambia. Per re-embed singolo file usa `single_page`."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "force": {"type": "boolean", "default": False, "description": "Re-embed all, ignore dirty check"},
+                "include_sessions": {"type": "boolean", "default": True, "description": "Include wiki/sessions/"},
+                "single_page": {"type": "string", "description": "Path assoluto a una singola .md (più rapido per refresh post-modifica)"},
+            },
+        },
+    },
+    {
+        "name": "graph.report",
+        "description": (
+            "🔗 GRAPH: compute knowledge graph report (god nodes + clusters + surprise edges + "
+            "wiki↔code anchors + orphans). Scrive `wiki/GRAPH_REPORT.md` agent-readable. "
+            "USE FOR: 'panoramica del wiki', 'cosa è centrale qui?', 'cosa va consolidato?', "
+            "'mappa code→entity automatica'. **Read this report instead of scanning the whole wiki** "
+            "quando ti serve orientamento su un progetto sconosciuto."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "top_god": {"type": "integer", "default": 8, "description": "Top-N god nodes per degree centrality"},
+                "surprise_threshold": {"type": "number", "default": 0.72},
+                "anchor_threshold": {"type": "number", "default": 0.6},
+                "k_per_node": {"type": "integer", "default": 5},
+                "include_sessions": {"type": "boolean", "default": False},
+                "write": {"type": "boolean", "default": True, "description": "Scrive GRAPH_REPORT.md"},
+                "verbose": {"type": "boolean", "default": False, "description": "Include semantic_neighbors + explicit_edges nel response"},
+            },
+        },
+    },
+    {
+        "name": "graph.html",
+        "description": (
+            "🔗 GRAPH: genera `<wiki>/graph.html` standalone visualizer (Cytoscape). "
+            "Single-file con dati embedded, sidebar search/filtri, click su nodo per dettagli. "
+            "Apri nel browser, no server. Suggerisci all'utente di aprire il file."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target": {"type": "string", "description": "Output path override (default: <wiki>/graph.html)"},
+            },
+        },
+    },
+    {
+        "name": "graph.semantic_neighbors",
+        "description": (
+            "🔗 GRAPH: k-NN nello spazio embedding unificato wiki+code. "
+            "Trova pagine wiki e/o file di codice semanticamente simili a una source data. "
+            "USE FOR: 'pagine simili a [[X]]', 'quale codice descrive questa entity?', "
+            "'questa entity ha file di codice mappabili?', 'duplicati semantici nel wiki', "
+            "'surprise edges (no [[wikilink]] esplicito ma alta similarity)'. "
+            "Score = 1 - cosine_distance (1.0 identico, 0.0 ortogonale)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": "slug pagina wiki ('auth-service' o 'entities:auth-service') OR file path codice ('src/auth.py')"},
+                "kind": {"type": "string", "enum": ["auto", "wiki", "code"], "default": "auto"},
+                "filter": {"type": "string", "enum": ["all", "wiki", "code"], "default": "all"},
+                "k": {"type": "integer", "default": 10},
+                "min_score": {"type": "number", "default": 0.55, "description": "Cosine similarity threshold"},
+            },
+            "required": ["source"],
+        },
+    },
 ]
 
 TOOL_HANDLERS = {
@@ -5246,6 +5580,10 @@ TOOL_HANDLERS = {
     "code.search": tool_code_search,
     "code.reindex": tool_code_reindex,
     "code.status": tool_code_status,
+    "wiki.embed": tool_wiki_embed,
+    "graph.semantic_neighbors": tool_graph_semantic_neighbors,
+    "graph.report": tool_graph_report,
+    "graph.html": tool_graph_html,
 }
 
 

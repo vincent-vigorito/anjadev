@@ -344,6 +344,33 @@ def spawn_bg_summarize(session_file: Path) -> None:
         pass
 
 
+def spawn_bg_wiki_embed_check(project_root: Path) -> None:
+    """Spawn DETACHED background `wiki_embed.py` per consistency check.
+
+    Cattura modifiche fatte fuori dai trigger inline / PostToolUse (es. edit
+    manuale del file dall'utente). Dirty detection idempotente: re-run è no-op
+    se nulla è cambiato dall'ultimo embed.
+
+    Skip se ANJA_WIKI_EMBED=0 (opt-out globale) o se manca embed provider
+    (silenzioso: il subprocess stesso fa graceful exit con error in stdout).
+    """
+    if os.environ.get("ANJA_WIKI_EMBED", "1") == "0":
+        return
+    script = Path(__file__).resolve().parent.parent / "scripts" / "wiki_embed.py"
+    if not script.is_file():
+        return
+    try:
+        subprocess.Popen(
+            [sys.executable, str(script), str(project_root)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
+
+
 def main() -> None:
     session_meta = parse_stdin()
 
@@ -374,6 +401,10 @@ def main() -> None:
         spawn_bg_summarize(session_file)
     except Exception as e:
         print(f"[anja] WARNING: session file write failed: {e}", file=sys.stderr)
+
+    # Wiki embedding consistency check (orphan cleanup + dirty pages catch-all)
+    if kind == "project":
+        spawn_bg_wiki_embed_check(root)
 
     best_effort_post_session_hooks(root)
 

@@ -2,9 +2,9 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.8.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.9.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
 
-## Cosa fa, in 6 punti
+## Cosa fa, in 7 punti
 
 1. **Wiki strutturato per progetto** in `.anjawiki/wiki/` (entities, concepts, sources, analysis, sessions) mantenuto dall'agent via tool MCP CRUD + lint + rename + backlinks.
 2. **Memoria identitaria** in 4 layer: wiki semantico + user profile + soul agent + sessions journal.
@@ -12,6 +12,7 @@
 4. **Roadmap task come 4° file speciale**: `roadmap.md` con priority/owner/est, 6 tool MCP, slash command `/anja-task`, focus top-5 P0/P1 al SessionStart per continuity multi-agent.
 5. **Auto-summary di sessione** in background allo SessionEnd (subprocess detached, non blocca `/exit`).
 6. **Skill management 3-livelli** (v0.8.0): SKILL.md con frontmatter strutturato in `.anjawiki/skills/<slug>/`, discovery multi-source (project + user-global + plugin), progressive disclosure (`skill.list` → `skill.load` → `skill.read_file`), e write-side agent-managed (`skill.save / patch / edit / delete / write_file / remove_file`) per memoria procedurale persistente. Catalog Level 0 auto-iniettato al SessionStart.
+7. **Knowledge graph wiki ↔ codice** (v0.9.0): embedding condiviso tra wiki pages e code chunks → k-NN cross-kind (`graph.semantic_neighbors`) scopre "questa entity copre quale file?" e duplicati semantici. `graph.report` produce `GRAPH_REPORT.md` con god nodes + cluster + surprise edges (alta similarity, niente `[[wikilink]]`) + auto-mapping wiki→code per token reduction agent. `graph.html` genera visualizer Cytoscape standalone con sidebar search. Re-embed automatico: inline nei `wiki.upsert_*` + PostToolUse hook su Write/Edit + SessionEnd consistency check.
 
 ## Install
 
@@ -80,9 +81,9 @@ Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Res
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
 
-## MCP tools (74 totali via `mcp_memory_server`)
+## MCP tools (78 totali via `mcp_memory_server`)
 
-Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (14 gruppi).
+Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 
 ### Gruppo `wiki` (18 tool)
 `wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
@@ -90,6 +91,12 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (14 gruppi).
 ### Gruppo `skills` (9 tool) — v0.8.0
 **Read-side (Level 0/1/2)**: `skill.list`, `skill.load`, `skill.read_file`
 **Write-side (agent-managed)**: `skill.save`, `skill.patch` (find/replace mirato), `skill.edit`, `skill.delete`, `skill.write_file`, `skill.remove_file`
+
+### Gruppo `graph` (4 tool) — v0.9.0
+**Embedding pipeline**: `wiki.embed` (incremental, dirty-check, multi-trigger inline+hook+session-end).
+**Query cross-kind**: `graph.semantic_neighbors` (k-NN nello spazio condiviso wiki+code, threshold + filter per kind).
+**Report agent-friendly**: `graph.report` (scrive `GRAPH_REPORT.md` con god nodes + cluster + surprise edges + wiki↔code anchors + orphans).
+**Visualizer standalone**: `graph.html` (Cytoscape single-file con sidebar search + filtri + dettagli on-click, apri nel browser).
 
 ### Gruppo `roadmap` (6 tool)
 `roadmap.list`, `roadmap.add`, `roadmap.update`, `roadmap.complete`, `roadmap.block`, `roadmap.archive`

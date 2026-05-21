@@ -88,7 +88,24 @@ def _init_schema(db: sqlite3.Connection, dim: int) -> None:
         );
     """)
     set_meta(db, "embed_dim", str(dim))
+    _migrate_kind_column(db)
     db.commit()
+
+
+def _migrate_kind_column(db: sqlite3.Connection) -> None:
+    """Migration idempotente: aggiunge `kind` discriminator a `chunks`.
+
+    'code' (default, backwards-compat) | 'wiki' (entity/concept/source/analysis/session).
+    Code-index esistenti vengono marchiati 'code' automaticamente via DEFAULT.
+    """
+    cols = {row["name"] for row in db.execute("PRAGMA table_info(chunks)").fetchall()}
+    if "kind" in cols:
+        return
+    db.executescript("""
+        ALTER TABLE chunks ADD COLUMN kind TEXT NOT NULL DEFAULT 'code';
+        CREATE INDEX IF NOT EXISTS idx_chunks_kind ON chunks(kind);
+        CREATE INDEX IF NOT EXISTS idx_chunks_kind_path ON chunks(kind, file_path);
+    """)
 
 
 def get_meta(db: sqlite3.Connection, key: str) -> Optional[str]:
@@ -122,8 +139,12 @@ def upsert_chunk(
     last_modified: str,
     content_sha: str,
     embedding: list[float],
+    kind: str = "code",
 ) -> int:
-    """Insert o update chunk + vec. Restituisce chunk_id."""
+    """Insert o update chunk + vec. Restituisce chunk_id.
+
+    `kind`: 'code' (default, backwards-compat) | 'wiki'. Vedi anche `upsert_wiki_page`.
+    """
     # Cerca esistente
     row = db.execute(
         "SELECT id, content_sha FROM chunks WHERE file_path = ? AND line_start = ? AND line_end = ?",
@@ -136,15 +157,15 @@ def upsert_chunk(
             return chunk_id  # No change
         # Update content + re-embed
         db.execute(
-            "UPDATE chunks SET func_name=?, content=?, lang=?, last_modified=?, content_sha=? WHERE id=?",
-            (func_name, content, lang, last_modified, content_sha, chunk_id),
+            "UPDATE chunks SET func_name=?, content=?, lang=?, last_modified=?, content_sha=?, kind=? WHERE id=?",
+            (func_name, content, lang, last_modified, content_sha, kind, chunk_id),
         )
         db.execute("DELETE FROM chunk_vec WHERE rowid = ?", (chunk_id,))
     else:
         cur = db.execute(
-            "INSERT INTO chunks (file_path, func_name, line_start, line_end, content, lang, last_modified, content_sha) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (file_path, func_name, line_start, line_end, content, lang, last_modified, content_sha),
+            "INSERT INTO chunks (file_path, func_name, line_start, line_end, content, lang, last_modified, content_sha, kind) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (file_path, func_name, line_start, line_end, content, lang, last_modified, content_sha, kind),
         )
         chunk_id = cur.lastrowid
 
@@ -155,10 +176,50 @@ def upsert_chunk(
     return chunk_id
 
 
-def delete_chunks_for_file(db: sqlite3.Connection, file_path: str) -> int:
-    """Rimuovi tutti i chunks per un file (es. file cancellato o re-indexato).
+def upsert_wiki_page(
+    db: sqlite3.Connection,
+    slug: str,
+    file_path: str,
+    content: str,
+    content_sha: str,
+    last_modified: str,
+    embedding: list[float],
+    page_type: Optional[str] = None,
+) -> int:
+    """Wrapper di upsert_chunk per pagine wiki (one-shot, no line range).
+
+    `func_name` archivia lo slug, `lang` archivia il page_type (entity/concept/...).
+    `line_start=line_end=0` (necessario per UNIQUE constraint).
+    """
+    return upsert_chunk(
+        db=db,
+        file_path=file_path,
+        func_name=slug,
+        line_start=0,
+        line_end=0,
+        content=content,
+        lang=page_type or "markdown",
+        last_modified=last_modified,
+        content_sha=content_sha,
+        embedding=embedding,
+        kind="wiki",
+    )
+
+
+def delete_chunks_for_file(
+    db: sqlite3.Connection,
+    file_path: str,
+    kind: Optional[str] = None,
+) -> int:
+    """Rimuovi tutti i chunks per un file. Se `kind` passato, filtra.
     Restituisce conta righe rimosse."""
-    rows = db.execute("SELECT id FROM chunks WHERE file_path = ?", (file_path,)).fetchall()
+    if kind:
+        rows = db.execute(
+            "SELECT id FROM chunks WHERE file_path = ? AND kind = ?",
+            (file_path, kind),
+        ).fetchall()
+    else:
+        rows = db.execute("SELECT id FROM chunks WHERE file_path = ?", (file_path,)).fetchall()
     ids = [r[0] for r in rows]
     if not ids:
         return 0
@@ -167,21 +228,33 @@ def delete_chunks_for_file(db: sqlite3.Connection, file_path: str) -> int:
     return len(ids)
 
 
+def list_wiki_pages(db: sqlite3.Connection) -> list[dict]:
+    """Elenca tutte le pagine wiki indexate (slug + path + hash) per consistency check."""
+    rows = db.execute(
+        "SELECT id, func_name AS slug, file_path, content_sha, lang AS page_type, last_modified "
+        "FROM chunks WHERE kind = 'wiki' ORDER BY func_name"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def vector_search(
     db: sqlite3.Connection,
     query_vec: list[float],
     limit: int = 10,
     lang_filter: Optional[str] = None,
+    kind_filter: Optional[str] = None,
+    exclude_id: Optional[int] = None,
 ) -> list[dict]:
     """Top-k vector search per cosine distance. Joina con chunks per metadata.
 
     sqlite-vec knn richiede `k = ?` predicate (più efficiente di LIMIT plain).
-    Se lang_filter è attivo, sovra-recuperiamo k*3 e filtriamo in Python.
+    Filtri lang/kind/exclude_id applicati in Python su over-fetch (3×).
     """
-    k = limit * 3 if lang_filter else limit
+    needs_post_filter = bool(lang_filter or kind_filter or exclude_id is not None)
+    k = limit * 3 if needs_post_filter else limit
     sql = """
         SELECT c.id, c.file_path, c.func_name, c.line_start, c.line_end,
-               c.content, c.lang, c.last_modified, v.distance
+               c.content, c.lang, c.kind, c.last_modified, v.distance
         FROM chunk_vec v
         JOIN chunks c ON c.id = v.rowid
         WHERE v.embedding MATCH ? AND k = ?
@@ -189,11 +262,58 @@ def vector_search(
     """
     params: list = [_serialize_vec(query_vec), k]
     rows = db.execute(sql, params).fetchall()
-    if lang_filter:
-        rows = [r for r in rows if r["lang"] == lang_filter][:limit]
+    if needs_post_filter:
+        out = []
+        for r in rows:
+            if lang_filter and r["lang"] != lang_filter:
+                continue
+            if kind_filter and r["kind"] != kind_filter:
+                continue
+            if exclude_id is not None and r["id"] == exclude_id:
+                continue
+            out.append(r)
+            if len(out) >= limit:
+                break
+        rows = out
     else:
         rows = rows[:limit]
     return [dict(row) for row in rows]
+
+
+def get_embedding_by_source(
+    db: sqlite3.Connection,
+    source: str,
+    kind: Optional[str] = None,
+) -> Optional[dict]:
+    """Trova il primo chunk per source (file_path o slug-as-file_path) + kind.
+
+    Ritorna dict con id + metadata (no embedding raw, serve solo l'id per query knn).
+    """
+    if kind:
+        row = db.execute(
+            "SELECT id, file_path, func_name, line_start, line_end, lang, kind FROM chunks "
+            "WHERE (file_path = ? OR func_name = ?) AND kind = ? LIMIT 1",
+            (source, source, kind),
+        ).fetchone()
+    else:
+        row = db.execute(
+            "SELECT id, file_path, func_name, line_start, line_end, lang, kind FROM chunks "
+            "WHERE file_path = ? OR func_name = ? LIMIT 1",
+            (source, source),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def get_embedding_vector(db: sqlite3.Connection, chunk_id: int) -> Optional[list[float]]:
+    """Ritorna l'embedding raw per un chunk_id (per usarlo come query knn altrove)."""
+    row = db.execute(
+        "SELECT embedding FROM chunk_vec WHERE rowid = ?", (chunk_id,)
+    ).fetchone()
+    if not row:
+        return None
+    import struct
+    blob = row[0]
+    return list(struct.unpack(f"{len(blob) // 4}f", blob))
 
 
 def stats(db: sqlite3.Connection) -> dict:
@@ -203,10 +323,15 @@ def stats(db: sqlite3.Connection) -> dict:
         row[0]: row[1]
         for row in db.execute("SELECT lang, COUNT(*) FROM chunks GROUP BY lang ORDER BY 2 DESC").fetchall()
     }
+    by_kind = {
+        row[0]: row[1]
+        for row in db.execute("SELECT kind, COUNT(*) FROM chunks GROUP BY kind ORDER BY 2 DESC").fetchall()
+    }
     last_modified = db.execute("SELECT MAX(last_modified) FROM chunks").fetchone()[0]
     return {
         "total_chunks": total,
         "by_lang": by_lang,
+        "by_kind": by_kind,
         "last_modified": last_modified,
         "embed_dim": get_meta(db, "embed_dim"),
         "embed_provider": get_meta(db, "embed_provider"),
