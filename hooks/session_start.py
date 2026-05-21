@@ -97,6 +97,53 @@ def _load_roadmap_focus(wiki_root: Path) -> list[str]:
     return lines
 
 
+def _print_skills_catalog(root: Path, kind: str) -> None:
+    """Stampa Level 0 catalog skill (project + user-global) per injection nel context.
+
+    Hermes-aligned: la lista è ~5-15 righe, body completo via tool skill.load on-demand.
+    """
+    try:
+        scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+        import skill_parser  # type: ignore
+    except Exception:
+        return
+
+    sources: list[tuple[str, Path]] = []
+    if kind == "project":
+        sources.append(("project", root / ".anjawiki" / "skills"))
+    elif kind == "hub":
+        sources.append(("hub", root / "skills"))
+    sources.append(("user-global", Path.home() / ".anja" / "skills"))
+
+    seen: dict[str, tuple[str, dict]] = {}
+    for label, src in sources:
+        if not src.is_dir():
+            continue
+        for sub in sorted(src.iterdir()):
+            if not sub.is_dir() or sub.name.startswith("."):
+                continue
+            md = sub / "SKILL.md"
+            if not md.is_file():
+                continue
+            parsed = skill_parser.parse_skill_md(md)
+            name = parsed.get("name")
+            if not name or name in seen:
+                continue
+            seen[name] = (label, parsed)
+
+    if not seen:
+        return
+    print("  Skill anja disponibili (use `skill.load <name>` per il body):")
+    for name in sorted(seen):
+        label, parsed = seen[name]
+        desc = (parsed.get("description") or "")[:80]
+        cat = parsed.get("category") or ""
+        cat_part = f" [{cat}]" if cat else ""
+        print(f"    - [{label}]{cat_part} {name} — {desc}")
+
+
 def _suggest_anja_init(cwd: Path) -> None:
     """Print onboarding nudge se cwd è un progetto plausibile (git repo o code presence)
     senza .anjawiki/. Idempotente per cwd: marker in ~/.anja-nudged/.
@@ -152,6 +199,9 @@ def main() -> None:
         focus_lines = _load_roadmap_focus(wiki_root)
         for line in focus_lines:
             print(line)
+
+    # Hermes-aligned: Level 0 catalog skill anja (project + user-global)
+    _print_skills_catalog(root, kind)
 
 
 if __name__ == "__main__":
