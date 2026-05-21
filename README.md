@@ -2,15 +2,16 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.7.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.8.0 — usable in production. Estratto da AnjaHub monorepo. License MIT.
 
-## Cosa fa, in 5 punti
+## Cosa fa, in 6 punti
 
 1. **Wiki strutturato per progetto** in `.anjawiki/wiki/` (entities, concepts, sources, analysis, sessions) mantenuto dall'agent via tool MCP CRUD + lint + rename + backlinks.
 2. **Memoria identitaria** in 4 layer: wiki semantico + user profile + soul agent + sessions journal.
 3. **Ricerca semantica del codice** (`code.search`): hybrid 3-livelli (ripgrep → LLM rerank → vector embedding sqlite-vec). Provider pluggable (OpenRouter default, Voyage AI, OpenAI, local sentence-transformers). Description con trigger prescrittivi USE/SKIP così l'agent sceglie autonomamente vs `Grep` in base alla natura della query (semantica/concettuale → code.search, nome esatto → Grep).
 4. **Roadmap task come 4° file speciale**: `roadmap.md` con priority/owner/est, 6 tool MCP, slash command `/anja-task`, focus top-5 P0/P1 al SessionStart per continuity multi-agent.
 5. **Auto-summary di sessione** in background allo SessionEnd (subprocess detached, non blocca `/exit`).
+6. **Skill management 3-livelli** (v0.8.0): SKILL.md con frontmatter strutturato in `.anjawiki/skills/<slug>/`, discovery multi-source (project + user-global + plugin), progressive disclosure (`skill.list` → `skill.load` → `skill.read_file`), e write-side agent-managed (`skill.save / patch / edit / delete / write_file / remove_file`) per memoria procedurale persistente. Catalog Level 0 auto-iniettato al SessionStart.
 
 ## Install
 
@@ -79,12 +80,16 @@ Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Res
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
 
-## MCP tools (30 totali via `mcp_memory_server`)
+## MCP tools (74 totali via `mcp_memory_server`)
 
-Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS`.
+Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (14 gruppi).
 
-### Gruppo `wiki` (16 tool)
+### Gruppo `wiki` (18 tool)
 `wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
+
+### Gruppo `skills` (9 tool) — v0.8.0
+**Read-side (Level 0/1/2)**: `skill.list`, `skill.load`, `skill.read_file`
+**Write-side (agent-managed)**: `skill.save`, `skill.patch` (find/replace mirato), `skill.edit`, `skill.delete`, `skill.write_file`, `skill.remove_file`
 
 ### Gruppo `roadmap` (6 tool)
 `roadmap.list`, `roadmap.add`, `roadmap.update`, `roadmap.complete`, `roadmap.block`, `roadmap.archive`
@@ -98,8 +103,8 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS`.
 ### Gruppo `sessions` (3 tool)
 `sessions.list`, `sessions.read`, `sessions.summarize` (claude CLI haiku subprocess)
 
-### Gruppo `soul` / `user` / `skills`
-`soul.show`, `soul.update`, `user.read`, `user.update`, `skill.list`, `skill.load`
+### Altri gruppi
+`soul` (2), `user` (2), `agents` (2), `tasks` (3), `workspace` (5), `kanban` (8), `goals` (7), `pp` (3)
 
 ## Architettura
 
