@@ -2,6 +2,19 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.12.0 — 2026-05-23
+
+**Refocus**: research skills migrate al plugin anja-hub (Personal AI Hub workflows). anjadev resta plugin puro "dev + memory + code search" per qualsiasi progetto.
+
+### Removed (moved to anja-hub plugin)
+
+- `skills/research-duckduckgo/` → ora in `anja-hub/skills/`
+- `skills/research-serpapi/` → ora in `anja-hub/skills/`
+
+**Razionale**: web research è un workflow user-facing del Personal AI Hub, non una capability "dev tooling" universale. Lo split coerente con la filosofia post-v0.10.0 (anjadev = strumenti dev/memory/code, anja-hub = Personal AI Hub UX).
+
+Skills che restano in anjadev (wiki workflows generici): `ingest`, `init-analyze`, `lint`, `query`, `refresh`.
+
 ## v0.11.0 — 2026-05-23
 
 **Feature**: Web research skills (Hermes-style — lazy load on-demand via `skill.load`, no MCP server resident, no token overhead).
