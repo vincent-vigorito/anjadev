@@ -2,6 +2,33 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.13.0 — 2026-05-23
+
+**Feature**: F-SkillEvolution-B — Skill auto-improvement workflow (pattern Hermes "skills learn from usage").
+
+### Added
+
+- **PostToolUse hook** `hooks/skill_evolution.py`: traccia invocazioni di skill scripts via Bash. Append a `~/.anja/skill_evolution_inbox.jsonl` con dedup hash (60s window). Skip silenzioso se `ANJA_SKILL_EVOLUTION=0`.
+
+- **Skill `evolve-skills`** + `scripts/evolve.py`: workflow review. Legge inbox, invoca Claude haiku per analizzare se ogni invocazione è memorabile (edge case, pattern, esempio utile) → propone patch SKILL.md → output in `~/.anja/skill_evolution_proposals.jsonl`. Marker incrementale per non re-processare.
+
+- **Slash command `/anja-evolve-skills`**: triggera evolve workflow, mostra proposte memorable con diff, chiede conferma utente per ogni, applica via `skill.patch`. Modalità `--apply-all` per batch trusted.
+
+- **2 nuovi tool MCP** in `mcp_memory_server`:
+  - `skill.history(name)` — lista backup disponibili in `<skill>/.history/`
+  - `skill.rollback(name, timestamp?)` — ripristina SKILL.md da backup (default: ultimo)
+
+### Changed
+
+- `skill.patch` ora crea automaticamente backup `<skill>/.history/<ts>.SKILL.md` prima della modifica (microsecond timestamp per evitare collisioni). Max 20 backup per skill (LRU). Backup recoverable via `skill.rollback`.
+
+### Safety
+
+- No auto-apply: ogni patch evolution richiede conferma utente esplicita
+- Rollback reversibile: anche il rollback crea backup dello stato corrente
+- Marker incrementale evita re-review delle stesse entry
+- Tool group `skills` esteso con `skill.history` + `skill.rollback`
+
 ## v0.12.0 — 2026-05-23
 
 **Refocus**: research skills migrate al plugin anja-hub (Personal AI Hub workflows). anjadev resta plugin puro "dev + memory + code search" per qualsiasi progetto.

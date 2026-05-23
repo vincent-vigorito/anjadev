@@ -38,6 +38,7 @@ import re
 import secrets
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
@@ -1792,8 +1793,30 @@ def tool_skill_save(args: dict) -> dict:
     }
 
 
+def _backup_skill_md(skill_dir: Path) -> Optional[Path]:
+    """Salva copia di SKILL.md in <skill>/.history/<ts>.SKILL.md prima di una modifica.
+    Ritorna path del backup o None se SKILL.md non esiste."""
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.is_file():
+        return None
+    history_dir = skill_dir / ".history"
+    history_dir.mkdir(exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+    bak = history_dir / f"{ts}.SKILL.md"
+    bak.write_text(skill_md.read_text(encoding="utf-8"), encoding="utf-8")
+    # Cap history: keep last 20
+    backups = sorted(history_dir.glob("*.SKILL.md"))
+    for old in backups[:-20]:
+        try:
+            old.unlink()
+        except Exception:
+            pass
+    return bak
+
+
 def tool_skill_patch(args: dict) -> dict:
     """Patch mirato del SKILL.md via find/replace (Hermes-style, preferito a edit).
+    Backup automatico in <skill>/.history/<ts>.SKILL.md prima della modifica.
 
     args:
       name: str
@@ -1820,8 +1843,79 @@ def tool_skill_patch(args: dict) -> dict:
         return {"error": "old_string not found in SKILL.md"}
     if text.count(old) > 1:
         return {"error": "old_string is not unique — include more surrounding context"}
+    bak = _backup_skill_md(skill_dir)
     skill_md.write_text(text.replace(old, new, 1), encoding="utf-8")
-    return {"status": "patched", "scope": scope_label, "name": name}
+    return {"status": "patched", "scope": scope_label, "name": name,
+            "backup": str(bak) if bak else None}
+
+
+def tool_skill_history(args: dict) -> dict:
+    """Lista i backup disponibili di una skill (in .history/).
+
+    args:
+      name: str — skill name
+    """
+    name = (args.get("name") or "").strip()
+    if not name:
+        return {"error": "name required"}
+    found = _find_skill_dir_writable(name)
+    if not found:
+        return {"error": f"skill '{name}' not found in a writable scope"}
+    _, skill_dir = found
+    history_dir = skill_dir / ".history"
+    if not history_dir.is_dir():
+        return {"name": name, "backups": []}
+    backups = []
+    for f in sorted(history_dir.glob("*.SKILL.md")):
+        try:
+            backups.append({
+                "timestamp": f.stem.replace(".SKILL", ""),
+                "path": str(f),
+                "size_bytes": f.stat().st_size,
+            })
+        except Exception:
+            continue
+    return {"name": name, "backups": backups, "total": len(backups)}
+
+
+def tool_skill_rollback(args: dict) -> dict:
+    """Ripristina SKILL.md da un backup in .history/.
+
+    args:
+      name: str — skill name
+      timestamp: str — opzionale, formato YYYYMMDD-HHMMSS. Se omesso usa l'ultimo.
+    """
+    name = (args.get("name") or "").strip()
+    ts_filter = (args.get("timestamp") or "").strip() or None
+    if not name:
+        return {"error": "name required"}
+    found = _find_skill_dir_writable(name)
+    if not found:
+        return {"error": f"skill '{name}' not found in a writable scope"}
+    _, skill_dir = found
+    history_dir = skill_dir / ".history"
+    if not history_dir.is_dir():
+        return {"error": "no .history/ directory — nothing to rollback"}
+    backups = sorted(history_dir.glob("*.SKILL.md"))
+    if not backups:
+        return {"error": "no backups available"}
+    target = None
+    if ts_filter:
+        for b in backups:
+            if b.stem.startswith(ts_filter):
+                target = b
+                break
+        if target is None:
+            return {"error": f"backup with timestamp '{ts_filter}' not found"}
+    else:
+        target = backups[-1]
+    # Backup state corrente PRIMA di rollback (così è anche reversibile)
+    _backup_skill_md(skill_dir)
+    skill_md = skill_dir / "SKILL.md"
+    skill_md.write_text(target.read_text(encoding="utf-8"), encoding="utf-8")
+    return {"status": "rolled_back", "name": name,
+            "restored_from": str(target),
+            "current_snapshot_saved": True}
 
 
 def tool_skill_edit(args: dict) -> dict:
@@ -4325,6 +4419,7 @@ TOOL_GROUPS = {
         "skill.list", "skill.load", "skill.read_file",
         "skill.save", "skill.patch", "skill.edit", "skill.delete",
         "skill.write_file", "skill.remove_file",
+        "skill.history", "skill.rollback",
     ],
     # Fase P-Plugin — Wiki tools (read + 4 upsert + 2 special-file + log + 4 maintenance)
     "wiki": [
@@ -4942,7 +5037,7 @@ TOOLS = [
     },
     {
         "name": "skill.patch",
-        "description": "Patch mirato del SKILL.md via find/replace (preferito a edit, più sicuro). old_string deve essere unico nel file.",
+        "description": "Patch mirato del SKILL.md via find/replace (preferito a edit, più sicuro). old_string deve essere unico nel file. Backup automatico in <skill>/.history/<ts>.SKILL.md prima della modifica (recoverable via skill.rollback).",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -4951,6 +5046,29 @@ TOOLS = [
                 "new_string": {"type": "string"},
             },
             "required": ["name", "old_string", "new_string"],
+        },
+    },
+    {
+        "name": "skill.history",
+        "description": "Lista backup disponibili di una skill (file in <skill>/.history/). Backup creati automaticamente prima di ogni skill.patch/skill.edit/skill.save. Max 20 backup tenuti per skill (LRU).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "skill.rollback",
+        "description": "Ripristina SKILL.md da un backup in .history/. Default: ultimo backup. Opzionale: timestamp specifico (formato YYYYMMDD-HHMMSS). Lo stato corrente viene a sua volta backuppato prima del rollback (reversibile).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "timestamp": {"type": "string", "description": "Opzionale, formato YYYYMMDD-HHMMSS. Vedi output skill.history per timestamps disponibili."},
+            },
+            "required": ["name"],
         },
     },
     {
@@ -5709,6 +5827,8 @@ TOOL_HANDLERS = {
     "skill.read_file": tool_skill_read_file,
     "skill.save": tool_skill_save,
     "skill.patch": tool_skill_patch,
+    "skill.history": tool_skill_history,
+    "skill.rollback": tool_skill_rollback,
     "skill.edit": tool_skill_edit,
     "skill.delete": tool_skill_delete,
     "skill.write_file": tool_skill_write_file,
