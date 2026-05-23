@@ -2,6 +2,32 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.11.0 — 2026-05-23
+
+**Feature**: Web research skills (Hermes-style — lazy load on-demand via `skill.load`, no MCP server resident, no token overhead).
+
+### Added
+
+- **`skills/research-duckduckgo/`** — Ricerca web tramite DuckDuckGo HTML scrape. Zero setup, no API key, privacy-friendly. Default per uso quotidiano. Output JSON `{query, count, results: [{title, url, snippet}]}`. Stdlib only (urllib + regex parser). Smoke verde su query reali.
+
+- **`skills/research-serpapi/`** — Ricerca Google via SerpAPI ufficiale. Richiede `SERPAPI_KEY` env (free tier 100 req/mese). Drop-in compatible con DDG (stesso schema JSON). Errore esplicito se key mancante con istruzioni setup.
+
+### Pattern
+
+Le skill sono caricate on-demand via `skill.load(name)` quando l'agent rileva intent di ricerca web ("cerca info su X", "trova news", "google Y", ecc.). Output strutturato pronto da sintetizzare con citazioni `[title](url)` markdown.
+
+Vantaggi del pattern skill vs MCP server dedicato:
+- Token cost: ~500 token solo quando caricata, vs schema tool sempre nel context
+- Niente subprocess permanente in memoria
+- Distribuibile come markdown file in git, no setup utente
+- Provider swap-able (DDG/SerpAPI/futuri arxiv/github) senza rebuild
+
+### Integration (in AnjaHub plugin privato)
+
+- Settings → Research tab: stato attivo skill, test button, preferred provider (ddg/serpapi/fallback)
+- Anja hub system prompt: routing rules "cerca/trova/google" → invoca skill.load
+- Endpoint `/api/settings/research` GET/POST + `/api/settings/research/test` per live verification
+
 ## v0.10.0 — 2026-05-23
 
 **Breaking change**: focus del plugin ristretto a "advanced knowledge management + semantic code search per progetti dev/research". Tool MCP AnjaHub-specific e content-generation rimossi.
