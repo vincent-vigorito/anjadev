@@ -1,7 +1,7 @@
 {
   "name": "anja",
-  "version": "0.9.1",
-  "description": "Wiki strutturato + memoria identitaria + ricerca semantica del codice per progetti dev. 9 slash command + 81 MCP tool su 15 gruppi (wiki CRUD/maintenance + roadmap + code search hybrid 3-livelli ripgrep/LLM-rerank/vector sqlite-vec + sessions + memory + skill management 3-livelli + knowledge graph wiki↔code con embedding condiviso + semantic search via query libera cross-kind + report markdown + visualizer HTML standalone Obsidian-style). Provider embedding pluggable (OpenRouter/Voyage/OpenAI/local). Auto-load .anjawiki/.secrets.env. Auto-summary bg + roadmap focus SessionStart + skill catalog injection + wiki re-embed trigger inline/PostToolUse/SessionEnd. Schema .anjawiki/ wire format pubblico (SCHEMA.md).",
+  "version": "0.10.0",
+  "description": "Wiki strutturato + memoria identitaria + ricerca semantica del codice per progetti dev/research. 9 slash command + MCP server `mcp_memory_server` (wiki CRUD/maintenance + roadmap + sessions + memory + skill management 3-livelli + knowledge graph wiki↔code con embedding condiviso + semantic search via query libera cross-kind + report markdown + visualizer HTML standalone Obsidian-style) + MCP server `mcp_code_server` (code search hybrid 3-livelli ripgrep/LLM-rerank/vector sqlite-vec). Provider embedding pluggable (OpenRouter/Voyage/OpenAI/local). Auto-load .anjawiki/.secrets.env. Auto-summary bg + roadmap focus SessionStart + skill catalog injection + wiki re-embed trigger inline/PostToolUse/SessionEnd. Schema .anjawiki/ wire format pubblico (SCHEMA.md).",
   "keywords": [
     "wiki",
     "knowledge-base",
