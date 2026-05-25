@@ -9,12 +9,20 @@ Schema sessions: file-per-session in wiki/sessions/<date>/<id>.md, scritto a Ses
 con metadata reali estratti dal transcript JSONL.
 """
 
+import os
 import re
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 
 LOG_HEADER_RE = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (\w[\w-]*) \| (.+?)$", re.M)
+
+# Auto-summary sweep config
+_SUMMARY_MIN_USER_MSGS = int(os.environ.get("ANJA_SUMMARY_MIN_MSGS", "15"))
+_SUMMARY_MAX_AGE_H = 48      # solo session recenti (evita backlog infinito)
+_SUMMARY_MAX_SPAWN = 3       # cap spawn per SessionStart (no flood)
 
 
 def find_anja_root(start: Path):
@@ -174,12 +182,78 @@ def _suggest_anja_init(cwd: Path) -> None:
     print(f"[anja] (suggerimento mostrato 1 volta sola — marker in ~/.anja-nudged/)", file=sys.stderr)
 
 
+def _sessions_root_for(root: Path, kind: str) -> Path:
+    """Deriva la sessions dir dallo scope. Mirror della logica in session_end.py."""
+    if kind == "project":
+        return root / ".anjawiki" / "wiki" / "sessions"
+    return root / "sessions"  # hub + agent
+
+
+def _summary_is_placeholder(text: str) -> bool:
+    m = re.search(r"^## Summary\s*\n(.*?)(?=\n## |\Z)", text, re.M | re.DOTALL)
+    if not m:
+        return False  # niente sezione Summary → non è un nostro session file
+    body = m.group(1).strip()
+    return (not body) or body.startswith("<!--")
+
+
+def _sweep_pending_summaries(root: Path, kind: str) -> None:
+    """Recupera i summary mancanti: spawn bg summarize per session recenti, lunghe,
+    e ancora con placeholder. Robusto vs il detached da session_end (che CC killa a
+    /exit): qui l'ambiente è stabile (sessione vecchia già morta, nuova in boot).
+
+    Filtri: mtime < 48h, messages_user >= soglia (default 15), Summary placeholder.
+    Cap a 3 spawn per SessionStart. Opt-out via ANJA_AUTO_SUMMARY=0.
+    """
+    if os.environ.get("ANJA_AUTO_SUMMARY", "1") == "0":
+        return
+    script = Path(__file__).resolve().parent.parent / "scripts" / "summarize_session_bg.py"
+    if not script.is_file():
+        return
+    sessions_root = _sessions_root_for(root, kind)
+    if not sessions_root.is_dir():
+        return
+
+    cutoff = time.time() - _SUMMARY_MAX_AGE_H * 3600
+    candidates = []
+    for f in sessions_root.rglob("*.md"):
+        try:
+            if f.stat().st_mtime < cutoff:
+                continue
+            text = f.read_text(encoding="utf-8")
+        except Exception:
+            continue
+        if not _summary_is_placeholder(text):
+            continue
+        m = re.search(r"^messages_user:\s*(\d+)", text, re.M)
+        n_user = int(m.group(1)) if m else 0
+        if n_user < _SUMMARY_MIN_USER_MSGS:
+            continue
+        candidates.append((f.stat().st_mtime, f))
+
+    # Più recenti prima, cap a MAX_SPAWN
+    candidates.sort(reverse=True)
+    for _, f in candidates[:_SUMMARY_MAX_SPAWN]:
+        try:
+            subprocess.Popen(
+                [sys.executable, str(script), "--session-file", str(f)],
+                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, start_new_session=True,
+            )
+        except Exception:
+            pass
+
+
 def main() -> None:
     found = find_anja_root(Path.cwd())
     if found is None:
         _suggest_anja_init(Path.cwd())
         sys.exit(0)
     root, kind, log_file = found
+
+    # Safety net: recupera summary mancanti delle sessioni recenti lunghe.
+    # Spostato qui da session_end perché il detached spawn a /exit veniva killato da CC.
+    _sweep_pending_summaries(root, kind)
 
     last_entries = []
     if log_file.is_file():
@@ -200,7 +274,7 @@ def main() -> None:
         for line in focus_lines:
             print(line)
 
-    # Hermes-aligned: Level 0 catalog skill anja (project + user-global)
+    # Level 0 catalog skill anja (project + user-global)
     _print_skills_catalog(root, kind)
 
 
