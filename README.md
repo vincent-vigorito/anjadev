@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.9.1 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.13.1 — usable in production. Estratto da AnjaHub monorepo. License MIT.
 
 ## Cosa fa, in 7 punti
 
