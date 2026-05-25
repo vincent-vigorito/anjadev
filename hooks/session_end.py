@@ -19,6 +19,7 @@ Si fa:
 
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -193,8 +194,43 @@ def _duration_human(start_iso: str, end_iso: str) -> str:
         return "?"
 
 
+def _find_existing_for_cc_session(date_dir: Path, cc_session_id: str) -> Path | None:
+    """Cerca un session file già scritto per questa cc_session_id nella date_dir.
+
+    Serve per UPSERT: compact/resume/exit/Ctrl+C emettono SessionEnd multipli per
+    la STESSA cc_session_id. Invece di creare N file (noise) o skippare 'other'
+    (perde l'uscita Ctrl+C), aggiorniamo sempre lo stesso file.
+    """
+    if not cc_session_id or not date_dir.is_dir():
+        return None
+    needle = f"cc_session_id: {cc_session_id}"
+    for f in date_dir.glob("*.md"):
+        try:
+            if needle in f.read_text(encoding="utf-8"):
+                return f
+        except Exception:
+            continue
+    return None
+
+
+def _extract_populated_summary(path: Path) -> str | None:
+    """Ritorna il body della sezione ## Summary se popolato (non placeholder), else None.
+    Serve a NON perdere un summary già generato quando facciamo upsert del file."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception:
+        return None
+    m = re.search(r"^## Summary\s*\n(.*?)(?=\n## |\Z)", text, re.M | re.DOTALL)
+    if not m:
+        return None
+    body = m.group(1).strip()
+    if not body or body.startswith("<!--"):
+        return None
+    return body
+
+
 def write_session_file(sessions_root: Path, kind: str, session_meta: dict, transcript_info: dict) -> Path:
-    """Crea file-per-session arricchito con metadata + transcript snippets.
+    """Crea (o aggiorna, upsert per cc_session_id) il file-per-session.
 
     sessions_root: <project>/.anjawiki/wiki/sessions/ (project) o <hub>/sessions/ (hub).
     kind: 'project' | 'hub' (scrive nel frontmatter scope).
@@ -226,10 +262,17 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     assistant_count = transcript_info.get("assistant_messages_count", 0)
     tools_used = transcript_info.get("tools_used", Counter())
 
-    # Layout file-per-session
+    # Layout file-per-session — UPSERT per cc_session_id
     date_dir = sessions_root / today
     date_dir.mkdir(parents=True, exist_ok=True)
-    session_file = date_dir / f"{anja_id}.md"
+    existing = _find_existing_for_cc_session(date_dir, cc_session_id)
+    if existing is not None:
+        session_file = existing
+        anja_id = existing.stem           # riusa l'id originale (link/citazioni stabili)
+        preserved_summary = _extract_populated_summary(existing)  # non perdere il summary già generato
+    else:
+        session_file = date_dir / f"{anja_id}.md"
+        preserved_summary = None
 
     # Build markdown — frontmatter conforming a schema wiki canonico
     # (title + type + created + updated obbligatori, vedi .anjawiki/CLAUDE.md)
@@ -259,7 +302,10 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     lines.append("")
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"<!-- Vuoto by design. Popola on-demand via MCP tool: sessions.summarize(session_id=\"{anja_id}\"). -->")
+    if preserved_summary:
+        lines.append(preserved_summary)
+    else:
+        lines.append(f"<!-- Vuoto by design. Popola on-demand via MCP tool: sessions.summarize(session_id=\"{anja_id}\"). -->")
     lines.append("")
     lines.append("## Stats")
     lines.append("")
@@ -374,14 +420,13 @@ def spawn_bg_wiki_embed_check(project_root: Path) -> None:
 def main() -> None:
     session_meta = parse_stdin()
 
-    # CC emette SessionEnd con reason=other anche per eventi interni (context compact,
-    # resume, stream blip). Una singola chat utente può generare N file di sessione
-    # consecutivi, uno per ogni boundary di compact. Scrivere solo su terminazioni
-    # esplicite dell'utente: clear, logout, prompt_input_exit. "other" → skip.
+    # CC emette SessionEnd con reason vari: clear, logout, prompt_input_exit, other.
+    # `other` copre sia eventi interni (compact/resume/stream blip) SIA alcune uscite
+    # reali (es. Ctrl+C/Ctrl+D in certe versioni CC). Non skippiamo più ciecamente
+    # `other` (perdeva l'uscita Ctrl+C): l'UPSERT per cc_session_id in write_session_file
+    # garantisce 1 solo file per sessione (no noise da compact), sempre aggiornato
+    # all'ultimo boundary. Il summary già generato viene preservato attraverso gli upsert.
     reason = session_meta.get("reason", "")
-    if reason == "other":
-        print(f"[anja] SessionEnd reason=other (likely compact/resume), skip", file=sys.stderr)
-        sys.exit(0)
 
     found = find_anja_root(Path.cwd())
     if found is None:
