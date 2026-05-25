@@ -20,11 +20,40 @@ Niente output verso stdout/stderr quando lanciato in background. Logging in
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
+
+
+def _resolve_claude_bin(explicit: str | None = None) -> str | None:
+    """Risolve il path assoluto del binario `claude`.
+
+    Quando il summarizer è spawnato da un hook CC, il PATH ereditato è minimale
+    e NON include ~/.local/bin (dove vive `claude` tipicamente). Cercare il
+    comando nudo fallisce con FileNotFoundError → summary mai generato.
+    Risolviamo esplicitamente: env override → which → path noti per OS.
+    """
+    if explicit and explicit != "claude":
+        return explicit  # path esplicito passato dall'utente
+    # 1. shutil.which con PATH corrente (funziona se lanciato da shell completa)
+    found = shutil.which("claude")
+    if found:
+        return found
+    # 2. PATH allargato con le location note (hook env minimale)
+    candidates = [
+        Path.home() / ".local" / "bin" / "claude",
+        Path("/usr/local/bin/claude"),
+        Path("/opt/homebrew/bin/claude"),
+        Path.home() / ".claude" / "local" / "claude",
+        Path("/usr/bin/claude"),
+    ]
+    for c in candidates:
+        if c.is_file() and os.access(c, os.X_OK):
+            return str(c)
+    return None
 
 
 def _log(msg: str, log_path: Path | None = None) -> None:
@@ -43,6 +72,12 @@ def summarize(session_file: Path, model: str = "haiku", claude_bin: str = "claud
     if not session_file.is_file():
         _log(f"ERROR session not found: {session_file}", log_path)
         return 2
+
+    resolved_bin = _resolve_claude_bin(claude_bin)
+    if not resolved_bin:
+        _log(f"ERROR claude binary not found (PATH minimale? cercato ~/.local/bin, /usr/local/bin, /opt/homebrew/bin)", log_path)
+        return 3
+    claude_bin = resolved_bin
 
     content = session_file.read_text(encoding="utf-8")
     summary_re = re.compile(r"(^## Summary\s*\n)(.*?)(?=\n## |\Z)", re.M | re.DOTALL)
@@ -112,6 +147,7 @@ def main() -> None:
                 log_path = parent / ".bg-summarize.log"
                 break
 
+    _log(f"STARTED {session_file.name} (pid={os.getpid()})", log_path)
     try:
         rc = summarize(session_file, model=args.model, claude_bin=args.claude_bin, log_path=log_path)
         sys.exit(rc)

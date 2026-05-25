@@ -1,6 +1,6 @@
 {
   "name": "anjadev",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "owner": {
     "name": "Vincent Vigorito",
     "email": "vvigorito@vigesrl.it"
@@ -10,7 +10,7 @@
       "name": "anja",
       "source": "./",
       "description": "Claude Code plugin: wiki strutturato + memoria identitaria + ricerca semantica del codice per progetti dev. 81 MCP tool su 15 gruppi (wiki CRUD/maintenance + roadmap + code search hybrid 3-livelli + sessions + memory + skill management + knowledge graph wiki↔code con embedding condiviso + semantic search query libera cross-kind + report markdown + visualizer HTML standalone Obsidian-style). Provider embedding pluggable: OpenRouter, Voyage AI, OpenAI, local. Auto-load .anjawiki/.secrets.env per shell-less workflows. Auto-summary background + roadmap focus + skill catalog injection al SessionStart + wiki re-embed automatico inline/PostToolUse/SessionEnd. Schema .anjawiki/ wire format pubblico (vedi SCHEMA.md).",
-      "version": "0.13.1",
+      "version": "0.13.2",
       "keywords": ["wiki", "knowledge-base", "memory", "code-search", "semantic-search", "claude-code-plugin"]
     }
   ]
