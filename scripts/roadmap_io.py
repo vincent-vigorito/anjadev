@@ -32,6 +32,8 @@ Sezioni canoniche (ordine): Open, Done, Blocked. Cancelled vanno in Done sezione
 Stdlib pure, no deps esterne.
 """
 
+from __future__ import annotations
+
 import re
 from collections import OrderedDict
 from datetime import datetime, timedelta

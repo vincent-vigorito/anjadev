@@ -17,6 +17,8 @@ Si fa:
   5. Trigger cc_memory_to_soul → cc_memory_sync → compose_claude_md
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -420,12 +422,16 @@ def spawn_bg_wiki_embed_check(project_root: Path) -> None:
 def main() -> None:
     session_meta = parse_stdin()
 
-    # CC emette SessionEnd con reason vari: clear, logout, prompt_input_exit, other.
-    # `other` copre sia eventi interni (compact/resume/stream blip) SIA alcune uscite
-    # reali (es. Ctrl+C/Ctrl+D in certe versioni CC). Non skippiamo più ciecamente
-    # `other` (perdeva l'uscita Ctrl+C): l'UPSERT per cc_session_id in write_session_file
+    # CC emette SessionEnd con reason: clear, resume, logout, prompt_input_exit,
+    # bypass_permissions_disabled, other. NB: Ctrl+C (SIGINT) NON emette SessionEnd —
+    # termina il processo prima del cleanup hook. Le uscite catturabili sono quelle
+    # graceful: /exit, Ctrl+D (EOF), /clear, logout, compact.
+    # Non skippiamo nessun reason: l'UPSERT per cc_session_id in write_session_file
     # garantisce 1 solo file per sessione (no noise da compact), sempre aggiornato
     # all'ultimo boundary. Il summary già generato viene preservato attraverso gli upsert.
+    # IMPORTANTE: questo hook gira con `python3` (su macOS = /usr/bin/python3 = 3.9).
+    # `from __future__ import annotations` in testa è obbligatorio: senza, i type hints
+    # 3.10+ (`X | None`) crashano l'hook all'import su 3.9 → nessun file scritto.
     reason = session_meta.get("reason", "")
 
     found = find_anja_root(Path.cwd())

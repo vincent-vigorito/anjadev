@@ -17,6 +17,8 @@ Niente output verso stdout/stderr quando lanciato in background. Logging in
 `<wiki>/.bg-summarize.log` per debug post-mortem.
 """
 
+from __future__ import annotations
+
 import argparse
 import os
 import re

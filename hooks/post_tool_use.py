@@ -17,6 +17,8 @@ Skip silenzioso se ANJA_WIKI_EMBED=0 o se non c'è wiki anja.
 Fire-and-forget: avvia `wiki_embed.py --single <path>` detached.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import subprocess
