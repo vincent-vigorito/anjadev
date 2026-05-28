@@ -380,6 +380,12 @@ def spawn_bg_summarize(session_file: Path) -> None:
     script = here.parent.parent / "scripts" / "summarize_session_bg.py"
     if not script.is_file():
         return
+    # Disabilita auto-summary nella sub-sessione `claude -p` spawnata da
+    # summarize_session_bg: senza questo opt-out, ogni summary genera una
+    # nuova SessionEnd che riarma il loop → centinaia di session file fantasma.
+    child_env = os.environ.copy()
+    child_env["ANJA_AUTO_SUMMARY"] = "0"
+    child_env["ANJA_WIKI_EMBED"] = "0"
     try:
         subprocess.Popen(
             [sys.executable, str(script), "--session-file", str(session_file)],
@@ -387,6 +393,7 @@ def spawn_bg_summarize(session_file: Path) -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,   # detach: sopravvive alla morte del parent
+            env=child_env,
         )
     except Exception:
         pass

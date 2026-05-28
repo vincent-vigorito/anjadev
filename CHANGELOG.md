@@ -2,6 +2,12 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.13.5 — 2026-05-28
+
+**Fix critico**: `session_end.py` spawnava `summarize_session_bg.py` detached, che invocava `claude -p ...` headless. La sub-sessione `claude -p` però è essa stessa una sessione Claude Code: al termine scattava di nuovo `SessionEnd` hook → nuovo session file → nuovo summary in background → loop infinito (~1 sessione fantasma ogni 10s, dir `.anjawiki/wiki/sessions/<date>/` allagata).
+
+L'opt-out `ANJA_AUTO_SUMMARY=0` esisteva già (`session_end.py:377`) ma non veniva propagato al subprocess. Fix: `spawn_bg_summarize` ora passa `env=ANJA_AUTO_SUMMARY=0` + `ANJA_WIKI_EMBED=0` al child, così la sub-sessione `claude -p` non riarma il loop.
+
 ## v0.13.0 — 2026-05-23
 
 **Feature**: F-SkillEvolution-B — Skill auto-improvement workflow (pattern Hermes "skills learn from usage").
