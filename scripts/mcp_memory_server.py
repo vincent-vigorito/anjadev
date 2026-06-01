@@ -2195,6 +2195,161 @@ def tool_wiki_search(args: dict) -> dict:
     return {"results": matches[:limit], "total_matches": len(matches)}
 
 
+def _rrf_fuse(ranked_lists, k=60, weights=None):
+    """Reciprocal Rank Fusion. Ogni lista è una sequenza di chiavi ordinate per rank
+    (rank 1 = migliore). Fonde per POSIZIONE, non per score assoluto (BM25 e cosine
+    non sono comparabili): score(key) = Σ w / (k + rank). Ritorna {key: rrf_score}."""
+    if weights is None:
+        weights = [1.0] * len(ranked_lists)
+    scores = {}
+    for lst, w in zip(ranked_lists, weights):
+        for rank, key in enumerate(lst, start=1):
+            scores[key] = scores.get(key, 0.0) + w / (k + rank)
+    return scores
+
+
+def _rel_to_root(p):
+    try:
+        return str(Path(p).resolve().relative_to(ROOT.resolve()))
+    except (ValueError, OSError):
+        return str(p)
+
+
+def _wiki_vector_search(query, type_filter, limit, include_sessions):
+    """Canale vector del wiki: embedda la query e fa k-NN su kind='wiki'.
+    Ritorna (hits, note). note != None se il canale non è disponibile (no provider/index)."""
+    try:
+        import sys as _sys
+        here = Path(__file__).resolve().parent
+        if str(here) not in _sys.path:
+            _sys.path.insert(0, str(here))
+        import code_db
+        import embed_providers
+    except ImportError as e:
+        return [], f"module missing: {e}"
+
+    provider = embed_providers.get_provider()
+    if provider is None:
+        return [], "no embed provider (set ANJA_EMBED_PROVIDER + API key)"
+    anjawiki = ROOT / ".anjawiki"
+    if not (anjawiki / "code-index.db").exists():
+        return [], "vector index not built (run wiki.embed / code.reindex)"
+    try:
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+    except Exception as e:
+        return [], f"db open failed: {e}"
+    try:
+        qv = provider.embed([query])
+        if not qv:
+            return [], "empty query embedding"
+        hits = code_db.vector_search(db, qv[0], limit=limit, kind_filter="wiki")
+    except Exception as e:
+        return [], f"vector search failed: {e}"
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+    out = []
+    for h in hits:
+        page_type = h.get("lang") or "page"
+        if not include_sessions and page_type == "session":
+            continue
+        if type_filter != "all" and page_type != type_filter:
+            continue
+        slug_full = h.get("func_name") or ""
+        out.append({
+            "key": str(Path(h["file_path"]).resolve()),
+            "slug": slug_full.split(":")[-1],
+            "title": slug_full.split(":")[-1],
+            "type": page_type,
+            "path": _rel_to_root(h["file_path"]),
+            "preview": (h.get("content") or "")[:160].replace("\n", " ").strip(),
+        })
+    return out, None
+
+
+def tool_wiki_search_hybrid(args: dict) -> dict:
+    """🔀 Ricerca wiki IBRIDA (keyword + vector) fusa via Reciprocal Rank Fusion.
+
+    Usa SEMPRE entrambi i canali quando disponibili e li fonde per rango: robusta sia
+    su query esatte (nomi/comandi → keyword) sia concettuali (riformulazioni → vector).
+    Degrada a solo keyword se manca embed provider/index.
+
+    args: query (req), type ('all'|entity|concept|source|analysis|session), limit (10),
+    mode ('hybrid'|'keyword'|'vector', default 'hybrid'), k (60, costante RRF),
+    include_sessions (false), weight_keyword/weight_vector (1.0).
+    """
+    query = (args.get("query") or "").strip()
+    if not query:
+        return {"error": "query required"}
+    type_filter = (args.get("type") or "all").strip().lower()
+    limit = int(args.get("limit", 10))
+    mode = (args.get("mode") or "hybrid").strip().lower()
+    k = int(args.get("k", 60))
+    include_sessions = bool(args.get("include_sessions", False))
+    wk = float(args.get("weight_keyword", 1.0))
+    wv = float(args.get("weight_vector", 1.0))
+
+    pool = max(limit * 3, 20)
+    meta = {}
+    kw_rank = []
+    vec_rank = []
+    note = None
+
+    if mode in ("hybrid", "keyword"):
+        kw = tool_wiki_search({"query": query, "type": type_filter, "limit": pool})
+        for r in kw.get("results", []):
+            if not include_sessions and r.get("type") == "session":
+                continue
+            key = str((ROOT / r["path"]).resolve())
+            m = meta.setdefault(key, {"slug": r["slug"], "title": r["title"],
+                                      "type": r["type"], "path": r["path"],
+                                      "preview": r.get("preview", ""), "channels": []})
+            m["channels"].append("keyword")
+            kw_rank.append(key)
+
+    if mode in ("hybrid", "vector"):
+        hits, vnote = _wiki_vector_search(query, type_filter, pool, include_sessions)
+        if vnote:
+            note = vnote
+        for h in hits:
+            key = h["key"]
+            m = meta.setdefault(key, {"slug": h["slug"], "title": h["title"],
+                                      "type": h["type"], "path": h["path"],
+                                      "preview": h["preview"], "channels": []})
+            m["channels"].append("vector")
+            vec_rank.append(key)
+
+    if not meta:
+        out = {"results": [], "count": 0, "method": f"rrf_{mode}"}
+        if note:
+            out["_note"] = note
+        return out
+
+    fused = _rrf_fuse([kw_rank, vec_rank], k=k, weights=[wk, wv])
+    ranked = sorted(fused.keys(), key=lambda key: -fused[key])[:limit]
+    results = []
+    for key in ranked:
+        m = meta[key]
+        results.append({
+            "slug": m["slug"], "title": m["title"], "type": m["type"],
+            "path": m["path"], "rrf_score": round(fused[key], 5),
+            "channels": sorted(set(m["channels"])), "preview": m["preview"],
+        })
+    channels_used = []
+    if kw_rank:
+        channels_used.append("keyword")
+    if vec_rank:
+        channels_used.append("vector")
+    out = {"results": results, "count": len(results),
+           "method": f"rrf_{mode}", "k": k, "channels_used": channels_used}
+    if note:
+        out["_note"] = note
+    return out
+
+
 def tool_wiki_read(args: dict) -> dict:
     """Legge una pagina wiki per slug. Ricerca breadth-first in wiki/ + sottocartelle."""
     slug = (args.get("slug") or "").strip()
@@ -5122,16 +5277,20 @@ TOOLS = [
         "name": "wiki.search",
         "description": (
             "📚 Cerca nelle pagine del wiki di questo scope (project/hub/workspace). "
-            "Differenza vs memory.recall: filtra per type (entity/concept/source/analysis/...) "
-            "e ritorna metadati strutturati (slug, type, updated, score, preview). "
+            "IBRIDA di default: fonde keyword + ricerca semantica via Reciprocal Rank "
+            "Fusion (trova sia match esatti di parole sia affinità concettuale). "
+            "Degrada a solo keyword se manca l'embed index. Ritorna metadati strutturati "
+            "(slug, type, path, rrf_score, channels, preview). "
             "USE FOR: 'cerca le entità che parlano di X', 'che concetti abbiamo su Y', 'fonti su Z'."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Parole chiave"},
+                "query": {"type": "string", "description": "Query (parole chiave o frase concettuale)"},
                 "type": {"type": "string", "enum": ["all", "entity", "concept", "source", "analysis", "session", "overview", "index"], "description": "Filtra per tipo pagina (default 'all')"},
                 "limit": {"type": "integer", "description": "Max risultati (default 10)"},
+                "mode": {"type": "string", "enum": ["hybrid", "keyword", "vector"], "description": "Canale di ricerca (default 'hybrid')"},
+                "include_sessions": {"type": "boolean", "description": "Includi le pagine session nei risultati (default false)"},
             },
             "required": ["query"],
         },
@@ -5834,7 +5993,8 @@ TOOL_HANDLERS = {
     "skill.write_file": tool_skill_write_file,
     "skill.remove_file": tool_skill_remove_file,
     # Fase P-Plugin — Wiki tools
-    "wiki.search": tool_wiki_search,
+    "wiki.search": tool_wiki_search_hybrid,
+    "wiki.search_keyword": tool_wiki_search,
     "wiki.read": tool_wiki_read,
     "wiki.upsert_entity": tool_wiki_upsert_entity,
     "wiki.upsert_concept": tool_wiki_upsert_concept,
