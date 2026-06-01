@@ -2,6 +2,21 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.14.0 — 2026-06-01
+
+**Feature**: `wiki.search` ibrida (Memory 2.0 — hybrid retrieval).
+
+### Added
+
+- **`wiki.search` ora è IBRIDA di default**: fonde il canale keyword (grep+rank) e quello vettoriale (sqlite-vec, embedding condiviso wiki↔code) via **Reciprocal Rank Fusion** (RRF). Robusta sia su query esatte (nomi/comandi → keyword) sia concettuali (riformulazioni → vector): su query concettuali il keyword da solo restituiva risultati irrilevanti, l'hybrid premia i documenti trovati da entrambi i canali (consensus → top rank).
+- Param nuovi su `wiki.search`: `mode` (`hybrid`|`keyword`|`vector`, default `hybrid`), `include_sessions` (default false).
+- Helper `_rrf_fuse` (fusione per rango — ignora score non comparabili BM25/cosine) + `_wiki_vector_search` (embed query + k-NN `kind='wiki'`).
+- Nuovo handler `wiki.search_keyword` per accesso esplicito al solo canale keyword.
+
+### Changed
+
+- `wiki.search` degrada con grazia a solo keyword se manca embed provider/index (campo `_note` nel risultato). `tool_wiki_search` (motore keyword) invariato → retro-compatibile.
+
 ## v0.13.5 — 2026-05-28
 
 **Fix critico**: `session_end.py` spawnava `summarize_session_bg.py` detached, che invocava `claude -p ...` headless. La sub-sessione `claude -p` però è essa stessa una sessione Claude Code: al termine scattava di nuovo `SessionEnd` hook → nuovo session file → nuovo summary in background → loop infinito (~1 sessione fantasma ogni 10s, dir `.anjawiki/wiki/sessions/<date>/` allagata).
