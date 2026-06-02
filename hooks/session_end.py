@@ -244,6 +244,7 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
 
     cc_session_id = session_meta.get("session_id", "")
     reason = session_meta.get("reason", "?")
+    transcript_path = session_meta.get("transcript_path", "")
 
     # Use transcript timestamps se disponibili, altrimenti fallback a now
     started_raw = transcript_info.get("started") or now_local.isoformat()
@@ -287,6 +288,8 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     lines.append(f"id: {anja_id}")
     if cc_session_id:
         lines.append(f"cc_session_id: {cc_session_id}")
+    if transcript_path:
+        lines.append(f"transcript_path: {transcript_path}")
     lines.append(f"started: {started_local}")
     lines.append(f"ended: {ended_local}")
     lines.append(f"duration: {duration}")
@@ -323,17 +326,18 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     if user_messages:
         lines.append("## User prompts")
         lines.append("")
-        # primi 5 + ultimi 3 se più di 8 totali
-        if len(user_messages) <= 8:
-            shown = user_messages
-        else:
-            shown = user_messages[:5] + ["…"] + user_messages[-3:]
-        for i, m in enumerate(shown, 1):
-            if m == "…":
-                lines.append(f"- _(... {len(user_messages) - 8} prompts intermedi omessi ...)_")
-            else:
-                snippet = m.replace("\n", " ").strip()[:200]
-                lines.append(f"- {snippet}")
+        # Lossless: TUTTI i prompt utente (segnale denso, compatto). Prima erano
+        # troncati a primi-5 + ultimi-3 → perdita. Il drill-down completo ai turni
+        # assistant/tool è via `transcript_path` qui sotto.
+        for m in user_messages:
+            snippet = m.replace("\n", " ").strip()[:280]
+            lines.append(f"- {snippet}")
+        lines.append("")
+    if transcript_path:
+        lines.append("## Transcript (drill-down lossless)")
+        lines.append("")
+        lines.append("> Recovery deterministico ai turni originali (assistant + tool, oltre i prompt qui sopra):")
+        lines.append(f"> `{transcript_path}`")
         lines.append("")
     lines.append("## Notes")
     lines.append("")

@@ -58,3 +58,4 @@ updated: {DATE}
 - `SOUL.md` — preferenze user, feedback memorabili, identità agent
 - `TOOLS.md` — capabilities (auto-generato)
 - `.anjawiki/wiki/` — knowledge strutturata (entities/concepts/sources/sessions)
+- **Senza MCP**: il wiki è file `.md` → `cat .anjawiki/wiki/index.md` (catalogo), `grep -ril --include='*.md' "<kw>" .anjawiki/wiki/`, `cat .anjawiki/wiki/<cat>/<slug>.md`. Dettagli in `.anjawiki/CLAUDE.md` → "Accesso bash-native".

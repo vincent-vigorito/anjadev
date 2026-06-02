@@ -14,6 +14,41 @@
 | Lint | `/anja-lint` | `analysis/lint-<date>.md` (transient) + log |
 | Session | hook `SessionStart`/`SessionEnd` | `sessions/<date>.md` + log entry `session` |
 
+## Accesso bash-native (fallback senza MCP)
+
+> ⚠️ **Priorità**: se hai il tool MCP `wiki.search`, usa **sempre quello** — è ibrido
+> keyword+vector (RRF), più preciso del grep. Il bash qui sotto è il **fallback** per
+> quando l'MCP non c'è (Codex/Grok senza plugin, o MCP non disponibile), NON un'alternativa
+> da preferire: `grep` è solo keyword, perde l'affinità semantica.
+
+Il wiki è **solo file `.md` su disco**: qualunque agente che sa usare la shell lo
+interroga senza i tool MCP. Su harness senza `anja_memory` (o quando l'MCP non è
+disponibile), usa gli strumenti Unix standard:
+
+```bash
+# Catalogo: parti SEMPRE da qui (è l'indice del wiki)
+cat .anjawiki/wiki/index.md
+
+# Cerca per keyword in tutto il wiki (entity/concept/source/analysis/session)
+grep -ril --include='*.md' "<keyword>" .anjawiki/wiki/   # solo i .md che matchano
+grep -rin --include='*.md' "<keyword>" .anjawiki/wiki/entities/  # con riga + contesto
+
+# Elenca le pagine di una categoria
+find .anjawiki/wiki/entities -name '*.md'
+
+# Leggi una pagina / segui un [[wikilink]] (il target è <slug>.md)
+cat .anjawiki/wiki/entities/<slug>.md
+find .anjawiki/wiki -name '<slug>.md'
+
+# Memoria episodica (cronologia) + tesi corrente
+tail -40 .anjawiki/wiki/log.md
+cat .anjawiki/wiki/overview.md
+```
+
+Convenzioni che rendono il wiki grep-friendly: slug **kebab-case** nei nomi file,
+frontmatter YAML in testa (`title:`/`type:`/`tags:`), `[[wikilink]]` = `<slug>.md`.
+Quando l'MCP c'è, preferisci `wiki.search` (ibrida keyword+vector, più precisa del grep).
+
 ## Identità del progetto
 
 I dati di identità (token, nome, tipo, data, tag) sono in `meta.yaml` accanto a questo file. **`meta.yaml` è la single source of truth** per l'identità — non duplicare quei dati qui.

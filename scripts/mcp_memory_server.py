@@ -2350,6 +2350,81 @@ def tool_wiki_search_hybrid(args: dict) -> dict:
     return out
 
 
+def tool_wiki_find_duplicates(args: dict) -> dict:
+    """🔎 Trova coppie di pagine wiki semanticamente troppo simili (candidati duplicati
+    / da fondere, o potenzialmente contraddittorie) via gli embeddings condivisi
+    (code-index.db). Vede ciò che il match esatto NON vede (es. 'auth-service' vs
+    'authentication'). Complementa il lint.
+
+    args: threshold (default 0.85 similarity coseno), types (lista page_type, default
+    ['entity','concept']), limit (default 20 coppie).
+    """
+    threshold = float(args.get("threshold", 0.85))
+    types = args.get("types") or ["entity", "concept"]
+    if isinstance(types, str):
+        types = [types]
+    limit = int(args.get("limit", 20))
+
+    try:
+        import sys as _sys
+        here = Path(__file__).resolve().parent
+        if str(here) not in _sys.path:
+            _sys.path.insert(0, str(here))
+        import code_db
+        import embed_providers
+    except ImportError as e:
+        return {"error": f"module missing: {e}"}
+
+    provider = embed_providers.get_provider()
+    if provider is None:
+        return {"error": "no embed provider available (set ANJA_EMBED_PROVIDER + API key)"}
+    anjawiki = ROOT / ".anjawiki"
+    if not (anjawiki / "code-index.db").exists():
+        return {"error": "vector index not built — run wiki.embed / code.reindex first"}
+    try:
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+    except Exception as e:
+        return {"error": f"db open failed: {e}"}
+
+    try:
+        pages = [p for p in code_db.list_wiki_pages(db)
+                 if (p.get("page_type") or "") in types]
+        seen_pairs = {}
+        for p in pages:
+            vec = code_db.get_embedding_vector(db, p["id"])
+            if vec is None:
+                continue
+            neighbors = code_db.vector_search(db, vec, limit=4, kind_filter="wiki", exclude_id=p["id"])
+            for n in neighbors:
+                if (n.get("lang") or "") not in types:
+                    continue
+                score = 1.0 - float(n["distance"])
+                if score < threshold:
+                    continue
+                a = (p.get("slug") or "").split(":")[-1]
+                b = (n.get("func_name") or "").split(":")[-1]
+                if not a or not b or a == b:
+                    continue
+                key = tuple(sorted([a, b]))
+                if key not in seen_pairs or score > seen_pairs[key]["score"]:
+                    seen_pairs[key] = {"pages": list(key), "score": round(score, 4),
+                                       "type": p.get("page_type")}
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+    pairs = sorted(seen_pairs.values(), key=lambda x: -x["score"])[:limit]
+    return {
+        "duplicates": pairs,
+        "count": len(pairs),
+        "threshold": threshold,
+        "types": types,
+        "_hint": "Coppie sopra soglia = candidati merge/conflitto. Verifica con wiki.read prima di unire.",
+    }
+
+
 def tool_wiki_read(args: dict) -> dict:
     """Legge una pagina wiki per slug. Ricerca breadth-first in wiki/ + sottocartelle."""
     slug = (args.get("slug") or "").strip()
@@ -5296,6 +5371,22 @@ TOOLS = [
         },
     },
     {
+        "name": "wiki.find_duplicates",
+        "description": (
+            "🔎 Trova coppie di pagine wiki semanticamente troppo simili (candidati duplicati / "
+            "da fondere o contraddittorie) via embeddings condivisi. Vede ciò che il match esatto "
+            "non vede (es. 'auth-service' vs 'authentication'). USE per cleanup wiki / pre-ingest dedup."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "threshold": {"type": "number", "description": "Similarity coseno minima (default 0.85)"},
+                "types": {"type": "array", "items": {"type": "string"}, "description": "page_type da considerare (default [entity, concept])"},
+                "limit": {"type": "integer", "description": "Max coppie (default 20)"},
+            },
+        },
+    },
+    {
         "name": "wiki.read",
         "description": (
             "📚 Legge una pagina wiki per slug. Usa DOPO wiki.search per leggere il contenuto pieno. "
@@ -5995,6 +6086,7 @@ TOOL_HANDLERS = {
     # Fase P-Plugin — Wiki tools
     "wiki.search": tool_wiki_search_hybrid,
     "wiki.search_keyword": tool_wiki_search,
+    "wiki.find_duplicates": tool_wiki_find_duplicates,
     "wiki.read": tool_wiki_read,
     "wiki.upsert_entity": tool_wiki_upsert_entity,
     "wiki.upsert_concept": tool_wiki_upsert_concept,

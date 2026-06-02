@@ -2,6 +2,16 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.15.0 — 2026-06-01
+
+**Feature batch**: Memory 2.0 — journal lossless + dedup semantico + accesso bash-native.
+
+### Added
+
+- **`wiki.find_duplicates`**: trova coppie di pagine wiki semanticamente troppo simili (candidati duplicati / da fondere o contraddittorie) via embeddings condivisi (`code-index.db`). Vede ciò che il match esatto non vede (es. `auth-service` vs `authentication`). Args: `threshold` (default 0.85), `types`, `limit`.
+- **Session journal lossless** (`session_end.py`): il session file ora salva `transcript_path` nel frontmatter (recovery pointer ai turni originali, che CC conserva) + **TUTTI** i user prompt (prima troncati a primi-5 + ultimi-3) + sezione "Transcript (drill-down lossless)". Niente archivio separato → zero gonfiamento git, nessun rischio di committare chat sensibili.
+- **Accesso bash-native** documentato (template `project-skeleton/CLAUDE.md` + `triade-skeleton/AGENTS.md`): il wiki è file `.md` → `grep`/`find`/`cat` come fallback universale per harness senza MCP. Portabilità "gratis" (spunto Mirage filesystem-as-interface).
+
 ## v0.14.0 — 2026-06-01
 
 **Feature**: `wiki.search` ibrida (Memory 2.0 — hybrid retrieval).
