@@ -2,6 +2,20 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.16.0 — 2026-06-06
+
+**Cross-harness**: portabilità verso Codex / Grok / OpenCode (F-MCP-CrossHarness + F-NonCC-ManualMode, lato plugin).
+
+### Changed
+
+- **Modello context unificato**: `compose_claude_md.py` ora genera `AGENTS.md` (composed *inline*, standard cross-tool letto nativo da Codex/Grok/OpenCode) + `CLAUDE.md` = wrapper `@AGENTS.md` (per Claude Code). Il source editabile è `AGENTS.src.md`. **Migrazione idempotente** automatica (`AGENTS.md`→`AGENTS.src.md` al primo run). Rimossi i residui `@SOUL.md`/`@TOOLS.md` dal composed (gli harness non-CC non espandono `@import`).
+- Scaffold allineato a `AGENTS.src.md`: `init_project.py`, `upgrade_triade.py`, template `triade-skeleton/`.
+
+### Added
+
+- **README — sezione "Cross-harness setup"**: config MCP pronte per Codex (`config.toml` / `codex mcp add`), Grok (`.grok/settings.json`), OpenCode (`opencode.json`). I server core (`mcp_memory_server` / `mcp_code_server`) sono MCP stdio standard → girano su qualunque host MCP (verificato via handshake `initialize` + `tools/list`).
+- **Sezione Bootstrap** nel context composto: per harness senza hook anja, guida il pull di contesto manuale (`roadmap.list` / `memory.timeline`) + journal bash-native.
+
 ## v0.15.0 — 2026-06-01
 
 **Feature batch**: Memory 2.0 — journal lossless + dedup semantico + accesso bash-native.

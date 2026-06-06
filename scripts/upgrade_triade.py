@@ -4,8 +4,8 @@ upgrade_triade.py — backfill triade AGENTS+SOUL+TOOLS in un progetto/hub esist
 
 Per progetti pre-Fase 8 che hanno già `.anjawiki/` ma non hanno la triade.
 Aggiunge senza distruggere:
-  - AGENTS.md, SOUL.md, TOOLS.md (skip se esistono già)
-  - CLAUDE.md → AGENTS.md symlink (se CLAUDE.md non esiste)
+  - AGENTS.src.md, SOUL.md, TOOLS.md source (skip se esistono già)
+  - AGENTS.md (composed cross-harness) + CLAUDE.md (@AGENTS.md wrapper) via compose
   - .mcp.json con anja_memory registrato (merge non-destructive)
   - .anjawiki/config.json (project) o config.json (hub) con `memory:` section
   - TOOLS.md auto-generato
@@ -121,7 +121,7 @@ def upgrade_hub(target: Path, dry_run: bool = False) -> int:
         return 0
 
     # Copy triade files only (non tutto il template hub-skeleton, per non sovrascrivere config/projects.json)
-    for fname in ("AGENTS.md", "SOUL.md", "TOOLS.md"):
+    for fname in ("AGENTS.src.md", "SOUL.md", "TOOLS.md"):
         src = template / fname
         dst = target / fname
         if not dst.exists() and src.is_file():

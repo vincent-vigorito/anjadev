@@ -67,6 +67,87 @@ echo "OPENROUTER_API_KEY=sk-or-..." >> .anjawiki/.secrets.env
 
 Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Restart CC dopo il primo setup.
 
+## Cross-harness setup (Codex · Grok · OpenCode)
+
+Il core (`mcp_memory_server.py` + `mcp_code_server.py`) è **JSON-RPC 2.0 over stdio**
+standard, stdlib pure, zero dipendenze → gira su **qualunque host MCP**, non solo Claude
+Code. Stessi 3 env ovunque: `ANJA_SCOPE` (`project`|`hub`|`agent`), `ANJA_ROOT` (path del
+root), `ANJA_TOOL_GROUPS` (filtro opzionale, default tutti i gruppi).
+
+Verificato con handshake `initialize` + `tools/list` su stdio puro: `anja_memory` espone
+27 tool (con `memory,wiki,roadmap`), `anja_code` 1 tool (`execute_python`). Nessuna
+modifica al plugin: cambia solo *dove* dichiari il server. `<ANJADEV>` = path del plugin
+installato (`~/.claude/plugins/marketplaces/anjadev`) o di un clone locale del repo.
+
+**Claude Code** — `.mcp.json` del progetto (formato di riferimento, scritto da `/anja-init`):
+
+```json
+{
+  "mcpServers": {
+    "anja_memory": {
+      "command": "python3",
+      "args": ["<ANJADEV>/scripts/mcp_memory_server.py"],
+      "env": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/project", "ANJA_TOOL_GROUPS": "memory,wiki,roadmap,code" }
+    }
+  }
+}
+```
+
+**OpenAI Codex** — `~/.codex/config.toml` (o `.codex/config.toml` project-scoped):
+
+```toml
+[mcp_servers.anja_memory]
+command = "python3"
+args = ["<ANJADEV>/scripts/mcp_memory_server.py"]
+
+[mcp_servers.anja_memory.env]
+ANJA_SCOPE = "project"
+ANJA_ROOT = "/abs/project"
+ANJA_TOOL_GROUPS = "memory,wiki,roadmap,code"
+```
+
+Oppure via CLI:
+`codex mcp add anja_memory --env ANJA_SCOPE=project --env ANJA_ROOT=/abs/project -- python3 <ANJADEV>/scripts/mcp_memory_server.py`
+
+**Grok CLI** (`superagent-ai/grok-cli`) — `.grok/settings.json`, formato `mcpServers` stile Claude:
+
+```json
+{
+  "mcpServers": {
+    "anja_memory": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["<ANJADEV>/scripts/mcp_memory_server.py"],
+      "env": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/project", "ANJA_TOOL_GROUPS": "memory,wiki,roadmap,code" }
+    }
+  }
+}
+```
+
+**OpenCode** — `opencode.json`, chiave `mcp`, tipo `local` (`command` è un array, env in `environment`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "anja_memory": {
+      "type": "local",
+      "command": ["python3", "<ANJADEV>/scripts/mcp_memory_server.py"],
+      "enabled": true,
+      "environment": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/project", "ANJA_TOOL_GROUPS": "memory,wiki,roadmap,code" }
+    }
+  }
+}
+```
+
+> ⚠️ Gli automatismi via **hook** (journal a fine sessione, context injection a inizio, re-embed
+> post-edit) sono specifici di Claude Code. Su Codex/Grok serve il "modo manuale" (vedi roadmap
+> AnjaHub `F-NonCC-ManualMode`); OpenCode può ricostruirli via plugin (`F-OpenCodeAdapter`). Il
+> **wire format** del wiki (`.anjawiki/`) è comunque accessibile bash-native (grep/cat) ovunque.
+>
+> Nota Codex: alcune versioni hanno avuto bug nel leggere `mcp_servers` da `config.toml`
+> ([openai/codex#3441](https://github.com/openai/codex/issues/3441)) — verifica con la tua release.
+
 ## Slash command
 
 | Command | Descrizione |

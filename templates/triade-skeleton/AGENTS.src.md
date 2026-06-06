@@ -9,17 +9,12 @@ updated: {DATE}
 > {PROJECT_DESCRIPTION}
 
 <!--
-  AGENTS.md è il file always-loaded di project-level (cross-tool: CC, OpenCode, Cursor, Aider, ...).
-  Sostituisce il vecchio CLAUDE.md (mantenuto come symlink → AGENTS.md per back-compat).
+  Questo è il SOURCE editabile del project context (a mano).
+  compose_claude_md.py unisce questo + SOUL.md + TOOLS.md in AGENTS.md (composed, letto
+  nativo da Codex/Grok/OpenCode) e crea CLAUDE.md = @AGENTS.md (per Claude Code).
+  Non dichiarare @SOUL.md/@TOOLS.md qui: il compose li aggiunge inline automaticamente.
   Token budget HOT: ~600. Mantienilo focalizzato e fresco.
-
-  IMPORTANTE: i marker `@SOUL.md` e `@TOOLS.md` qui sotto sono import dichiarativi:
-  Claude Code (e OpenCode) li sostituiscono inline col contenuto del file. Così la triade
-  completa è sempre caricata in ogni sessione, anche da CLI puro nel progetto.
 -->
-
-@SOUL.md
-@TOOLS.md
 
 ## Stato corrente
 

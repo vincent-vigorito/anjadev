@@ -32,7 +32,7 @@ PLACEHOLDER_FILES = (
 )
 
 # Triade files (scritte in project-root, fuori da .anjawiki/)
-TRIADE_FILES = ("AGENTS.md", "SOUL.md", "TOOLS.md")
+TRIADE_FILES = ("AGENTS.src.md", "SOUL.md", "TOOLS.md")
 
 # Mapping type → baseline soul filename
 SOUL_BASELINE_MAP = {
@@ -354,7 +354,8 @@ def main() -> None:
     print(f"  Type:  {args.type}")
     print(f"  Mode:  {args.mode}")
     print(f"  Name:  {name}")
-    print(f"  Triade scritta in: {project_root}/AGENTS.md, SOUL.md, TOOLS.md")
+    print(f"  Source scritti in: {project_root}/AGENTS.src.md, SOUL.md, TOOLS.md")
+    print(f"  Composti: AGENTS.md (cross-harness) + CLAUDE.md (@AGENTS.md wrapper)")
 
 
 if __name__ == "__main__":

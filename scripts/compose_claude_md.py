@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-compose_claude_md.py — genera CLAUDE.md concatenando AGENTS.md + SOUL.md + TOOLS.md.
+compose_claude_md.py — compone la triade in un unico AGENTS.md cross-harness.
 
-Risolve il problema "CC carica solo CLAUDE.md, non AGENTS.md / @-import non scatta":
-  - Source files (editati): AGENTS.md (primary), SOUL.md (via tool MCP), TOOLS.md (auto-gen)
-  - Output (auto-generated): CLAUDE.md = concat con header + section delimiters
-  - CLAUDE.md ha frontmatter `auto_generated: true` per identificarlo
+Modello (F-NonCC-ManualMode):
+  - Source (editati):  AGENTS.src.md (a mano) · SOUL.md (via soul.update) · TOOLS.md (auto)
+  - Output composed:   AGENTS.md = i 3 source uniti INLINE + sezione Bootstrap
+                       → letto NATIVO da Codex / Grok / OpenCode (no @import, no hook)
+  - Wrapper:           CLAUDE.md = `@AGENTS.md` → Claude Code lo espande
 
-Gestione vecchio CLAUDE.md preesistente (non auto-generato):
-  - Backup in `CLAUDE.original.md` (1 sola volta, se non esiste già)
-  - Warning visibile all'utente
-  - Sovrascrive con il composed nuovo
+Perché AGENTS.md e non più CLAUDE.md come composed:
+  AGENTS.md è lo standard cross-tool. Gli harness diversi da CC NON espandono la
+  sintassi @import, quindi il file che leggono deve avere SOUL+TOOLS già inline.
+  CC invece non legge AGENTS.md nativamente → lo importa via CLAUDE.md (@AGENTS.md).
 
-Idempotente: ad ogni run riscrive CLAUDE.md con il content corrente di AGENTS+SOUL+TOOLS.
+Migrazione idempotente:
+  se trova un AGENTS.md *source* (non auto-generato) e nessun AGENTS.src.md,
+  lo rinomina AGENTS.md → AGENTS.src.md prima di comporre. Run successivi: no-op.
+
+Idempotente: ad ogni run riscrive AGENTS.md + CLAUDE.md dal content corrente dei source.
 
 Usage:
     python3 compose_claude_md.py --target <project-or-hub-root>
@@ -21,7 +26,6 @@ Usage:
 """
 
 import argparse
-import re
 import sys
 from datetime import date
 from pathlib import Path
@@ -29,23 +33,52 @@ from pathlib import Path
 
 AUTO_GEN_MARKER = "auto_generated_by: anja/compose_claude_md.py"
 
-CLAUDE_HEADER_TEMPLATE = """---
+AGENTS_HEADER_TEMPLATE = """---
 auto_generated: true
 {marker}
-sources: [AGENTS.md, SOUL.md, TOOLS.md]
+sources: [AGENTS.src.md, SOUL.md, TOOLS.md]
 updated: {date}
 ---
 
 <!--
   AUTO-GENERATED — non editare manualmente.
-  Source primary: AGENTS.md (editato dall'utente).
-  Source secondary: SOUL.md (preferenze, scritto via tool MCP anja_memory.soul.update),
-  TOOLS.md (capabilities, auto-generato da scripts/tools_md.py).
-
-  Per modificare: edita AGENTS.md (project context), invoca soul.update tool (preferenze),
-  rigenera TOOLS.md via tools_md.py. Compose viene rieseguito automaticamente.
+  File context cross-harness: letto NATIVO da Codex/Grok/OpenCode; Claude Code lo
+  importa via CLAUDE.md (@AGENTS.md).
+  Per modificare: edita AGENTS.src.md (project context), invoca soul.update
+  (preferenze), rigenera TOOLS.md via tools_md.py. Compose viene rieseguito.
 -->
 
+"""
+
+CLAUDE_WRAPPER_TEMPLATE = """---
+auto_generated: true
+{marker}
+sources: [AGENTS.md]
+updated: {date}
+---
+
+<!-- AUTO-GENERATED wrapper. Claude Code legge questo file e via @AGENTS.md espande
+     il context composto. NON editare: il context vive in AGENTS.src.md. -->
+
+@AGENTS.md
+"""
+
+# Bootstrap per harness senza gli hook di Claude Code (Codex/Grok/...).
+# Su CC l'hook session_start stampa "[anja] Sessione aperta" → la condizione è falsa
+# e l'agente la ignora; altrove guida il pull di contesto manuale.
+BOOTSTRAP_SECTION = """
+---
+
+# Bootstrap (harness senza hook anja)
+
+> Se all'avvio **non** vedi un blocco `[anja] Sessione aperta (...)`, il tuo harness
+> non ha gli hook anja. Prima di lavorare, fai tu il pull di contesto:
+> 1. `roadmap.list` (status open + in_progress) → focus task
+> 2. `memory.timeline` → ultime sessioni + log recente
+> 3. a fine lavoro: scrivi il journal in `<scope>/sessions/<YYYY-MM-DD>/<id>.md`
+>    (i .md sono accessibili bash-native via grep/cat/write — vedi SCHEMA.md)
+>
+> Su Claude Code è automatico (hook session_start/end): ignora questa sezione.
 """
 
 
@@ -58,43 +91,19 @@ def _strip_frontmatter(text: str) -> str:
     return text[end + 4:].lstrip("\n")
 
 
+def _strip_at_imports(text: str) -> str:
+    """Rimuove le righe `@SOUL.md` / `@TOOLS.md` dal body AGENTS: nel composed il
+    loro contenuto è già appeso inline, e gli harness non-CC non espandono @import
+    (resterebbe testo morto)."""
+    keep = [ln for ln in text.splitlines() if ln.strip() not in ("@SOUL.md", "@TOOLS.md")]
+    return "\n".join(keep)
+
+
 def _is_auto_generated(text: str) -> bool:
-    """Detect se un CLAUDE.md è già auto-generato da noi."""
     if not text:
         return False
     head = text[:500]
     return AUTO_GEN_MARKER in head or "auto_generated: true" in head
-
-
-def _backup_existing(claude_path: Path, quiet: bool = False) -> bool:
-    """Se CLAUDE.md esiste e NON è auto-generato, backup in CLAUDE.original.md.
-    Ritorna True se ha backuppato, False se non c'era da fare niente."""
-    if not claude_path.is_file() and not claude_path.is_symlink():
-        return False
-    if claude_path.is_symlink():
-        # symlink (es. CLAUDE.md → AGENTS.md): rimuove direttamente, niente backup
-        claude_path.unlink()
-        if not quiet:
-            print(f"[compose] removed symlink {claude_path.name} (will be replaced by composed file)")
-        return False
-    text = claude_path.read_text(encoding="utf-8", errors="replace")
-    if _is_auto_generated(text):
-        return False  # è già nostro, nessun backup needed
-    # vecchio CLAUDE.md utente — backuppa
-    backup_path = claude_path.parent / "CLAUDE.original.md"
-    if backup_path.exists():
-        # già esiste un backup precedente: non sovrascriviamo (preserve user's first backup)
-        if not quiet:
-            print(f"[compose] CLAUDE.original.md già esiste, lascio invariato. Cancello CLAUDE.md attuale.")
-    else:
-        claude_path.rename(backup_path)
-        if not quiet:
-            print(f"[compose] ⚠ vecchio CLAUDE.md backuppato in {backup_path.name}")
-        return True
-    # cancella il vecchio CLAUDE.md per fare spazio al composed
-    if claude_path.exists():
-        claude_path.unlink()
-    return True
 
 
 def _read_optional(path: Path) -> str:
@@ -103,55 +112,94 @@ def _read_optional(path: Path) -> str:
     return ""
 
 
+def _migrate_source(target: Path, quiet: bool = False) -> None:
+    """One-shot idempotente: AGENTS.md *source* (non auto-gen) → AGENTS.src.md.
+
+    Skip se AGENTS.src.md esiste già, o se AGENTS.md è il composed auto-generato,
+    o se AGENTS.md è un symlink/non esiste.
+    """
+    src = target / "AGENTS.src.md"
+    agents = target / "AGENTS.md"
+    if src.exists():
+        return
+    if not agents.is_file() or agents.is_symlink():
+        return
+    if _is_auto_generated(agents.read_text(encoding="utf-8", errors="replace")):
+        return
+    agents.rename(src)
+    if not quiet:
+        print(f"[compose] migrato source: AGENTS.md → AGENTS.src.md")
+
+
+def _backup_if_user_file(path: Path, quiet: bool = False) -> None:
+    """Se `path` esiste, NON è auto-generato e NON è symlink → backup .original.md
+    (1 volta sola). Protegge un eventuale file utente preesistente prima di sovrascrivere."""
+    if path.is_symlink():
+        path.unlink()
+        return
+    if not path.is_file():
+        return
+    if _is_auto_generated(path.read_text(encoding="utf-8", errors="replace")):
+        return
+    backup = path.with_suffix(".original.md")
+    if not backup.exists():
+        path.rename(backup)
+        if not quiet:
+            print(f"[compose] ⚠ {path.name} utente backuppato in {backup.name}")
+    elif path.exists():
+        path.unlink()
+
+
 def compose(target: Path, dry_run: bool = False, quiet: bool = False) -> int:
     target = target.resolve()
     if not target.is_dir():
         print(f"ERROR: target not found: {target}", file=sys.stderr)
         return 1
 
-    agents_text = _read_optional(target / "AGENTS.md")
+    if not dry_run:
+        _migrate_source(target, quiet=quiet)
+
+    agents_text = _read_optional(target / "AGENTS.src.md")
     soul_text = _read_optional(target / "SOUL.md")
     tools_text = _read_optional(target / "TOOLS.md")
 
     if not agents_text and not soul_text and not tools_text:
         if not quiet:
-            print(f"[compose] nessuno tra AGENTS.md/SOUL.md/TOOLS.md trovato in {target}, skip")
+            print(f"[compose] nessuno tra AGENTS.src.md/SOUL.md/TOOLS.md in {target}, skip")
         return 0
 
-    # build composed body
-    parts = [CLAUDE_HEADER_TEMPLATE.format(marker=AUTO_GEN_MARKER, date=date.today().isoformat())]
-
+    # --- build AGENTS.md composed (inline, no @import) ---
+    parts = [AGENTS_HEADER_TEMPLATE.format(marker=AUTO_GEN_MARKER, date=date.today().isoformat())]
     if agents_text:
         parts.append("# AGENTS — project / hub context\n")
-        parts.append(_strip_frontmatter(agents_text).strip())
+        parts.append(_strip_at_imports(_strip_frontmatter(agents_text)).strip())
         parts.append("\n")
-
     if soul_text:
         parts.append("\n---\n")
         parts.append("\n# SOUL — identity, preferences, memorable feedback\n")
         parts.append(_strip_frontmatter(soul_text).strip())
         parts.append("\n")
-
     if tools_text:
         parts.append("\n---\n")
         parts.append("\n# TOOLS — capabilities (auto-generated)\n")
         parts.append(_strip_frontmatter(tools_text).strip())
         parts.append("\n")
-
+    parts.append(BOOTSTRAP_SECTION)
     composed = "\n".join(parts)
 
+    agents_path = target / "AGENTS.md"
     claude_path = target / "CLAUDE.md"
+    wrapper = CLAUDE_WRAPPER_TEMPLATE.format(marker=AUTO_GEN_MARKER, date=date.today().isoformat())
+
     if dry_run:
-        print(f"[dry-run] would write {claude_path} ({len(composed)} bytes)")
-        if claude_path.exists() and not _is_auto_generated(_read_optional(claude_path)):
-            print(f"[dry-run] would BACKUP existing {claude_path.name} → CLAUDE.original.md")
+        print(f"[dry-run] would write {agents_path} ({len(composed)} bytes) + {claude_path} (wrapper @AGENTS.md)")
         return 0
 
-    _backup_existing(claude_path, quiet=quiet)
-    claude_path.write_text(composed, encoding="utf-8")
+    _backup_if_user_file(claude_path, quiet=quiet)  # vecchio CLAUDE.md composed/utente
+    agents_path.write_text(composed, encoding="utf-8")
+    claude_path.write_text(wrapper, encoding="utf-8")
     if not quiet:
-        rel = claude_path.relative_to(target.parent) if target.parent.exists() else claude_path
-        print(f"[compose] ✓ {rel} composed ({len(composed)} bytes from AGENTS+SOUL+TOOLS)")
+        print(f"[compose] ✓ AGENTS.md composed ({len(composed)} bytes) + CLAUDE.md wrapper @AGENTS.md")
     return 0
 
 
