@@ -2,6 +2,12 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.17.1 — 2026-06-06
+
+### Fixed
+
+- **Collisione `.mcp.json` CC ↔ Codex**: il file MCP del plugin Codex (con `${PLUGIN_ROOT}`) veniva auto-scoperto anche da Claude Code (che usa `${CLAUDE_PLUGIN_ROOT}`) → errori "Missing environment variables: PLUGIN_ROOT" al reload. Rinominato `.mcp.json` → `.mcp.codex.json` (referenziato esplicitamente dal manifest Codex; CC non lo auto-scopre più — su CC gli MCP restano scaffoldati nei progetti, come sempre).
+
 ## v0.17.0 — 2026-06-06
 
 **Codex plugin**: anjadev distribuibile come plugin Codex nativo (esperienza piena, non solo MCP).
