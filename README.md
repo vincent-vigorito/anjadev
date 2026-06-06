@@ -176,6 +176,20 @@ Non editare i generati: il context vive in `AGENTS.src.md`.
 > Nota Codex: alcune versioni hanno avuto bug nel leggere `mcp_servers` da `config.toml`
 > ([openai/codex#3441](https://github.com/openai/codex/issues/3441)) — verifica con la tua release.
 
+### Install come plugin Codex (esperienza piena)
+
+Oltre alla config MCP manuale, anjadev è un **plugin Codex completo** — stesso core di CC
+(`.codex-plugin/plugin.json` ↔ `.claude-plugin/plugin.json`, stesso `skills/` + `hooks.json`):
+skills + MCP + **lifecycle hooks** (context injection a `SessionStart`, wiki re-embed a `PostToolUse`).
+
+```bash
+codex plugin marketplace add vincent-vigorito/anjadev
+# poi nel plugin browser della CLI: installa "anja"
+```
+
+Dà gli automatismi come su CC. Nota: il journal a `SessionEnd` parsea il transcript nel formato
+CC → su Codex può servire un adattamento del parser (gli altri hook funzionano a prescindere).
+
 ## Slash command
 
 | Command | Descrizione |

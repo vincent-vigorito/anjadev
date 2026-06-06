@@ -1,0 +1,13 @@
+{
+  "anja_memory": {
+    "command": "python3",
+    "args": ["${PLUGIN_ROOT}/scripts/mcp_memory_server.py"],
+    "env": {
+      "ANJA_TOOL_GROUPS": "memory,sessions,soul,user,skills,wiki,roadmap,code,graph"
+    }
+  },
+  "anja_code": {
+    "command": "python3",
+    "args": ["${PLUGIN_ROOT}/scripts/mcp_code_server.py"]
+  }
+}

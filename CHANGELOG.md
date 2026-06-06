@@ -2,6 +2,20 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.17.0 — 2026-06-06
+
+**Codex plugin**: anjadev distribuibile come plugin Codex nativo (esperienza piena, non solo MCP).
+
+### Added
+
+- `.codex-plugin/plugin.json` — manifest plugin Codex (punta a `./skills/`, `./.mcp.json`, `./hooks/hooks.codex.json`).
+- `.mcp.json` — definizione MCP server (`anja_memory`/`anja_code`) per il plugin (`${PLUGIN_ROOT}`).
+- `hooks/hooks.codex.json` — hook lifecycle (`SessionStart`/`SessionEnd`/`PostToolUse`) nel formato Codex (`${PLUGIN_ROOT}`); riusano gli stessi script Python di CC.
+- `.agents/plugins/marketplace.json` — entry marketplace per `codex plugin marketplace add`.
+- README — install come plugin Codex.
+
+La struttura del plugin Codex combacia con quella di CC (`.codex-plugin/plugin.json` ↔ `.claude-plugin/plugin.json`, stesso `skills/` + `hooks.json`): riuso ~totale. Nota: il parser del journal (`session_end`) è tarato sul transcript CC e potrebbe richiedere un adattamento al formato Codex (degrada gracefully; gli altri hook funzionano a prescindere).
+
 ## v0.16.1 — 2026-06-06
 
 **Cross-harness**: supporto Gemini CLI.
