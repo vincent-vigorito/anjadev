@@ -109,20 +109,18 @@ ANJA_TOOL_GROUPS = "memory,wiki,roadmap,code"
 Oppure via CLI:
 `codex mcp add anja_memory --env ANJA_SCOPE=project --env ANJA_ROOT=/abs/project -- python3 <ANJADEV>/scripts/mcp_memory_server.py`
 
-**Grok CLI** (`superagent-ai/grok-cli`) — `.grok/settings.json`, formato `mcpServers` stile Claude:
+**Grok Build** (xAI) — **zero config**, verificato sul campo: ha una *Claude-compatibility*
+nativa (`grok inspect` → "Harness Compatibility: claude", tutto on di default). Carica da solo:
+i **plugin Claude Code** installati (skills + hooks di anja), il **`.mcp.json` di progetto**
+formato CC, `AGENTS.md` e perfino le permissions da `.claude/settings.local.json`.
 
-```json
-{
-  "mcpServers": {
-    "anja_memory": {
-      "type": "stdio",
-      "command": "python3",
-      "args": ["<ANJADEV>/scripts/mcp_memory_server.py"],
-      "env": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/project", "ANJA_TOOL_GROUPS": "memory,wiki,roadmap,code" }
-    }
-  }
-}
-```
+Unico passo richiesto: dare il **trust al progetto** dentro la TUI (`/hooks` → *trust this
+project*, oppure dal pannello `/plugins` → tab Hooks) — senza trust, MCP e hook restano
+bloccati per sicurezza e l'agente ripiega sull'accesso bash-native. Diagnostica:
+`grok mcp doctor` e `grok inspect`.
+
+(Il grok-cli open-source di superagent-ai è un tool diverso: lì serve `.grok/settings.json`
+con `mcpServers` stile Claude.)
 
 **OpenCode** — `opencode.json`, chiave `mcp`, tipo `local` (`command` è un array, env in `environment`):
 
@@ -189,6 +187,11 @@ codex plugin marketplace add vincent-vigorito/anjadev
 
 Dà gli automatismi come su CC. Nota: il journal a `SessionEnd` parsea il transcript nel formato
 CC → su Codex può servire un adattamento del parser (gli altri hook funzionano a prescindere).
+
+> ⚠️ Verificato su codex-cli 0.137: i plugin caricano le **skills**, ma gli **MCP server del
+> manifest non vengono ancora avviati** dalla CLI → registra gli MCP via `config.toml`
+> (project-scoped `.codex/config.toml` o `~/.codex/config.toml`, vedi sezione sopra) o
+> `codex mcp add`. Il `.mcp.codex.json` del plugin resta per quando Codex li supporterà.
 
 ## Slash command
 
