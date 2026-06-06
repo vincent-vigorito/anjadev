@@ -150,6 +150,18 @@ def _backup_if_user_file(path: Path, quiet: bool = False) -> None:
         path.unlink()
 
 
+def _write_gemini(target: Path) -> None:
+    """Gemini CLI legge GEMINI.md (non AGENTS.md): lo creiamo come symlink → AGENTS.md.
+    Fallback a copia del contenuto se i symlink non sono supportati (es. Windows)."""
+    gemini = target / "GEMINI.md"
+    if gemini.exists() or gemini.is_symlink():
+        gemini.unlink()
+    try:
+        gemini.symlink_to("AGENTS.md")
+    except (OSError, NotImplementedError):
+        gemini.write_text((target / "AGENTS.md").read_text(encoding="utf-8"), encoding="utf-8")
+
+
 def compose(target: Path, dry_run: bool = False, quiet: bool = False) -> int:
     target = target.resolve()
     if not target.is_dir():
@@ -198,8 +210,9 @@ def compose(target: Path, dry_run: bool = False, quiet: bool = False) -> int:
     _backup_if_user_file(claude_path, quiet=quiet)  # vecchio CLAUDE.md composed/utente
     agents_path.write_text(composed, encoding="utf-8")
     claude_path.write_text(wrapper, encoding="utf-8")
+    _write_gemini(target)  # GEMINI.md → AGENTS.md (per Gemini CLI)
     if not quiet:
-        print(f"[compose] ✓ AGENTS.md composed ({len(composed)} bytes) + CLAUDE.md wrapper @AGENTS.md")
+        print(f"[compose] ✓ AGENTS.md composed ({len(composed)} bytes) + CLAUDE.md (@AGENTS.md) + GEMINI.md (→AGENTS.md)")
     return 0
 
 

@@ -2,6 +2,15 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.16.1 — 2026-06-06
+
+**Cross-harness**: supporto Gemini CLI.
+
+### Added
+
+- `compose_claude_md.py` genera anche `GEMINI.md` (symlink → `AGENTS.md`) per Gemini CLI (che legge `GEMINI.md`, non `AGENTS.md`).
+- README — sezione cross-harness estesa con **Gemini** (`~/.gemini/settings.json` mcpServers + `GEMINI.md` + opzione *extension*). Nota hook aggiornata dopo verifica: **Grok CLI ha hook CC-compatibili** (gli automatismi anja reggono), Codex/Gemini "modo manuale", OpenCode parcheggiato.
+
 ## v0.16.0 — 2026-06-06
 
 **Cross-harness**: portabilità verso Codex / Grok / OpenCode (F-MCP-CrossHarness + F-NonCC-ManualMode, lato plugin).

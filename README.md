@@ -67,7 +67,7 @@ echo "OPENROUTER_API_KEY=sk-or-..." >> .anjawiki/.secrets.env
 
 Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Restart CC dopo il primo setup.
 
-## Cross-harness setup (Codex · Grok · OpenCode)
+## Cross-harness setup (Codex · Grok · Gemini · OpenCode)
 
 Il core (`mcp_memory_server.py` + `mcp_code_server.py`) è **JSON-RPC 2.0 over stdio**
 standard, stdlib pure, zero dipendenze → gira su **qualunque host MCP**, non solo Claude
@@ -140,10 +140,38 @@ Oppure via CLI:
 }
 ```
 
-> ⚠️ Gli automatismi via **hook** (journal a fine sessione, context injection a inizio, re-embed
-> post-edit) sono specifici di Claude Code. Su Codex/Grok serve il "modo manuale" (vedi roadmap
-> AnjaHub `F-NonCC-ManualMode`); OpenCode può ricostruirli via plugin (`F-OpenCodeAdapter`). Il
-> **wire format** del wiki (`.anjawiki/`) è comunque accessibile bash-native (grep/cat) ovunque.
+**Gemini CLI** — `~/.gemini/settings.json` (o `.gemini/settings.json` project-scoped), chiave `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "anja_memory": {
+      "command": "python3",
+      "args": ["<ANJADEV>/scripts/mcp_memory_server.py"],
+      "env": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/project", "ANJA_TOOL_GROUPS": "memory,wiki,roadmap,code" }
+    }
+  }
+}
+```
+
+Gemini legge `GEMINI.md` (non `AGENTS.md`): `compose_claude_md.py` lo genera come **symlink → `AGENTS.md`**. Alternativa pulita per distribuzione: una Gemini *extension* (`contextFileName: AGENTS.md` + `mcpServers`), installabile via path/GitHub.
+
+### Context file generati (da `AGENTS.src.md`)
+
+Il compose produce, oltre ad `AGENTS.md` (composed, letto nativo da Codex/Grok):
+- `CLAUDE.md` = `@AGENTS.md`  (Claude Code)
+- `GEMINI.md` = symlink → `AGENTS.md`  (Gemini CLI)
+
+Non editare i generati: il context vive in `AGENTS.src.md`.
+
+> **Automatismi (hook).** Claude Code **e Grok CLI** hanno hook compatibili (`SessionStart/End`,
+> `PreToolUse/PostToolUse`, … — JSON su stdin/stdout): gli automatismi anja (context injection,
+> journal, re-embed) reggono su entrambi. **Codex e Gemini** non hanno hook equivalenti → "modo
+> manuale": il context statico è nel file, ma il pull dinamico (roadmap/sessioni) e il journal si
+> fanno via tool MCP o bash-native — vedi la sezione *Bootstrap* nel context composto.
+>
+> OpenCode (parcheggiato): config MCP `opencode.json` sopra; gli automatismi richiederebbero un
+> plugin JS lifecycle (`F-OpenCodeAdapter`, non in uso).
 >
 > Nota Codex: alcune versioni hanno avuto bug nel leggere `mcp_servers` da `config.toml`
 > ([openai/codex#3441](https://github.com/openai/codex/issues/3441)) — verifica con la tua release.
