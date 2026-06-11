@@ -146,6 +146,6 @@ Chiama `mcp__anja_memory__wiki_log_append`:
 
 ## Edge cases
 
-- `.mcp.json` mancante → errore con suggestion "Lancia `/anja-init` o `python3 scripts/upgrade_triade.py`"
+- `.mcp.json` mancante → errore con suggestion "Lancia `/anja-init` (progetto nuovo) o `/anja-upgrade` (wiki esistente)"
 - Server `anja_memory` non in `mcpServers` → errore
 - Provider/model "other" custom → accetta free-form input via AskUserQuestion

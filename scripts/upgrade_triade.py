@@ -79,13 +79,14 @@ def upgrade_project(target: Path, project_type: str, dry_run: bool = False) -> i
 
     print(f"[upgrade_triade] target={target} kind=project type={project_type}")
     if dry_run:
-        print("[dry-run] would write triade + symlink + MCP register + config + TOOLS.md")
+        print("[dry-run] would write triade + symlink + MCP register + config + TOOLS.md + schema-version")
         return 0
 
     ip.write_triade(target, triade_replacements)
     ip.make_claude_md_symlink(target)
     # config.json va in <target>/.anjawiki/ per progetti
     ip._write_config_json(target / ".anjawiki")
+    ip._write_schema_version(target / ".anjawiki")
     # Fase P-Plugin — force_update_env per backfill ANJA_TOOL_GROUPS su progetti vecchi
     ip._register_anja_memory_mcp(target, force_update_env=True)
     ip._regenerate_tools_md(target)

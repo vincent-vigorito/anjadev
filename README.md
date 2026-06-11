@@ -37,6 +37,8 @@ CC clona automaticamente il repo in `~/.claude/plugins/marketplaces/anjadev/`. A
 /plugin update anja@anjadev
 ```
 
+Se un progetto ha un wiki scaffoldato con una versione precedente del plugin, dopo l'update lancia `/anja-upgrade` nel progetto per portarlo al layout corrente (non-distruttivo).
+
 Per dev locale del plugin (contributor only): clone manuale in `~/Documents/anjadev/` e `marketplace add /Users/$(whoami)/Documents/anjadev` su path locale.
 
 ### Setup primo progetto
@@ -206,6 +208,7 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 | `/anja-task add\|list\|done\|triage` | Gestione roadmap.md |
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
+| `/anja-upgrade` | Migra progetto/hub con wiki di versione precedente al layout corrente (triade + composed + MCP + schema-version) |
 
 ## MCP tools (81 totali via `mcp_memory_server`)
 

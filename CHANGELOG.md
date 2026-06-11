@@ -2,6 +2,23 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.18.0 — 2026-06-11
+
+**Feature**: `/anja-upgrade` — migrazione guidata di progetti/hub con wiki di versione precedente.
+
+### Added
+
+- **`/anja-upgrade`** (`commands/anja-upgrade.md`): slash command che wrappa `upgrade_triade.py` con workflow guidato — diagnosi stato (kind, schema-version, triade/composed/MCP mancanti), dry-run, conferma AskUserQuestion, esecuzione, opzionale `--memory` per migrare la CC memory in SOUL.md via `migrate_cc_memory.py` (orchestrato `--dry-run` + conferma + `--yes`, lo script da solo chiederebbe `input()` interattivo). Non-distruttivo: aggiunge solo ciò che manca.
+
+### Fixed
+
+- `upgrade_triade.py` ora backfilla anche `.anjawiki/.schema-version` nei progetti migrati (prima lo scriveva solo `init_project.py` → i progetti upgradati restavano senza version per il gate migration).
+
+### Changed
+
+- `/anja-config` edge case `.mcp.json` mancante: la suggestion ora punta a `/anja-upgrade` per wiki esistenti (prima suggeriva lo script raw).
+- README: riga `/anja-upgrade` nella tabella comandi + nota post-`/plugin update`.
+
 ## v0.17.1 — 2026-06-06
 
 ### Fixed
