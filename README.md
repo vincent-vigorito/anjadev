@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.13.1 — usable in production. Estratto da AnjaHub monorepo. License MIT.
+**Stato**: v0.18.1 — usable in production. Estratto da AnjaHub monorepo. License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -209,6 +209,7 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
 | `/anja-upgrade` | Migra progetto/hub con wiki di versione precedente al layout corrente (triade + composed + MCP + schema-version) |
+| `/anja-evolve-skills` | Review auto-improvement delle skill (pattern Hermes): legge inbox PostToolUse, propone patch SKILL.md, applica dopo conferma |
 
 ## MCP tools (81 totali via `mcp_memory_server`)
 
@@ -247,14 +248,17 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 
 ```
 anja/
-├── .claude-plugin/plugin.json   # manifest plugin
-├── commands/                    # 9 slash command (.md)
+├── .claude-plugin/plugin.json   # manifest plugin (versione — allineata da bump.sh)
+├── .codex-plugin/plugin.json    # manifest plugin Codex
+├── bump.sh                      # release: allinea le versioni nei 3 manifest in un colpo
+├── CHANGELOG.md                 # storia release
+├── commands/                    # 11 slash command (.md)
 ├── hooks/
 │   ├── session_start.py         # carica focus roadmap + ultime 5 log
 │   └── session_end.py           # write session file + spawn auto-summary bg
 ├── agents/                      # subagent (wiki-maintainer)
 ├── scripts/
-│   ├── mcp_memory_server.py     # MCP server stdio (v1.7.0, 28 tool)
+│   ├── mcp_memory_server.py     # MCP server stdio (81 tool, 15 gruppi)
 │   ├── code_db.py + code_index.py + code_search.py + embed_providers.py
 │   ├── roadmap_io.py
 │   ├── summarize_session_bg.py  # detached process per auto-summary
@@ -296,16 +300,21 @@ Il layout `.anjawiki/` è un **contratto pubblico** descritto in [`SCHEMA.md`](.
 ## Dev setup (per contributor)
 
 ```bash
-git clone git@github.com:vincent-vigorito/anja.git ~/Documents/anja-platform
-cd ~/Documents/anja-platform
+git clone git@github.com:vincent-vigorito/anjadev.git ~/Documents/anjadev
+cd ~/Documents/anjadev
 
-# Il plugin vive in anja/. Editing diretto sui file. Nessun build step.
+# Il repo È il plugin (root = plugin). Editing diretto sui file. Nessun build step.
 # Per testare in un progetto reale:
 cd ~/Documents/my-project
-/plugin marketplace add ~/Documents/anja-platform
-/plugin install anja@anja-marketplace
+/plugin marketplace add ~/Documents/anjadev
+/plugin install anja@anjadev
 /anja-init --type dev
 ```
+
+> **Release**: dopo ogni modifica da distribuire, `./bump.sh <major.minor.patch>` allinea
+> la versione nei 3 manifest (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
+> `.codex-plugin/plugin.json`), poi commit + `git tag vX.Y.Z`. Senza bump, CC vede "already at
+> latest" e continua a caricare la cache pre-modifica (versiona per numero, non per git SHA).
 
 ### Workflow dev tipico
 
@@ -319,9 +328,9 @@ cd ~/Documents/my-project
 ### Smoke test
 
 ```bash
-python3 -m pytest anja/tests/ -v
+python3 -m pytest tests/ -v
 # oppure:
-python3 anja/tests/test_mcp_smoke.py
+python3 tests/test_mcp_smoke.py
 ```
 
 ### Convenzioni codice
@@ -333,17 +342,15 @@ python3 anja/tests/test_mcp_smoke.py
 
 ## Changelog
 
-- **0.7.0** (2026-05-19) — 5 nuove feature roadmap-complete:
-  - Onboarding nudge in `session_start.py`: suggerimento `/anja-init` in progetti senza `.anjawiki/` (idempotente via marker `~/.anja-nudged/`)
-  - Validation soft in `wiki.upsert_*`: `_warnings` array per sezioni canoniche mancanti (entity: Sintesi/Dettagli/Apparizioni/Connessioni, concept: Definizione/Perché conta/Esempi/Riferimenti, ecc.)
-  - `/anja-refresh` workflow completo: slash command + skill + diff vs last codebase-snapshot
-  - `wiki.export` MCP tool: format md (zip)/json (dump strutturato)/html (static site con wikilinks risolti)
-  - `wiki.attach_image` MCP tool: copia/scarica immagine in raw/ + append markdown link nella page
-  - mcp_memory_server 1.8.0 → 1.9.0 (30 tool totali: +export +attach_image)
-  - Smoke test 16/16 verde
-- **0.6.2** (2026-05-19) — `code.search` description prescrittiva (USE/SKIP trigger pattern) per autoselect vs Grep
-- **0.6.1** (2026-05-19) — fix `session_end` hook: skip SessionEnd con `reason=other` (compact/resume CC interni); fix README install URL HTTPS
-- **0.6.0** (2026-05-18) — Initial commit: estrazione plugin da AnjaHub monorepo (MIT). 9 slash command + 28 MCP tool
+Storia completa e dettagliata in **[`CHANGELOG.md`](./CHANGELOG.md)**. Ultime release:
+
+- **0.18.1** (2026-06-11) — **Security**: confinamento path traversal nei tool MCP `sessions.read` / `wiki.export` / `wiki.attach_image` / `memory.write` (un caller poteva indurre lettura/scrittura di file arbitrari). + `bump.sh` (single source of truth versione).
+- **0.18.0** (2026-06-11) — `/anja-upgrade`: migrazione guidata di progetti/hub con wiki di versione precedente.
+- **0.17.x** (2026-06-06) — plugin **Codex** nativo (skills + MCP + hooks) + **Grok Build** zero-config (compat CC nativa).
+- **0.16.x** (2026-06-06) — cross-harness: `AGENTS.md` composed unificato + setup Codex/Grok/Gemini/OpenCode.
+- **0.14.0–0.15.0** (2026-06-01) — Memory 2.0: retrieval ibrido BM25+vector+RRF (`wiki.search`), lossless journal, `wiki.find_duplicates`, accesso bash-native.
+
+> Release: ogni cambiamento da distribuire richiede `./bump.sh <ver>` (allinea le versioni nei 3 manifest) + tag, altrimenti `/plugin update` non ricrea la cache e gira il codice vecchio.
 
 ## Rapporto con AnjaHub
 
