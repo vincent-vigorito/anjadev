@@ -54,6 +54,7 @@ SERVER_VERSION = "1.9.0"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "project")  # project | hub | agent
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
+_MAX_IMAGE_BYTES = 25 * 1024 * 1024  # cap download wiki.attach_image (anti file enorme da URL ostile)
 
 
 def _load_secrets_env() -> int:
@@ -166,7 +167,9 @@ def tool_memory_recall(args: dict) -> dict:
 
 def tool_memory_write(args: dict) -> dict:
     """Scrive nota in <raw>/notes/<date>-<slug>.md."""
-    category = args.get("category", "note")
+    # Sanitizza category: finisce in un path (raw/<category>) → '../../' uscirebbe da
+    # .anjawiki (F-Sec-Anjadev-CategoryTopicTraversal). Solo [a-z0-9_-].
+    category = re.sub(r"[^a-z0-9_-]", "", str(args.get("category", "note")).lower()) or "note"
     content = (args.get("content") or "").strip()
     title = args.get("title", "")
     if not content:
@@ -174,6 +177,10 @@ def tool_memory_write(args: dict) -> dict:
 
     raw = _raw_root()
     notes_dir = raw / ("notes" if category == "note" else category)
+    try:  # difesa in profondità oltre la sanitizzazione
+        notes_dir.resolve().relative_to(raw.resolve())
+    except ValueError:
+        return {"error": "invalid category"}
     notes_dir.mkdir(parents=True, exist_ok=True)
 
     date = datetime.now().strftime("%Y-%m-%d")
@@ -439,7 +446,15 @@ def tool_sessions_read(args: dict) -> dict:
 
     target_file = None
     if path_arg:
-        candidate = ROOT / path_arg
+        # Confina a sessions_root: senza il check, path='../../.secrets.env' (o un path
+        # assoluto, che in pathlib scavalca ROOT) leggerebbe file arbitrari e li
+        # restituirebbe nel content (F-Sec-Anjadev-SessionsReadTraversal). Stesso
+        # pattern di _validate_workspace_path / skill_read_file.
+        candidate = (ROOT / path_arg).resolve()
+        try:
+            candidate.relative_to(sessions_root.resolve())
+        except ValueError:
+            return {"error": "path must be inside the sessions directory"}
         if candidate.is_file():
             target_file = candidate
     elif sid:
@@ -3283,17 +3298,28 @@ def tool_wiki_attach_image(args: dict) -> dict:
         return {"error": f"page not found: {slug} (cerco in entities/concepts/sources/analysis)"}
 
     # Download or copy image
-    topic = (args.get("topic") or slug).strip().strip("/")
+    # topic finisce in raw/<topic>: sanitizza per impedire '../' traversal, poi confina
+    # (F-Sec-Anjadev-CategoryTopicTraversal).
+    topic = re.sub(r"[^a-zA-Z0-9_-]", "", (args.get("topic") or slug).strip().strip("/")) or slug
     raw_topic_dir = raw / topic
+    try:
+        raw_topic_dir.resolve().relative_to(raw.resolve())
+    except ValueError:
+        return {"error": "invalid topic"}
     raw_topic_dir.mkdir(parents=True, exist_ok=True)
 
     if image_path_arg.startswith(("http://", "https://")):
-        # Download
-        filename = image_path_arg.rsplit("/", 1)[-1].split("?")[0] or "image.png"
+        # Download — basename + cap size (no filename traversal, no file enorme da URL ostile)
+        filename = os.path.basename(image_path_arg.rsplit("/", 1)[-1].split("?")[0].strip())
+        if filename in ("", ".", ".."):
+            filename = "image.png"
         dest = raw_topic_dir / filename
         try:
             with urlopen(image_path_arg, timeout=15) as resp:
-                dest.write_bytes(resp.read())
+                data = resp.read(_MAX_IMAGE_BYTES + 1)
+            if len(data) > _MAX_IMAGE_BYTES:
+                return {"error": f"image too large (> {_MAX_IMAGE_BYTES // (1024 * 1024)}MB)"}
+            dest.write_bytes(data)
         except Exception as e:
             return {"error": f"download failed: {type(e).__name__}: {e}"}
     else:
@@ -3363,7 +3389,13 @@ def tool_wiki_export(args: dict) -> dict:
     default_dir.mkdir(parents=True, exist_ok=True)
     out_path_arg = args.get("output_path")
     if out_path_arg:
+        # Confina a ROOT: senza il check si esporta tutto il wiki (prompt utente, SOUL,
+        # frontmatter) verso un path arbitrario (F-Sec-Anjadev-ExportTraversal).
         out_path = Path(out_path_arg).expanduser().resolve()
+        try:
+            out_path.relative_to(ROOT.resolve())
+        except ValueError:
+            return {"error": "output_path must be inside the project root"}
     else:
         ext = {"md": "zip", "json": "json", "html": "zip"}[fmt]
         out_path = default_dir / f"wiki-export-{today}.{ext}"
