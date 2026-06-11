@@ -2,6 +2,21 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.18.1 — 2026-06-11
+
+**Security**: hardening dei tool MCP che costruivano path da argomenti del caller senza confinamento (un LLM influenzato da contenuto esterno poteva indurre lettura/scrittura di file arbitrari).
+
+### Fixed
+
+- **`sessions.read`** (`mcp_memory_server.py`): il branch `path` ora è confinato a `sessions_root` (era `ROOT / path_arg` → `../../.secrets.env` o un path assoluto leggevano file arbitrari e ne restituivano il content). Era l'unico read-tool che saltava il pattern `relative_to` già usato da skill/workspace.
+- **`wiki.export`**: `output_path` confinato a `ROOT` (esportava il wiki — prompt utente, SOUL, frontmatter — ovunque sul disco).
+- **`wiki.attach_image`**: `topic` sanitizzato + confinato a `raw/`, `filename` via basename, cap 25MB sul download da URL.
+- **`memory.write`**: `category` sanitizzata `[a-z0-9_-]` + confinata a `raw/`.
+
+### Added
+
+- **`bump.sh`**: script di release single-source-of-truth — aggiorna in un colpo le 4 occorrenze di `version` nei 3 manifest (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`), che prima andavano in deriva (causa del "già aggiornato" dopo un fix senza bump).
+
 ## v0.18.0 — 2026-06-11
 
 **Feature**: `/anja-upgrade` — migrazione guidata di progetti/hub con wiki di versione precedente.
