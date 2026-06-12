@@ -959,6 +959,10 @@ def tool_agent_delegate(args: dict) -> dict:
             pass
     model = cfg.get("default_model", "sonnet")
     role = cfg.get("role", "")
+    # F-Sec-Anjadev-DelegateBypass: bypassPermissions solo se l'agent lo dichiara
+    # esplicitamente nella sua config (default least-privilege). Letto QUI perché più
+    # sotto `cfg` viene riassegnato all'ultimo .mcp.json (shadowing).
+    bypass_perms = bool(cfg.get("bypass_permissions", False))
 
     # Spawn claude-agent-sdk in-process (timeout protection via asyncio)
     import asyncio
@@ -998,15 +1002,16 @@ def tool_agent_delegate(args: dict) -> dict:
     sdk_cwd = hub if (hub / ".mcp.json").is_file() else agent_dir
 
     async def _run():
+        # Least-privilege di default: l'agent delegato legge/cerca + usa i suoi MCP,
+        # ma NON scrive/esegue bash senza opt-in (bypass_permissions: true nella sua
+        # config). Con prompt injection non eredita più pieni poteri sull'host.
         opts_kwargs = {
             "system_prompt": system_prompt,
             "model": model,
             "cwd": str(sdk_cwd),
-            # User authorized MCP via anja UI: skip Claude Code permission prompts
-            "permission_mode": "bypassPermissions",
+            "permission_mode": "bypassPermissions" if bypass_perms else "default",
+            "allowed_tools": ["Read", "Grep", "Glob"] + mcp_patterns,
         }
-        if mcp_patterns:
-            opts_kwargs["allowed_tools"] = ["Read", "Grep", "Glob"] + mcp_patterns
         options = ClaudeAgentOptions(**opts_kwargs)
         chunks = []
         async for msg in query(prompt=prompt, options=options):

@@ -2,6 +2,15 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.18.2 — 2026-06-12
+
+**Security** (round 2): prompt-injection hardening sul subprocess di summarize + least-privilege sull'agent delegato.
+
+### Fixed
+
+- **`sessions.summarize`** (`summarize_session_bg.py`): il session content (prompt utente + materiale ingerito, potenzialmente non fidato) era interpolato nel prompt di `claude -p` con delimitatore `---` → prompt injection nel subprocess. Ora racchiuso in tag XML `<session_file>` con istruzione esplicita "dati, non istruzioni" + neutralizzazione del tag-breakout.
+- **`agent.delegate`** (`mcp_memory_server.py`): `tool_agent_delegate` hardcodava `permission_mode: bypassPermissions` per ogni agent delegato → con prompt injection l'agente girava senza guardrail. Ora least-privilege di default: `allowed_tools` SEMPRE ristretta (Read/Grep/Glob + i soli MCP dell'agent), `bypassPermissions` solo con opt-in `bypass_permissions: true` nella config dell'agent.
+
 ## v0.18.1 — 2026-06-11
 
 **Security**: hardening dei tool MCP che costruivano path da argomenti del caller senza confinamento (un LLM influenzato da contenuto esterno poteva indurre lettura/scrittura di file arbitrari).
