@@ -2,6 +2,19 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.0 — 2026-06-13
+
+**OpenCode full mode** (`F-OpenCodeAdapter`): plugin che aggancia i lifecycle di OpenCode agli hook Python anja, replicando gli automatismi senza riscriverne la logica.
+
+### Added
+
+- **`.opencode/plugin/anja.js`**: plugin OpenCode (Bun) — `event(session.idle)`→`session_end.py` (journal di sessione, debounced 60s), `tool.execute.after`→`post_tool_use.py` (re-embed del wiki dopo edit di `.anjawiki/wiki`), `chat.message`→`session_start.py` (context injection best-effort, 1×/sessione). Il plugin TRADUCE i messaggi OpenCode (via `client.session.messages`) nel JSONL stile Claude Code che `parse_transcript` già legge, poi invoca gli script Python **invariati** → zero modifiche al codice condiviso, zero regressioni su CC/Codex/Grok.
+- **`tests/test_opencode_adapter.py`**: verifica il contratto di integrazione (transcript tradotto → `session_end.py` → journal con user prompts + tool stats, 3/3).
+
+### Note
+
+- I campi esatti dell'API OpenCode (event payload, struttura `Part`, args dei tool) sono accedibili in modo difensivo (più fallback) — da validare sul campo quando OpenCode entra nel workflow. Il contratto verso il Python è testato.
+
 ## v0.18.2 — 2026-06-12
 
 **Security** (round 2): prompt-injection hardening sul subprocess di summarize + least-privilege sull'agent delegato.

@@ -170,8 +170,14 @@ Non editare i generati: il context vive in `AGENTS.src.md`.
 > manuale": il context statico è nel file, ma il pull dinamico (roadmap/sessioni) e il journal si
 > fanno via tool MCP o bash-native — vedi la sezione *Bootstrap* nel context composto.
 >
-> OpenCode (parcheggiato): config MCP `opencode.json` sopra; gli automatismi richiederebbero un
-> plugin JS lifecycle (`F-OpenCodeAdapter`, non in uso).
+> **OpenCode (full mode)**: oltre alla config MCP `opencode.json` sopra, il plugin
+> `.opencode/plugin/anja.js` aggancia i lifecycle OpenCode agli hook Python anja —
+> `event(session.idle)`→journal, `tool.execute.after`→re-embed wiki, `chat.message`→context
+> injection. Install: symlink/copia il plugin in `.opencode/plugin/` del progetto (o in
+> `~/.config/opencode/plugin/`); imposta `ANJADEV_DIR` se vive fuori dal repo. Il plugin
+> traduce i dati OpenCode nel formato JSONL che gli script CC già parsano → zero modifiche
+> al Python condiviso. (I campi esatti dell'API OpenCode sono accedibili in modo difensivo,
+> da validare sul campo quando OpenCode entra in uso.)
 >
 > Nota Codex: alcune versioni hanno avuto bug nel leggere `mcp_servers` da `config.toml`
 > ([openai/codex#3441](https://github.com/openai/codex/issues/3441)) — verifica con la tua release.

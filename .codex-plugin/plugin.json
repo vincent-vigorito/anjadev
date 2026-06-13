@@ -1,6 +1,6 @@
 {
   "name": "anja",
-  "version": "0.18.2",
+  "version": "0.19.0",
   "description": "Wiki strutturato + memoria identitaria + ricerca semantica del codice. MCP server (memory/wiki/roadmap/sessions/skills/code/graph) + skills + lifecycle hooks (context injection a SessionStart, journal a SessionEnd, wiki re-embed a PostToolUse). Stesso core del plugin Claude Code, distribuito come plugin Codex.",
   "author": {
     "name": "Vincent Vigorito",
