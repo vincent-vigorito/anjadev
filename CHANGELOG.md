@@ -2,6 +2,18 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.1 — 2026-06-13
+
+**OpenCode adapter validato sul campo** (OpenCode 1.17.4) + fix stdin.
+
+### Fixed
+
+- **`.opencode/plugin/anja.js`**: lo stdin verso gli hook Python passava da un metodo `.stdin()` inesistente sulla Bun shell → `TypeError` (journal e re-embed non partivano). Ora via `child_process.spawn` (stdin standard). **Validato e2e su OpenCode 1.17.4**: loading + hooks risolti, context injection (`chat.message`→`output.parts`, mutazione confermata), re-embed (`tool.execute.after`→`post_tool_use.py`), journal (`session.idle`→`session_end.py` con summary haiku). Campi runtime confermati: `event.properties.sessionID`, tool `write`/`edit` con `args.filePath`.
+
+### Added
+
+- Debug opt-in `ANJA_OC_DEBUG=1` → log diagnostico in `/tmp/anja-opencode.log`.
+
 ## v0.19.0 — 2026-06-13
 
 **OpenCode full mode** (`F-OpenCodeAdapter`): plugin che aggancia i lifecycle di OpenCode agli hook Python anja, replicando gli automatismi senza riscriverne la logica.

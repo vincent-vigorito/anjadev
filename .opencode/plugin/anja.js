@@ -20,7 +20,8 @@
  */
 import { join, resolve } from "path"
 import { tmpdir } from "os"
-import { writeFileSync } from "fs"
+import { writeFileSync, appendFileSync, existsSync } from "fs"
+import { spawn } from "child_process"
 
 function anjadevRoot() {
   if (process.env.ANJADEV_DIR) return process.env.ANJADEV_DIR
@@ -30,6 +31,13 @@ function anjadevRoot() {
 
 const HOOKS = join(anjadevRoot(), "hooks")
 const PY = process.env.ANJA_PYTHON || "python3"
+
+// Diagnostica opt-in (ANJA_OC_DEBUG=1): traccia loading + hook su /tmp/anja-opencode.log.
+const DEBUG = !!process.env.ANJA_OC_DEBUG
+function dbg(msg) {
+  if (!DEBUG) return
+  try { appendFileSync("/tmp/anja-opencode.log", `[${new Date().toISOString()}] ${msg}\n`) } catch {}
+}
 
 function sessionIdOf(ev) {
   const p = ev?.properties || ev || {}
@@ -71,9 +79,19 @@ export function toCcTranscript(items) {
 export const AnjaPlugin = async ({ client, directory, $ }) => {
   const lastJournal = {}   // debounce: session.idle scatta a ogni turno, non solo a fine sessione
   const injected = {}      // context injection una volta per sessione
+  dbg(`loaded · dir=${directory} · hooks=${HOOKS} · session_end=${existsSync(join(HOOKS, "session_end.py"))}`)
 
-  const run = (script, payload) =>
-    $`${PY} ${join(HOOKS, script)}`.cwd(directory).stdin(payload).quiet().nothrow()
+  // stdin via child_process (la Bun shell non espone un .stdin() concatenabile):
+  // gli hook Python leggono il payload da sys.stdin. Fire-and-forget, mai bloccante.
+  const run = (script, payload) => new Promise((res) => {
+    try {
+      const p = spawn(PY, [join(HOOKS, script)], { cwd: directory, stdio: ["pipe", "ignore", "ignore"] })
+      p.on("error", () => res())
+      p.on("close", () => res())
+      p.stdin.write(payload)
+      p.stdin.end()
+    } catch { res() }
+  })
 
   return {
     // Journal di sessione: tradotto e passato a session_end.py (invariato).
@@ -93,7 +111,8 @@ export const AnjaPlugin = async ({ client, directory, $ }) => {
           session_id: sid, transcript_path: tpath, cwd: directory,
           hook_event_name: "SessionEnd", reason: "other",
         }))
-      } catch { /* best-effort: mai disturbare la sessione */ }
+        dbg(`session.idle sid=${sid} items=${items.length} → session_end.py`)
+      } catch (e) { dbg(`session.idle ERR ${e}`) }  /* best-effort: mai disturbare la sessione */
     },
 
     // Re-embed del wiki dopo un edit dentro .anjawiki/wiki (post_tool_use.py invariato).
@@ -102,13 +121,15 @@ export const AnjaPlugin = async ({ client, directory, $ }) => {
       if (!["write", "edit", "patch", "multiedit"].includes(tool)) return
       const args = input?.args || {}
       const fp = args.filePath || args.path || args.file || args.file_path
+      dbg(`tool.execute.after tool=${tool} argKeys=${Object.keys(args)} fp=${fp}`)
       if (!fp || !String(fp).includes("/.anjawiki/wiki/")) return
       try {
         await run("post_tool_use.py", JSON.stringify({
           tool_name: tool === "write" ? "Write" : "Edit",
           tool_input: { file_path: fp },
         }))
-      } catch { /* fire-and-forget */ }
+        dbg(`re-embed → post_tool_use.py fp=${fp}`)
+      } catch (e) { dbg(`tool.after ERR ${e}`) }  /* fire-and-forget */
     },
 
     // Context injection best-effort: al primo messaggio, prepende l'output di
@@ -119,10 +140,10 @@ export const AnjaPlugin = async ({ client, directory, $ }) => {
       injected[sid] = true
       try {
         const ctx = (await $`${PY} ${join(HOOKS, "session_start.py")}`.cwd(directory).quiet().nothrow().text()).trim()
-        if (ctx && Array.isArray(output?.parts)) {
-          output.parts.unshift({ type: "text", text: `[anja]\n${ctx}\n` })
-        }
-      } catch { /* best-effort */ }
+        const ok = ctx && Array.isArray(output?.parts)
+        if (ok) output.parts.unshift({ type: "text", text: `[anja]\n${ctx}\n` })
+        dbg(`chat.message sid=${sid} ctxlen=${ctx.length} parts=${Array.isArray(output?.parts)} injected=${!!ok}`)
+      } catch (e) { dbg(`chat.message ERR ${e}`) }  /* best-effort */
     },
   }
 }

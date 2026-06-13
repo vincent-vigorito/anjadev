@@ -176,8 +176,8 @@ Non editare i generati: il context vive in `AGENTS.src.md`.
 > injection. Install: symlink/copia il plugin in `.opencode/plugin/` del progetto (o in
 > `~/.config/opencode/plugin/`); imposta `ANJADEV_DIR` se vive fuori dal repo. Il plugin
 > traduce i dati OpenCode nel formato JSONL che gli script CC già parsano → zero modifiche
-> al Python condiviso. (I campi esatti dell'API OpenCode sono accedibili in modo difensivo,
-> da validare sul campo quando OpenCode entra in uso.)
+> al Python condiviso. **Validato e2e su OpenCode 1.17.4** (loading · context injection ·
+> re-embed · journal con summary). Debug opt-in: `ANJA_OC_DEBUG=1` → `/tmp/anja-opencode.log`.
 >
 > Nota Codex: alcune versioni hanno avuto bug nel leggere `mcp_servers` da `config.toml`
 > ([openai/codex#3441](https://github.com/openai/codex/issues/3441)) — verifica con la tua release.
