@@ -2,6 +2,14 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.2 — 2026-06-30
+
+**Security**: YAML injection in `task.schedule_one_shot`.
+
+### Fixed
+
+- **`task.schedule_one_shot`** (`mcp_memory_server.py`): gli `output_actions` (il campo `type` e i valori) erano serializzati nel routine YAML con f-string non quotate → un valore contenente `"` o newline poteva iniettare chiavi YAML arbitrarie (es. forzare `enabled`/output non voluti). Ora i valori passano da `json.dumps` (scalare JSON valido anche come YAML, con escape corretto di quote/newline) e le chiavi sono validate come identificatori. Il `prompt` (blocco `|`) e il `name` (già validato kebab-case) non erano interessati.
+
 ## v0.19.1 — 2026-06-13
 
 **OpenCode adapter validato sul campo** (OpenCode 1.17.4) + fix stdin.

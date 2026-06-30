@@ -1185,11 +1185,15 @@ def tool_task_schedule_one_shot(args: dict) -> dict:
     for o in output_actions:
         if not isinstance(o, dict) or "type" not in o:
             continue
-        yaml_lines.append(f"  - type: {o['type']}")
+        # json.dumps produce uno scalare JSON valido anche come YAML, con escape
+        # corretto di quote/newline → niente injection di chiavi via type/value.
+        yaml_lines.append(f"  - type: {json.dumps(str(o['type']))}")
         for k, v in o.items():
             if k == "type":
                 continue
-            yaml_lines.append(f"    {k}: \"{v}\"")
+            if not _re.match(r"^[a-zA-Z0-9_-]+$", str(k)):
+                continue  # scarta chiavi non-identificatore (anti-injection)
+            yaml_lines.append(f"    {k}: {json.dumps(v)}")
     yaml_text = "\n".join(yaml_lines) + "\n"
     target.write_text(yaml_text, encoding="utf-8")
 
