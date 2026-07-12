@@ -126,18 +126,43 @@ def _session_id(payload: dict, meta: Optional[dict]) -> str:
     return ""
 
 
-def _rollout_path(payload: dict) -> Optional[Path]:
+def _rollout_workspace(path: Path) -> Optional[Path]:
+    """Legge la cwd dal metadata di un rollout Codex."""
+    try:
+        with path.open(encoding="utf-8", errors="replace") as raw:
+            for line in raw:
+                envelope = json.loads(line)
+                if envelope.get("type") != "session_meta":
+                    continue
+                cwd = _nested(envelope.get("payload") or {}, "cwd")
+                if isinstance(cwd, str) and cwd:
+                    return Path(cwd).expanduser().resolve()
+    except (OSError, json.JSONDecodeError):
+        return None
+    return None
+
+
+def _rollout_path(payload: dict, workspace: Path) -> Optional[Path]:
     for key in ("transcript_path", "transcriptPath", "rollout_path", "rolloutPath"):
         value = payload.get(key)
         if isinstance(value, str) and Path(value).is_file():
             return Path(value)
 
     sid = _session_id(payload, None)
-    if not sid or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in sid):
+    if sid and any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in sid):
         return None
     codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
-    matches = sorted((codex_home / "sessions").rglob(f"*{sid}*.jsonl"), key=lambda p: p.stat().st_mtime)
-    return matches[-1] if matches else None
+    sessions_root = codex_home / "sessions"
+    if sid:
+        matches = sorted(sessions_root.rglob(f"*{sid}*.jsonl"), key=lambda p: p.stat().st_mtime)
+        return matches[-1] if matches else None
+
+    # Lo schema dello Stop hook non garantisce un session_id. In quel caso scegli
+    # il rollout più recente della stessa workspace, mai quello di un altro progetto.
+    for candidate in sorted(sessions_root.rglob("*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
+        if _rollout_workspace(candidate) == workspace:
+            return candidate
+    return None
 
 
 def _workspace(payload: dict, meta: Optional[dict]) -> Path:
@@ -157,7 +182,8 @@ def _write_normalized_transcript(project_root: Path, session_id: str, events: li
 
 
 def session_end(payload: dict) -> int:
-    rollout = _rollout_path(payload)
+    workspace = _workspace(payload, None)
+    rollout = _rollout_path(payload, workspace)
     if rollout is None:
         return 0
     events, meta = _response_items_to_cc(rollout)
@@ -176,8 +202,9 @@ def session_end(payload: dict) -> int:
     core.write_session_file(sessions_root, kind, {
         "session_id": session_id,
         "transcript_path": str(transcript),
-        "hook_event_name": "SessionEnd",
-        "reason": payload.get("reason") or "codex-session-end",
+        "hook_event_name": "Stop",
+        "reason": payload.get("reason") or "codex-stop",
+        "agent": "cli-codex",
     }, transcript_info)
     if kind == "project":
         core.spawn_bg_wiki_embed_check(project_root)
@@ -210,11 +237,11 @@ def post_tool_use(payload: dict) -> int:
 
 
 def main() -> int:
-    if len(sys.argv) != 2 or sys.argv[1] not in ("session-end", "post-tool-use"):
-        print("usage: codex_adapter.py session-end|post-tool-use", file=sys.stderr)
+    if len(sys.argv) != 2 or sys.argv[1] not in ("stop", "post-tool-use"):
+        print("usage: codex_adapter.py stop|post-tool-use", file=sys.stderr)
         return 2
     payload = _read_payload()
-    return session_end(payload) if sys.argv[1] == "session-end" else post_tool_use(payload)
+    return session_end(payload) if sys.argv[1] == "stop" else post_tool_use(payload)
 
 
 if __name__ == "__main__":

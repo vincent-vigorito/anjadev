@@ -240,7 +240,8 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     now_local = datetime.now().astimezone()
     hms = now_local.strftime("%H%M%S")
     short_hash = secrets.token_hex(2)
-    anja_id = f"{hms}-cli-claude-{short_hash}"
+    agent = session_meta.get("agent", "cli-claude")
+    anja_id = f"{hms}-{agent}-{short_hash}"
 
     cc_session_id = session_meta.get("session_id", "")
     reason = session_meta.get("reason", "?")
@@ -294,7 +295,7 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     lines.append(f"ended: {ended_local}")
     lines.append(f"duration: {duration}")
     lines.append(f"scope: {kind}")
-    lines.append(f"agent: cli-claude")
+    lines.append(f"agent: {agent}")
     lines.append(f"date: {today}")
     lines.append(f"end_reason: {reason}")
     lines.append(f"messages_user: {len(user_messages)}")

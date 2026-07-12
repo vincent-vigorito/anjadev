@@ -50,8 +50,8 @@ def main():
     _rollout(rollout, project)
 
     env = dict(os.environ, CODEX_HOME=str(codex_home), ANJA_WIKI_EMBED="0", ANJA_AUTO_SUMMARY="0")
-    payload = json.dumps({"session_id": "codex-sess-123", "cwd": str(project)})
-    result = subprocess.run([sys.executable, str(ADAPTER), "session-end"], input=payload,
+    payload = json.dumps({"cwd": str(project)})
+    result = subprocess.run([sys.executable, str(ADAPTER), "stop"], input=payload,
                             text=True, capture_output=True, cwd=str(project), env=env, timeout=30)
     assert result.returncode == 0, result.stderr
 
@@ -62,6 +62,7 @@ def main():
     assert "ora aggiungi un test" in journal
     assert "functions.exec" in journal
     assert "codex-sess-123" in journal
+    assert "agent: cli-codex" in journal
     assert (project / ".anjawiki" / "transcripts" / "codex" / "codex-sess-123.jsonl").is_file()
     print("✓ adapter Codex converte rollout → journal con prompt e tool stats")
 

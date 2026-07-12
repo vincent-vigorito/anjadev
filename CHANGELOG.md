@@ -2,6 +2,21 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.4 — 2026-07-12
+
+**Codex lifecycle hook installabile e compatibile con il runtime reale.**
+
+### Fixed
+
+- Il manifest Codex non dichiara piu hook non supportati: Codex li scopre esclusivamente dalla configurazione del progetto e non dal plugin.
+- Il journal Codex usa l'evento supportato `Stop` al posto di `SessionEnd`; se il payload non espone il session ID, l'adapter trova il rollout piu recente della stessa workspace.
+- I journal Codex sono identificati come `cli-codex`; Claude Code conserva `cli-claude` come default invariato.
+
+### Added
+
+- **`scripts/install_codex_hooks.py`**: installazione idempotente per progetto di `SessionStart` e `Stop` in `.codex/hooks.json`, con preservazione degli hook esistenti e attivazione di `[features].hooks`.
+- **`tests/test_install_codex_hooks.py`**: copre merge, preservazione e idempotenza dell'installer.
+
 ## v0.19.3 — 2026-07-12
 
 **Codex lifecycle adapter**: journal e re-embed Codex ora passano da un adapter dedicato, senza modificare il percorso Claude Code.
