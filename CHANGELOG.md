@@ -2,6 +2,19 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.3 — 2026-07-12
+
+**Codex lifecycle adapter**: journal e re-embed Codex ora passano da un adapter dedicato, senza modificare il percorso Claude Code.
+
+### Added
+
+- **`hooks/codex_adapter.py`**: normalizza i rollout JSONL locali di Codex nel contratto transcript consumato dal core Anja, salva il transcript convertito in `.anjawiki/transcripts/codex/` e genera il journal con prompt utente + tool stats. Il percorso Codex non avvia auto-summary o sync `cc_memory`, entrambi specifici di Claude Code.
+- **`tests/test_codex_adapter.py`**: fixture Codex → journal che copre user prompts, function call e normalizzazione PostToolUse.
+
+### Changed
+
+- **`hooks/hooks.codex.json`**: `SessionEnd` e `PostToolUse` invocano l'adapter Codex; `SessionStart` e tutti gli hook Claude Code restano invariati.
+
 ## v0.19.2 — 2026-06-30
 
 **Security**: YAML injection in `task.schedule_one_shot`.
