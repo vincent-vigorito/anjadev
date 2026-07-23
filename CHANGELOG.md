@@ -2,6 +2,21 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.5 — 2026-07-23
+
+**Sandbox workspace dual-layout: i tool `workspace.*` vedono il layout post-hoist di AnjaHub.**
+
+### Fixed
+
+- `_validate_workspace_path`: per gli scope workspace, `files/`, `data/`, `scripts/` e i
+  file root (`CLAUDE.md`, `log.md`, `meta.yaml`) si risolvono ora alla **radice del
+  workspace** (layout AnjaHub post-hoist, es. `<ws>/data/PIANO.md`) con **fallback
+  automatico su `.anjawiki/`** per i workspace legacy pre-hoist. Prima la sandbox
+  puntava solo a `.anjawiki/` e gli agenti delegati non vedevano i dati operativi
+  del workspace (PIANO.md, catalogo, media) pur essendo in whitelist.
+- `wiki/**` resta sempre risolto in `.anjawiki/wiki` e lo scope `hub` è invariato;
+  path-traversal e whitelist immutati (8 casi di regressione verificati).
+
 ## v0.19.4 — 2026-07-12
 
 **Codex lifecycle hook installabile e compatibile con il runtime reale.**

@@ -1313,7 +1313,12 @@ _WORKSPACE_ROOT_FILES = ("CLAUDE.md", "log.md", "meta.yaml")
 def _validate_workspace_path(scope: str, rel_path: str) -> tuple[Optional[Path], Optional[str]]:
     """Path validation: ritorna (resolved_path, error_msg).
 
-    Allowed: scope_root/{files,data,scripts}/**/* + scope_root/{CLAUDE.md,log.md,meta.yaml}
+    Allowed: {files,data,scripts}/**/* + {CLAUDE.md,log.md,meta.yaml} + wiki/**.
+
+    Layout workspace POST-HOIST (AnjaHub 2026-06): files/data/scripts vivono alla
+    RADICE del workspace (<ws>/data/...), mentre wiki e memoria restano in
+    <ws>/.anjawiki/. I workspace pre-hoist hanno ancora tutto dentro .anjawiki/
+    → dual-layout: prova la radice, fallback su .anjawiki/ (legacy).
     """
     root = _resolve_workspace_root(scope)
     if not root:
@@ -1322,34 +1327,52 @@ def _validate_workspace_path(scope: str, rel_path: str) -> tuple[Optional[Path],
     if ".." in rel or rel.startswith("/"):
         return None, "path traversal not allowed"
 
-    # Per workspace scope, il root è il workspace dir; la struttura è
-    # <root>/.anjawiki/{files,data,scripts}/...
-    # Per hub, root è hub_path direttamente: <hub>/{files,data,scripts}/...
+    def _resolve_in(base: Path) -> tuple[Optional[Path], Optional[str]]:
+        t = (base / rel).resolve()
+        try:
+            t.relative_to(base.resolve())
+        except ValueError:
+            return None, "path outside scope"
+        return t, None
+
+    # Hub: root è hub_path diretto — <hub>/{files,data,scripts}/... (invariato)
     if scope == "hub" or not scope:
-        scope_root = root
-    else:
-        scope_root = root / ".anjawiki"
-        if not scope_root.is_dir():
-            return None, f"workspace .anjawiki not found: {scope_root}"
+        target, err = _resolve_in(root)
+        if err:
+            return None, err
+        rel_parts = target.relative_to(root.resolve()).parts
+        if len(rel_parts) == 0:
+            return root, None  # listing root
+        first = rel_parts[0]
+        if first in _ALLOWED_SUBDIRS:
+            return target, None
+        if len(rel_parts) == 1 and first in _WORKSPACE_ROOT_FILES:
+            return target, None
+        if first == "wiki":
+            return target, None
+        return None, f"path '{first}' not in whitelist (allowed: {_ALLOWED_SUBDIRS} + {_WORKSPACE_ROOT_FILES} + wiki/)"
 
-    target = (scope_root / rel).resolve()
-    try:
-        target.relative_to(scope_root)
-    except ValueError:
-        return None, "path outside scope"
+    # Workspace: dual-layout
+    aw = root / ".anjawiki"
+    if not aw.is_dir():
+        return None, f"workspace .anjawiki not found: {aw}"
+    parts = Path(rel).parts
+    if len(parts) == 0:
+        return root, None  # listing root del workspace (layout nuovo)
+    first = parts[0]
 
-    # Check whitelist: deve essere in files/data/scripts/ o root file noto
-    rel_parts = target.relative_to(scope_root).parts
-    if len(rel_parts) == 0:
-        return scope_root, None  # listing root
-    first = rel_parts[0]
-    if first in _ALLOWED_SUBDIRS:
-        return target, None
-    if len(rel_parts) == 1 and first in _WORKSPACE_ROOT_FILES:
-        return target, None
-    # Permetti anche read di wiki/
     if first == "wiki":
-        return target, None
+        # wiki vive SEMPRE in .anjawiki/
+        return _resolve_in(aw)
+
+    if first in _ALLOWED_SUBDIRS or (len(parts) == 1 and first in _WORKSPACE_ROOT_FILES):
+        # radice del workspace (post-hoist) se il path esiste lì o se il legacy
+        # non ce l'ha; altrimenti fallback .anjawiki/ (pre-hoist)
+        new_t = root / rel
+        old_t = aw / rel
+        base = root if (new_t.exists() or not old_t.exists()) else aw
+        return _resolve_in(base)
+
     return None, f"path '{first}' not in whitelist (allowed: {_ALLOWED_SUBDIRS} + {_WORKSPACE_ROOT_FILES} + wiki/)"
 
 
