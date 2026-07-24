@@ -972,11 +972,90 @@ def tool_agent_list(args: dict) -> dict:
     return {"agents": out, "count": len(out)}
 
 
+def _iter_agent_dirs(hub: Path):
+    """(name, workspace, dir) per gli agent con config: hub-level + team dei workspace."""
+    d = hub / "agents"
+    if d.is_dir():
+        for sub in sorted(d.iterdir()):
+            if sub.is_dir() and (sub / "config.json").is_file():
+                yield sub.name, "", sub
+    wsr = hub / "workspaces"
+    if wsr.is_dir():
+        for ws in sorted(wsr.iterdir()):
+            ad = ws / ".anjawiki" / "agents"
+            if ad.is_dir():
+                for sub in sorted(ad.iterdir()):
+                    if sub.is_dir() and (sub / "config.json").is_file():
+                        yield sub.name, ws.name, sub
+
+
+def _route_delegate_target(hub: Path, prompt: str, workspace: str = "") -> tuple:
+    """Sceglie l'agent quando `target` non è dato: match delle `auto_route_keywords`
+    sul prompt, ristretto al workspace (esplicito o inferito dal testo).
+    Deterministico e osservabile — nessuna chiamata LLM. Ritorna (target, meta)."""
+    entries = []
+    for name, ws, adir in _iter_agent_dirs(hub):
+        try:
+            cfg = json.loads((adir / "config.json").read_text(encoding="utf-8"))
+        except Exception:
+            cfg = {}
+        entries.append((name, ws, cfg))
+    if not entries:
+        return "", {"error": "nessun agent con config"}
+
+    low = " " + prompt.lower() + " "
+    ws_sel = (workspace or "").strip()
+    if not ws_sel:
+        # inferisci il workspace dal prompt (nome completo o primo token dello slug)
+        names = sorted({ws for _, ws, _ in entries if ws})
+        hits = [n for n in names
+                if re.search(r"\b" + re.escape(n.lower()) + r"\b", low)
+                or re.search(r"\b" + re.escape(n.split("-")[0].lower()) + r"\b", low)]
+        if len(hits) == 1:
+            ws_sel = hits[0]
+        elif len(hits) > 1:
+            return "", {"error": f"workspace ambiguo nel prompt: {hits} — passa `workspace`"}
+
+    cands = [e for e in entries if not ws_sel or e[1] == ws_sel]
+    if not cands:
+        return "", {"error": f"nessun agent nel workspace '{ws_sel}'"}
+
+    scored = []
+    for name, ws, cfg in cands:
+        kws = [str(k).lower() for k in (cfg.get("auto_route_keywords") or [])]
+        hit = [k for k in kws if re.search(r"\b" + re.escape(k) + r"\b", low)]
+        if hit:
+            # a parità di keyword vince chi PUÒ eseguire il task (tool di produzione)
+            scored.append((len(hit), 1 if cfg.get("delegate_tools") else 0, name, ws, hit))
+    if not scored:
+        leads = [(n, w) for n, w, c in cands if c.get("workspace_lead")]
+        if len(leads) == 1:
+            return leads[0][0], {"routed_to": leads[0][0], "workspace": leads[0][1],
+                                 "reason": "nessuna keyword matchata → lead del workspace"}
+        return "", {"error": "routing fallito: nessuna keyword matchata e lead non univoco — passa `target`"}
+
+    scored.sort(key=lambda t: (t[0], t[1]), reverse=True)
+    best = scored[0]
+    # Ambiguità di WORKSPACE: stesso punteggio in brand diversi (gli specialisti hanno
+    # nomi uguali nei pod) → mai tirare a sorte, il target sbagliato pubblica sul
+    # brand sbagliato. Chiedi `workspace`.
+    tied_ws = {s[3] for s in scored if (s[0], s[1]) == (best[0], best[1]) and s[3]}
+    if not ws_sel and len(tied_ws) > 1:
+        return "", {"error": f"routing ambiguo tra i workspace {sorted(tied_ws)} "
+                             f"(agent '{best[2]}', keyword {best[4]}) — passa `workspace`"}
+    others = [{"agent": s[2], "keywords": s[4]} for s in scored[1:3]]
+    return best[2], {"routed_to": best[2], "workspace": best[3],
+                     "matched_keywords": best[4], "runner_up": others,
+                     "reason": f"auto-route su keyword {best[4]}"}
+
+
 def tool_agent_delegate(args: dict) -> dict:
     """Delega un task a un agent specializzato. Spawn mini-sessione claude-agent-sdk con cwd=agent dir.
 
     args:
-      target: str  — nome agent (es. 'trader')
+      target: str  — nome agent (es. 'social'). OPZIONALE: se assente, l'agent viene
+                     scelto automaticamente dalle `auto_route_keywords` sul prompt
+      workspace: str — restringe il routing automatico a un workspace (opz.)
       prompt: str  — task da delegare
       timeout_sec: int = 120
     """
@@ -984,10 +1063,19 @@ def tool_agent_delegate(args: dict) -> dict:
     prompt = (args.get("prompt") or "").strip()
     timeout_sec = int(args.get("timeout_sec", 120))
 
-    if not target:
-        return {"error": "target (agent name) required"}
     if not prompt:
         return {"error": "prompt required"}
+
+    routing = None
+    if not target:
+        _hub_for_route = _hub_root_from_scope()
+        if not _hub_for_route:
+            return {"error": "hub root not determinable"}
+        target, routing = _route_delegate_target(
+            _hub_for_route, prompt, (args.get("workspace") or "").strip())
+        if not target:
+            return {"error": routing.get("error", "routing fallito"), "hint":
+                    "passa `target` esplicito (agent.list mostra il roster)"}
 
     hub = _hub_root_from_scope()
     if not hub:
@@ -1128,6 +1216,8 @@ def tool_agent_delegate(args: dict) -> dict:
         "response": response,
         "native_tools": native_tools,
     }
+    if routing:
+        out["routing"] = routing   # perché è stato scelto quell'agent (decision-trail)
     if sid:
         out["session"] = sid
     if timed_out:
@@ -4981,15 +5071,16 @@ TOOLS = [
     },
     {
         "name": "agent.delegate",
-        "description": "Delega un task a un agent specializzato (es. trader, writer, researcher). L'agent risponde in character secondo SOUL+AGENTS+TOOLS. Usa quando una richiesta è chiaramente nel dominio di un agent (controlla agent.list prima). Restituisce la risposta dell'agent come tool result.",
+        "description": "Delega un task a un agent specializzato (es. social, dev, analyst). L'agent risponde in character secondo SOUL+AGENTS+TOOLS. OMETTI `target` per lasciar scegliere l'agent giusto in automatico dalle sue auto_route_keywords (la risposta include `routing` con il perché). Restituisce la risposta dell'agent come tool result.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "target": {"type": "string", "description": "Nome agent da invocare (es. 'trader')"},
+                "target": {"type": "string", "description": "Nome agent da invocare. Omettilo per l'auto-routing sulle keyword del prompt"},
+                "workspace": {"type": "string", "description": "Restringe l'auto-routing a un workspace (utile se più brand condividono i nomi degli specialisti)"},
                 "prompt": {"type": "string", "description": "Task/domanda da delegare all'agent"},
                 "timeout_sec": {"type": "integer", "default": 120, "description": "Timeout massimo per la delegation"},
             },
-            "required": ["target", "prompt"],
+            "required": ["prompt"],
         },
     },
     {

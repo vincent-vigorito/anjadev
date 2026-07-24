@@ -2,6 +2,24 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.8 — 2026-07-24
+
+**Auto-routing della delega: `agent.delegate` sceglie da solo lo specialista giusto.**
+
+### Added
+
+- `target` è ora **opzionale**: senza, l'agent viene scelto dalle sue
+  `auto_route_keywords` matchate sul prompt (word-boundary, nessuna chiamata LLM →
+  deterministico e ripetibile). La risposta include `routing` con l'agent scelto,
+  le keyword che hanno fatto match e i runner-up — decision-trail leggibile.
+- Nuovo parametro `workspace` per restringere il routing a un brand. Se non passato
+  viene **inferito dal prompt**; a parità di punteggio fra workspace diversi il
+  routing **si rifiuta e chiede disambiguazione** invece di tirare a sorte (gli
+  specialisti hanno nomi uguali nei pod: sbagliare workspace = pubblicare sul brand
+  sbagliato).
+- A parità di keyword vince chi ha `delegate_tools`, cioè chi può davvero eseguire
+  il task invece di limitarsi a descriverlo.
+
 ## v0.19.7 — 2026-07-24
 
 **Delega non distruttiva + tool di produzione dichiarabili.**
