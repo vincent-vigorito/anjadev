@@ -897,20 +897,34 @@ def _hub_root_from_scope() -> Optional[Path]:
     return None
 
 
+def _resolve_hub_agent_dir(hub: Path, name: str) -> Optional[Path]:
+    """Agent dir per nome: <hub>/agents/ prima, poi i team dei workspace
+    (<hub>/workspaces/*/.anjawiki/agents/) — stesso lookup della webapp."""
+    d = hub / "agents" / name
+    if (d / "config.json").is_file() or (d / "AGENTS.md").is_file():
+        return d
+    ws_root = hub / "workspaces"
+    if ws_root.is_dir():
+        for ws in sorted(ws_root.iterdir()):
+            cand = ws / ".anjawiki" / "agents" / name
+            if (cand / "config.json").is_file() or (cand / "AGENTS.md").is_file():
+                return cand
+    return None
+
+
 def tool_agent_list(args: dict) -> dict:
-    """Lista agent disponibili nel hub (auto_route_keywords + role + model)."""
+    """Lista agent disponibili: hub-level + i team dei workspace (roster completo)."""
     hub = _hub_root_from_scope()
     if not hub:
         return {"error": "hub root not determinable. Set ANJA_HUB env or run from hub/agent scope."}
-    agents_dir = hub / "agents"
-    if not agents_dir.is_dir():
-        return {"agents": [], "_warning": f"no agents dir at {agents_dir}"}
-    out = []
-    for sub in sorted(agents_dir.iterdir()):
-        if not sub.is_dir():
-            continue
+
+    def _mk(sub: Path, ws: str = "") -> Optional[dict]:
         cfg_path = sub / "config.json"
+        if ws and not cfg_path.is_file() and not (sub / "AGENTS.md").is_file():
+            return None   # nei workspace conta solo un agent vero, non dir spurie
         info = {"name": sub.name, "role": "", "model": "?", "auto_route_keywords": []}
+        if ws:
+            info["workspace"] = ws
         if cfg_path.is_file():
             try:
                 cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
@@ -919,9 +933,42 @@ def tool_agent_list(args: dict) -> dict:
                 info["provider"] = cfg.get("default_provider", "claude")
                 info["auto_route_keywords"] = cfg.get("auto_route_keywords", [])
                 info["scope"] = cfg.get("scope", "hub")
+                info["_has_config"] = True
             except Exception:
                 pass
-        out.append(info)
+        return info
+
+    # NB: workspace diversi possono avere agent omonimi (pod: dev/analyst/…) —
+    # sono agent DIVERSI, tutti in lista. Si dedup-a solo il mirror hub
+    # (dir sessions/ senza config) rispetto all'agent vero di un workspace.
+    hub_entries: dict = {}
+    agents_dir = hub / "agents"
+    if agents_dir.is_dir():
+        for sub in sorted(agents_dir.iterdir()):
+            if sub.is_dir():
+                info = _mk(sub)
+                if info:
+                    hub_entries[sub.name] = info
+    replaced = set()
+    ws_out = []
+    ws_root = hub / "workspaces"
+    if ws_root.is_dir():
+        for ws in sorted(ws_root.iterdir()):
+            adir = ws / ".anjawiki" / "agents"
+            if not adir.is_dir():
+                continue
+            for sub in sorted(adir.iterdir()):
+                if not sub.is_dir():
+                    continue
+                info = _mk(sub, ws=ws.name)
+                if not info:
+                    continue
+                cur = hub_entries.get(sub.name)
+                if cur is not None and not cur.get("_has_config") and info.get("_has_config"):
+                    replaced.add(sub.name)
+                ws_out.append(info)
+    out = [a for n, a in hub_entries.items() if n not in replaced] + ws_out
+    out = [{k: v for k, v in i.items() if k != "_has_config"} for i in out]
     return {"agents": out, "count": len(out)}
 
 
@@ -945,9 +992,12 @@ def tool_agent_delegate(args: dict) -> dict:
     hub = _hub_root_from_scope()
     if not hub:
         return {"error": "hub root not determinable"}
-    agent_dir = hub / "agents" / target
-    if not agent_dir.is_dir():
-        return {"error": f"agent '{target}' not found in {hub}/agents/"}
+    # lookup cross-workspace (come la webapp); legacy: dir hub anche senza config
+    agent_dir = _resolve_hub_agent_dir(hub, target)
+    if agent_dir is None and (hub / "agents" / target).is_dir():
+        agent_dir = hub / "agents" / target
+    if agent_dir is None:
+        return {"error": f"agent '{target}' not found (né {hub}/agents/ né workspaces/*/.anjawiki/agents/)"}
 
     # Load agent config
     cfg_path = agent_dir / "config.json"

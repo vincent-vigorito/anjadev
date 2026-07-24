@@ -2,6 +2,22 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.6 — 2026-07-24
+
+**Roster e delega cross-workspace: gli agent dei workspace sono visibili e delegabili dalle sessioni hub.**
+
+### Fixed
+
+- `agent.list`: elenca il roster COMPLETO — agent hub-level + i team di tutti i
+  workspace (`<hub>/workspaces/*/.anjawiki/agents/`), con campo `workspace` per
+  distinguerli. Workspace diversi possono avere agent omonimi (pod `dev`/`analyst`/…):
+  sono agent diversi e compaiono tutti; il mirror-sessioni hub senza config non
+  oscura più l'agent vero. Prima le sessioni hub (es. Telegram) vedevano solo gli
+  hub-level e concludevano che i responsabili di workspace "non esistono".
+- `agent.delegate`: risoluzione del target con lo stesso lookup cross-workspace
+  della webapp (`_resolve_hub_agent_dir`) — delegare al responsabile di un
+  workspace ora funziona dalle sessioni hub.
+
 ## v0.19.5 — 2026-07-23
 
 **Sandbox workspace dual-layout: i tool `workspace.*` vedono il layout post-hoist di AnjaHub.**
