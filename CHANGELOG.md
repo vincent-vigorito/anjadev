@@ -2,6 +2,29 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.7 — 2026-07-24
+
+**Delega non distruttiva + tool di produzione dichiarabili.**
+
+### Fixed
+
+- `agent.delegate`: al **timeout** il lavoro non va più perso — il testo prodotto
+  fin lì viene restituito (`partial: true`, `timed_out: true`) e **loggato nella
+  sessione** dell'agent (`timed_out: true` nel frontmatter). Anche gli errori
+  inattesi riportano il `partial_response` quando c'è. Prima il parziale viveva
+  dentro la coroutine cancellata e spariva senza lasciare traccia.
+
+### Added
+
+- `agent.delegate` legge `delegate_tools` dalla config dell'agent: la lista dei
+  **tool nativi** concessi in delega, filtrata su whitelist (`Read/Write/Edit/
+  MultiEdit/Bash/Grep/Glob/LS/TodoWrite/WebFetch/WebSearch/NotebookEdit/Task`).
+  Default invariato e read-only (`Read/Grep/Glob`): serve per gli agent che devono
+  **produrre** (generare kit, eseguire script) e non solo consultare — vanno
+  abbinati a `bypass_permissions: true`, altrimenti in headless le scritture
+  restano bloccate dal permission system. La risposta espone `native_tools` e, in
+  caso di timeout, un `hint` che spiega come sbloccare.
+
 ## v0.19.6 — 2026-07-24
 
 **Roster e delega cross-workspace: gli agent dei workspace sono visibili e delegabili dalle sessioni hub.**

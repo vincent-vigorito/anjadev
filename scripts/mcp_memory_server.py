@@ -1013,6 +1013,14 @@ def tool_agent_delegate(args: dict) -> dict:
     # esplicitamente nella sua config (default least-privilege). Letto QUI perché più
     # sotto `cfg` viene riassegnato all'ultimo .mcp.json (shadowing).
     bypass_perms = bool(cfg.get("bypass_permissions", False))
+    # Tool NATIVI in delega: read-only di default. Un agent che deve PRODURRE (es. il
+    # lead di un workspace marketing: generare kit, convertire immagini) li dichiara
+    # in config `delegate_tools`. Filtrati su whitelist: niente nomi arbitrari.
+    _NATIVE_TOOLS = {"Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob",
+                     "LS", "TodoWrite", "WebFetch", "WebSearch", "NotebookEdit", "Task"}
+    declared = cfg.get("delegate_tools")
+    native_tools = ([t for t in declared if t in _NATIVE_TOOLS] if isinstance(declared, list) and declared
+                    else ["Read", "Grep", "Glob"])
 
     # Spawn claude-agent-sdk in-process (timeout protection via asyncio)
     import asyncio
@@ -1051,19 +1059,22 @@ def tool_agent_delegate(args: dict) -> dict:
     # mergiati via la lista mcp_patterns sopra.
     sdk_cwd = hub if (hub / ".mcp.json").is_file() else agent_dir
 
+    # Accumulo FUORI dalla coroutine: al timeout `wait_for` la cancella, ma il lavoro
+    # già prodotto resta qui e viene restituito+loggato invece di andare perso.
+    chunks: list = []
+
     async def _run():
         # Least-privilege di default: l'agent delegato legge/cerca + usa i suoi MCP,
-        # ma NON scrive/esegue bash senza opt-in (bypass_permissions: true nella sua
-        # config). Con prompt injection non eredita più pieni poteri sull'host.
+        # ma NON scrive/esegue bash senza opt-in (delegate_tools + bypass_permissions
+        # nella sua config). Con prompt injection non eredita pieni poteri sull'host.
         opts_kwargs = {
             "system_prompt": system_prompt,
             "model": model,
             "cwd": str(sdk_cwd),
             "permission_mode": "bypassPermissions" if bypass_perms else "default",
-            "allowed_tools": ["Read", "Grep", "Glob"] + mcp_patterns,
+            "allowed_tools": native_tools + mcp_patterns,
         }
         options = ClaudeAgentOptions(**opts_kwargs)
-        chunks = []
         async for msg in query(prompt=prompt, options=options):
             mtype = type(msg).__name__
             if mtype == "AssistantMessage":
@@ -1073,12 +1084,19 @@ def tool_agent_delegate(args: dict) -> dict:
         return "".join(chunks)
 
     started = datetime.now(timezone.utc)
+    timed_out = False
     try:
         response = asyncio.run(asyncio.wait_for(_run(), timeout=timeout_sec))
     except asyncio.TimeoutError:
-        return {"error": f"delegation to '{target}' timed out after {timeout_sec}s"}
+        # Timeout NON distruttivo: restituiamo il parziale e lo logghiamo (sotto).
+        timed_out = True
+        response = "".join(chunks)
     except Exception as e:
-        return {"error": f"delegation failed: {type(e).__name__}: {e}"}
+        partial = "".join(chunks)
+        out = {"error": f"delegation failed: {type(e).__name__}: {e}"}
+        if partial:
+            out["partial_response"] = partial
+        return out
     ended = datetime.now(timezone.utc)
     duration = (ended - started).total_seconds()
 
@@ -1094,19 +1112,32 @@ def tool_agent_delegate(args: dict) -> dict:
             f"---\nid: {sid}\nscope: agent\nagent: delegation\n"
             f"started: {started.isoformat()}\nended: {ended.isoformat()}\n"
             f"duration_sec: {round(duration, 2)}\nsource: agent.delegate\n"
-            f"caller_scope: {SCOPE}\nmodel: {model}\n---\n\n"
-            f"# Delegation {sid}\n\n## Prompt\n\n{prompt}\n\n## Response\n\n{response}\n"
+            f"caller_scope: {SCOPE}\nmodel: {model}\n"
+            f"timed_out: {str(timed_out).lower()}\n---\n\n"
+            f"# Delegation {sid}\n\n## Prompt\n\n{prompt}\n\n"
+            f"## Response{' (PARZIALE — timeout)' if timed_out else ''}\n\n{response}\n"
         )
         (sdir / f"{sid}.md").write_text(log, encoding="utf-8")
     except Exception:
-        pass  # logging failure non blocca delegation
+        sid = ""   # logging failure non blocca delegation
 
-    return {
+    out = {
         "agent": target,
         "model": model,
         "duration_sec": round(duration, 2),
         "response": response,
+        "native_tools": native_tools,
     }
+    if sid:
+        out["session"] = sid
+    if timed_out:
+        out["timed_out"] = True
+        out["partial"] = True
+        out["hint"] = (f"timeout dopo {timeout_sec}s: sopra c'è il parziale (loggato nella sessione). "
+                       f"Rilancia con timeout_sec maggiore, o spezza il task. Se l'agent deve "
+                       f"PRODURRE (bash/write) dichiara `delegate_tools` nella sua config: "
+                       f"in delega ha {native_tools}.")
+    return out
 
 
 # ============================================================
