@@ -101,7 +101,7 @@ def _write_config_json(target: Path) -> None:
 
 # Schema version del wiki: bump alla rottura del wire format (path/frontmatter/log format).
 # Consumatori esterni (hub, tool di sync) leggono .anjawiki/.schema-version per gate migration.
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 
 def _write_schema_version(target: Path) -> None:

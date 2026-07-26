@@ -2,6 +2,26 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.20.0 — 2026-07-26
+
+**Trust & freshness nel formato wiki — schema 1.0 → 1.1 (F-OKF-A).** Famiglia
+frontmatter opzionale con semantica identica a OKF v0.2 §5 (export lossless):
+
+- **`generated: { by, at }`** stampato automaticamente a ogni upsert, con
+  convenzione attori OKF §7 (`anjadev/<version>`, `human:<id>`, `process:<id>`;
+  override via `ANJA_ACTOR`). Chi scrive non è chi conferma.
+- **`verified: [{ by, at }]`** — nuovo tool **`wiki.verify`** (82° tool):
+  append di eventi di verifica, default `human:<utente>`. Trust tier derivato:
+  unverified → machine-confirmed → human-reviewed.
+- **`status: draft|stable|deprecated`** + **`stale_after: YYYY-MM-DD`**
+  opzionali sui 4 upsert (validati writer-side).
+- **Lint**: nuova categoria `trust` in `wiki.lint` (pagine oltre `stale_after`,
+  conteggi per trust tier, pagine deprecated) + check `stale-after` e
+  `trust_tiers` nello standalone `lint_checks.py`.
+- Parser frontmatter: le flow-list di mappe (`verified: [{...}]`) sono opache e
+  fanno round-trip verbatim — un upsert dopo una verifica non le corrompe.
+- `SCHEMA.md` → 1.1 (MINOR, non-breaking: consumer 1.0 ignorano i campi nuovi).
+
 ## v0.19.9 — 2026-07-26
 
 **graph.html da grafo a browser del wiki (F-OKF-B).** Il pannello dettaglio ora

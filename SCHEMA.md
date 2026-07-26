@@ -9,7 +9,7 @@
 - File `.anjawiki/.schema-version` contiene una stringa semver-like (es. `1.0`).
 - **MAJOR** bump = rottura layout/frontmatter required/log format → consumatori devono fare migration.
 - **MINOR** bump = aggiunte non-breaking (nuove sotto-cartelle ignorabili, nuovi frontmatter opzionali).
-- Current: **1.0**.
+- Current: **1.1** (aggiunge la famiglia trust/lifecycle opzionale, v. sotto).
 
 ## Layout cartelle
 
@@ -70,6 +70,31 @@ Campi **opzionali**:
 - `git_sha: <sha>` + `analyzed_at: YYYY-MM-DDTHH:MM:SSZ` (snapshot)
 - `transient: true` (analysis cancellabili, es. lint report)
 - `question: "..."` (analysis che nasce da query)
+
+### Trust & lifecycle (schema 1.1, semantica = OKF v0.2 §5)
+
+Famiglia **opzionale**; l'assenza è informativa, mai un errore. Semantica identica
+all'[Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+così un export OKF è lossless.
+
+```yaml
+generated: { by: anjadev/0.20.0, at: 2026-07-26T18:30:00Z }   # chi ha scritto l'ultima modifica (auto, ogni write)
+verified: [{ by: human:vincent, at: 2026-07-26T18:35:00Z }]   # chi ha CONFERMATO (append via wiki.verify)
+status: stable            # draft | stable | deprecated (assente = stable)
+stale_after: 2026-12-31   # data assoluta oltre cui il contenuto va ri-verificato
+```
+
+- **Convenzione attori** (OKF §7): `<producer>/<version>` per agent/tool,
+  `human:<id>` per persone, `process:<id>` per processi automatici.
+- **Trust tier derivato** (mai memorizzato): nessun `verified` → *unverified*;
+  solo attori non-`human:` → *machine-confirmed*; almeno un `human:` → *human-reviewed*.
+- `generated` ≠ `verified`: chi scrive non è chi conferma. I writer stampano
+  `generated` a ogni upsert; `verified` si appende solo via `wiki.verify`.
+- Wire format: flow-style inline su una riga (il parser naive li tratta come
+  stringhe opache e fa round-trip verbatim). Consumer: trattare un mapping nudo
+  `verified: { by, at }` come lista da 1 elemento.
+- Lint: pagine con `oggi >= stale_after` sono warning `stale-after`; il summary
+  riporta i conteggi per trust tier.
 
 ## Wikilinks
 

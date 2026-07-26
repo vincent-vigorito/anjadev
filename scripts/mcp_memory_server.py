@@ -2688,6 +2688,31 @@ def _today_iso() -> str:
     return datetime.now().astimezone().date().isoformat()
 
 
+def _now_iso_utc() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _plugin_version() -> str:
+    """Versione del plugin dal manifest (per l'actor `anjadev/<version>`)."""
+    global _PLUGIN_VERSION_CACHE
+    if _PLUGIN_VERSION_CACHE is None:
+        try:
+            pj = Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
+            _PLUGIN_VERSION_CACHE = json.loads(pj.read_text(encoding="utf-8")).get("version", "unknown")
+        except Exception:
+            _PLUGIN_VERSION_CACHE = "unknown"
+    return _PLUGIN_VERSION_CACHE
+
+
+_PLUGIN_VERSION_CACHE = None
+
+
+def _actor() -> str:
+    """Convenzione attori OKF §7: <producer>/<version> | human:<id> | process:<id>.
+    Override via ANJA_ACTOR (es. l'hub può stampare process:routine-x)."""
+    return os.environ.get("ANJA_ACTOR") or f"anjadev/{_plugin_version()}"
+
+
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
     """Parse YAML frontmatter naive (no PyYAML dep). Restituisce (fm_dict, body).
 
@@ -2713,8 +2738,13 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
         val = val.strip()
         if val.startswith("[") and val.endswith("]"):
             inner = val[1:-1].strip()
-            items = [x.strip().strip("'\"") for x in inner.split(",") if x.strip()]
-            fm[key] = items
+            if "{" in inner:
+                # flow-list di mappe (es. verified: [{ by, at }, ...]): lo split
+                # sulle virgole la corromperebbe — opaca, round-trip verbatim
+                fm[key] = val
+            else:
+                items = [x.strip().strip("'\"") for x in inner.split(",") if x.strip()]
+                fm[key] = items
         else:
             if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
                 val = val[1:-1]
@@ -2788,7 +2818,12 @@ _SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 _LOG_TYPE_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
-_EXTRA_FM_FIELDS = ("source_path", "subtype", "git_sha", "analyzed_at", "question", "transient")
+_EXTRA_FM_FIELDS = ("source_path", "subtype", "git_sha", "analyzed_at", "question", "transient",
+                    "status", "stale_after")
+
+# Schema 1.1 (semantica OKF v0.2 §5.4/§5.5)
+_VALID_STATUS = ("draft", "stable", "deprecated")
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
 _CANONICAL_SECTIONS = {
@@ -2829,6 +2864,12 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     sections_in = args.get("sections") or {}
     if not isinstance(sections_in, dict) or not sections_in:
         return {"error": "sections must be a non-empty dict {section_name: content}"}
+
+    # Schema 1.1: lifecycle opzionale, validato writer-side (siamo noi a scrivere)
+    if args.get("status") is not None and args["status"] not in _VALID_STATUS:
+        return {"error": f"status must be one of {_VALID_STATUS}"}
+    if args.get("stale_after") is not None and not _DATE_RE.match(str(args["stale_after"])):
+        return {"error": "stale_after must be an absolute ISO date (YYYY-MM-DD)"}
 
     wiki = _wiki_root()
     if not wiki.is_dir():
@@ -2889,6 +2930,10 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
         for sec_name, sec_content in sections_in.items():
             sections[sec_name] = (sec_content or "").strip()
         action = "created"
+
+    # Schema 1.1 (OKF §5.2): chi ha prodotto l'ultima modifica di contenuto.
+    # Stampato a OGNI write — generated ≠ verified (chi scrive non è chi conferma).
+    fm["generated"] = f"{{ by: {_actor()}, at: {_now_iso_utc()} }}"
 
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
     target_file.write_text(new_text, encoding="utf-8")
@@ -3189,6 +3234,73 @@ def tool_wiki_backlinks(args: dict) -> dict:
     return {"target_slug": slug, "count": len(backlinks), "backlinks": backlinks}
 
 
+def tool_wiki_verify(args: dict) -> dict:
+    """Registra un evento di verifica su una pagina wiki (schema 1.1, OKF §5.2/§5.3).
+
+    `verified` è SEPARATO da `generated`: chi scrive non è chi conferma. Append,
+    mai replace: più eventi = più conferme indipendenti. Il trust tier derivato:
+    nessun verified → unverified; solo attori non-human → machine-confirmed;
+    almeno un human:<id> → human-reviewed.
+
+    args:
+      slug: pagina da verificare (required)
+      by:   attore (opt) — default `human:<ANJA_USER|utente os>`, perché una
+            verifica invocata dall'agente su richiesta è una conferma dell'umano.
+            Passa `process:<id>` esplicito per check automatici.
+    """
+    slug = (args.get("slug") or "").strip()
+    if slug.endswith(".md"):
+        slug = slug[:-3]
+    if not slug:
+        return {"error": "slug required"}
+
+    by = (args.get("by") or "").strip()
+    if not by:
+        import getpass
+        by = "human:" + (os.environ.get("ANJA_USER") or getpass.getuser())
+    if not re.match(r"^(human:|process:)[\w.-]+$|^[\w.-]+/[\w.@-]+$", by):
+        return {"error": f"by must follow the actor convention "
+                         f"(human:<id> | process:<id> | <producer>/<version>): '{by}'"}
+
+    wiki = _wiki_root()
+    if not wiki.is_dir():
+        return {"error": f"wiki dir not found: {wiki}"}
+    target = None
+    for f in wiki.rglob(f"{slug}.md"):
+        target = f
+        break
+    if not target:
+        return {"error": f"page not found: {slug}"}
+
+    text = target.read_text(encoding="utf-8", errors="replace")
+    fm, body = _parse_frontmatter(text)
+    if not fm:
+        return {"error": f"page '{slug}' has no frontmatter — cannot verify"}
+
+    entry = f"{{ by: {by}, at: {_now_iso_utc()} }}"
+    cur = fm.get("verified")
+    if not cur:
+        fm["verified"] = f"[{entry}]"
+    elif isinstance(cur, str) and cur.startswith("[") and cur.endswith("]"):
+        inner = cur[1:-1].strip()
+        fm["verified"] = f"[{inner}, {entry}]" if inner else f"[{entry}]"
+    else:
+        # bare mapping (consumer OKF: mapping nudo ≡ lista da 1) o formato legacy
+        fm["verified"] = f"[{cur}, {entry}]"
+
+    sections = _parse_sections(body)
+    target.write_text(_compose_frontmatter(fm) + "\n" + _compose_sections(sections),
+                      encoding="utf-8")
+
+    tier = "human-reviewed" if "human:" in fm["verified"] else "machine-confirmed"
+    try:
+        rel = str(target.relative_to(ROOT))
+    except ValueError:
+        rel = str(target)
+    return {"slug": slug, "path": rel, "verified_by": by, "trust_tier": tier,
+            "verifications": fm["verified"].count("{ by:")}
+
+
 def tool_wiki_lint(args: dict) -> dict:
     """Health check del wiki: orfani, link rotti, pagine stale, frontmatter mancante.
 
@@ -3198,7 +3310,7 @@ def tool_wiki_lint(args: dict) -> dict:
       stale_days: opt int (default 90) — pagine con `updated` più vecchie sono stale SE attive
     """
     cats_in = args.get("categories")
-    all_cats = ("orphans", "broken_links", "stale", "frontmatter")
+    all_cats = ("orphans", "broken_links", "stale", "frontmatter", "trust")
     categories = tuple(cats_in) if isinstance(cats_in, list) and cats_in else all_cats
     for c in categories:
         if c not in all_cats:
@@ -3297,6 +3409,38 @@ def tool_wiki_lint(args: dict) -> dict:
         issues.sort(key=lambda x: x["slug"])
         result["frontmatter_issues"] = issues
         result["summary"]["frontmatter_issues"] = len(issues)
+
+    if "trust" in categories:
+        # Schema 1.1: freshness contrattuale (stale_after) + trust tier (verified)
+        today = datetime.now().astimezone().date()
+        expired = []
+        tiers = {"unverified": 0, "machine_confirmed": 0, "human_reviewed": 0}
+        deprecated = []
+        for slug, p in pages.items():
+            fmp = p["fm"]
+            ver = fmp.get("verified") or ""
+            if not ver:
+                tiers["unverified"] += 1
+            elif "human:" in str(ver):
+                tiers["human_reviewed"] += 1
+            else:
+                tiers["machine_confirmed"] += 1
+            if str(fmp.get("status", "")).strip() == "deprecated":
+                deprecated.append(slug)
+            sa = str(fmp.get("stale_after", "")).strip()
+            if sa:
+                try:
+                    sa_date = datetime.fromisoformat(sa).date()
+                except Exception:
+                    continue
+                if today >= sa_date:
+                    expired.append({"slug": slug, "type": p["type"], "stale_after": sa,
+                                    "days_expired": (today - sa_date).days})
+        expired.sort(key=lambda x: -x["days_expired"])
+        result["stale_after_expired"] = expired
+        result["deprecated_pages"] = sorted(deprecated)
+        result["summary"]["stale_after_expired"] = len(expired)
+        result["summary"]["trust_tiers"] = tiers
 
     result["summary"]["pages_scanned"] = len(pages)
     result["summary"]["stale_threshold_days"] = stale_days
@@ -4893,7 +5037,7 @@ TOOL_GROUPS = {
         "wiki.upsert_source", "wiki.upsert_analysis",
         "wiki.update_overview", "wiki.index_update",
         "wiki.log_append",
-        "wiki.backlinks", "wiki.lint",
+        "wiki.backlinks", "wiki.lint", "wiki.verify",
         "wiki.rename", "wiki.replace_links", "wiki.delete",
         "wiki.tree", "wiki.stats", "wiki.export", "wiki.attach_image",
     ],
@@ -5658,6 +5802,8 @@ TOOLS = [
                 },
                 "sources": {"type": "array", "items": {"type": "string"}, "description": "Source slug da aggiungere a `sources` frontmatter (dedupe)"},
                 "tags": {"type": "array", "items": {"type": "string"}},
+                "status": {"type": "string", "enum": ["draft", "stable", "deprecated"], "description": "Lifecycle (schema 1.1). Assente = stable"},
+                "stale_after": {"type": "string", "description": "Data ISO YYYY-MM-DD oltre cui il contenuto va ri-verificato (schema 1.1). Usa per pagine volatili"},
             },
             "required": ["slug", "sections"],
         },
@@ -5678,6 +5824,8 @@ TOOLS = [
                 "sections": {"type": "object", "additionalProperties": {"type": "string"}},
                 "sources": {"type": "array", "items": {"type": "string"}},
                 "tags": {"type": "array", "items": {"type": "string"}},
+                "status": {"type": "string", "enum": ["draft", "stable", "deprecated"], "description": "Lifecycle (schema 1.1). Assente = stable"},
+                "stale_after": {"type": "string", "description": "Data ISO YYYY-MM-DD oltre cui il contenuto va ri-verificato (schema 1.1). Usa per pagine volatili"},
             },
             "required": ["slug", "sections"],
         },
@@ -5703,6 +5851,8 @@ TOOLS = [
                 "subtype": {"type": "string", "description": "Sottotipo (es. 'codebase-snapshot')"},
                 "git_sha": {"type": "string", "description": "Solo per codebase-snapshot"},
                 "analyzed_at": {"type": "string", "description": "ISO timestamp analisi (solo codebase-snapshot)"},
+                "status": {"type": "string", "enum": ["draft", "stable", "deprecated"], "description": "Lifecycle (schema 1.1). Assente = stable"},
+                "stale_after": {"type": "string", "description": "Data ISO YYYY-MM-DD oltre cui il contenuto va ri-verificato (schema 1.1). Usa per pagine volatili"},
             },
             "required": ["slug", "sections"],
         },
@@ -5725,6 +5875,8 @@ TOOLS = [
                 "tags": {"type": "array", "items": {"type": "string"}},
                 "question": {"type": "string", "description": "La domanda originale che ha generato l'analisi"},
                 "transient": {"type": "boolean", "description": "True se cancellabile (es. lint report)"},
+                "status": {"type": "string", "enum": ["draft", "stable", "deprecated"], "description": "Lifecycle (schema 1.1). Assente = stable"},
+                "stale_after": {"type": "string", "description": "Data ISO YYYY-MM-DD oltre cui il contenuto va ri-verificato (schema 1.1). Usa per pagine volatili"},
             },
             "required": ["slug", "sections"],
         },
@@ -5785,7 +5937,8 @@ TOOLS = [
         "description": (
             "🔍 WIKI health check: orfani (pagine non linkate da nessuno), broken_links "
             "([[X]] dove X non esiste), stale (updated > N giorni ma ancora attive), "
-            "frontmatter_issues (campi obbligatori mancanti: title/type/created/updated). "
+            "frontmatter_issues (campi obbligatori mancanti: title/type/created/updated), "
+            "trust (schema 1.1: pagine oltre stale_after + conteggio trust tier da verified). "
             "Usa periodicamente per non lasciar degradare il wiki."
         ),
         "inputSchema": {
@@ -5793,11 +5946,29 @@ TOOLS = [
             "properties": {
                 "categories": {
                     "type": "array",
-                    "items": {"type": "string", "enum": ["orphans", "broken_links", "stale", "frontmatter"]},
+                    "items": {"type": "string", "enum": ["orphans", "broken_links", "stale", "frontmatter", "trust"]},
                     "description": "Subset di check (default: tutti)",
                 },
                 "stale_days": {"type": "integer", "default": 90, "description": "Soglia stale (default 90 giorni)"},
             },
+        },
+    },
+    {
+        "name": "wiki.verify",
+        "description": (
+            "\u2705 WIKI trust (schema 1.1): registra un evento di verifica su una pagina "
+            "(frontmatter `verified`, append). USE quando l'utente CONFERMA che una pagina "
+            "\u00e8 corretta/aggiornata ('s\u00ec \u00e8 giusto', 'confermo', review fatta). "
+            "Separato da generated: chi scrive non \u00e8 chi conferma. Trust tier derivato: "
+            "unverified \u2192 machine-confirmed \u2192 human-reviewed (se by \u00e8 human:<id>)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "slug": {"type": "string", "description": "Slug della pagina da verificare"},
+                "by": {"type": "string", "description": "Attore (default human:<utente>). Convenzione: human:<id> | process:<id> | <producer>/<version>"},
+            },
+            "required": ["slug"],
         },
     },
     {
@@ -6333,6 +6504,7 @@ TOOL_HANDLERS = {
     "wiki.log_append": tool_wiki_log_append,
     "wiki.backlinks": tool_wiki_backlinks,
     "wiki.lint": tool_wiki_lint,
+    "wiki.verify": tool_wiki_verify,
     "wiki.rename": tool_wiki_rename,
     "wiki.replace_links": tool_wiki_replace_links,
     "wiki.delete": tool_wiki_delete,

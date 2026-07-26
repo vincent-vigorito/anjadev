@@ -142,6 +142,45 @@ def check_stale(pages: dict, days: int) -> list:
     return issues
 
 
+def check_trust(pages: dict) -> tuple:
+    """Schema 1.1: pagine oltre stale_after (warning) + conteggio trust tier.
+    Ritorna (issues, tiers)."""
+    today = date.today()
+    issues = []
+    tiers = {"unverified": 0, "machine_confirmed": 0, "human_reviewed": 0}
+    for slug, (path, sub) in pages.items():
+        if sub == "sessions":
+            continue
+        text = path.read_text(encoding="utf-8")
+        present, block = parse_frontmatter(text)
+        if not present:
+            continue
+        m = re.search(r"^verified:\s*(.+)$", block, re.M)
+        if not m:
+            tiers["unverified"] += 1
+        elif "human:" in m.group(1):
+            tiers["human_reviewed"] += 1
+        else:
+            tiers["machine_confirmed"] += 1
+        m = re.search(r"^stale_after:\s*['\"]?(\d{4}-\d{2}-\d{2})", block, re.M)
+        if m:
+            try:
+                sa = date.fromisoformat(m.group(1))
+            except ValueError:
+                continue
+            if today >= sa:
+                issues.append({
+                    "severity": "warning",
+                    "type": "stale-after",
+                    "page": slug,
+                    "stale_after": sa.isoformat(),
+                    "days_expired": (today - sa).days,
+                    "message": f"page '{slug}' past its stale_after ({sa.isoformat()}, "
+                               f"{(today - sa).days} days ago) — re-verify or update",
+                })
+    return issues, tiers
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Mechanical lint checks for anja wiki.")
     p.add_argument("--wiki-root", required=True, help="path to .anjawiki/wiki/")
@@ -156,12 +195,14 @@ def main() -> None:
     broken, orphans = check_links_and_orphans(pages)
     fm_issues = check_frontmatter(pages)
     stale = check_stale(pages, days=args.stale_days)
+    trust_issues, trust_tiers = check_trust(pages)
 
-    all_issues = broken + orphans + fm_issues + stale
+    all_issues = broken + orphans + fm_issues + stale + trust_issues
     summary = {
         "wiki_root": str(wiki_root),
         "pages_total": len(pages),
         "issues_total": len(all_issues),
+        "trust_tiers": trust_tiers,
         "by_severity": {
             "error": sum(1 for i in all_issues if i["severity"] == "error"),
             "warning": sum(1 for i in all_issues if i["severity"] == "warning"),
