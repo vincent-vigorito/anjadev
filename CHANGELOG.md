@@ -2,6 +2,15 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.20.1 — 2026-07-26
+
+**Fix: wiki hub introvabile sugli hub post-hoist.** `_wiki_root()`/`_raw_root()`
+per scope hub/agent assumevano il layout legacy (`<root>/wiki`), ma gli hub
+recenti hanno il wiki in `.anjawiki/wiki` come i project → `wiki.upsert_*`
+falliva con "wiki dir not found" e l'agente ripiegava su Write manuale (senza
+timbro `generated`). Ora probe del layout reale: `.anjawiki/wiki` se esiste,
+altrimenti legacy. Trovato dal primo test live di schema 1.1 via Telegram.
+
 ## v0.20.0 — 2026-07-26
 
 **Trust & freshness nel formato wiki — schema 1.0 → 1.1 (F-OKF-A).** Famiglia

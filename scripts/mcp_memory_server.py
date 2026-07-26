@@ -74,17 +74,22 @@ _SECRETS_LOADED = _load_secrets_env()
 
 
 def _wiki_root() -> Path:
-    """Ritorna la directory wiki in base allo scope."""
+    """Ritorna la directory wiki in base allo scope.
+
+    Hub/agent: gli hub post-hoist (init_hub recenti) hanno il wiki in
+    `.anjawiki/wiki` come i project; i legacy in `<root>/wiki`. Probe del
+    layout reale — il bug era assumere il legacy e fallire sugli hub nuovi."""
     if SCOPE == "project":
         return ROOT / ".anjawiki" / "wiki"
-    # hub e agent: wiki direttamente sotto root (hub: <hub>/wiki/, agent: <hub>/agents/<n>/wiki/)
-    return ROOT / "wiki"
+    hoisted = ROOT / ".anjawiki" / "wiki"
+    return hoisted if hoisted.is_dir() else ROOT / "wiki"
 
 
 def _raw_root() -> Path:
     if SCOPE == "project":
         return ROOT / ".anjawiki" / "raw"
-    return ROOT / "raw"
+    hoisted = ROOT / ".anjawiki" / "raw"
+    return hoisted if hoisted.is_dir() else ROOT / "raw"
 
 
 def _soul_path() -> Path:
