@@ -2,6 +2,22 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.19.9 — 2026-07-26
+
+**graph.html da grafo a browser del wiki (F-OKF-B).** Il pannello dettaglio ora
+rende il **body markdown completo** della pagina (marked + DOMPurify), con i
+wikilink `[[slug]]` **navigabili dentro il viewer** (risoluzione slug nudo →
+`tipo:slug` come `_slug_to_target`). Backlinks in stile OKF: sezioni separate
+**"Citato da" / "Linka" / "Correlati"** al posto del blob Neighbors. Layout
+aggiuntivi circle/grid. **Self-contained vero**: cytoscape/marked/dompurify
+vendorizzati inline in `scripts/vendor/` (~700KB output) — niente CDN, funziona
+offline e sotto CSP. Embed JSON con escaping `</` (un body con `</script>` non
+può rompere/iniettare la pagina); markdown sanitizzato con DOMPurify.
+`graph_report.build_report(include_bodies=True)` espone `pages` {slug → body +
+frontmatter chiave}. Ispirato al confronto con OKF v0.2 (GoogleCloudPlatform/
+knowledge-catalog): prese le idee buone del loro viz, tenuta la nostra
+diagnostica (cluster, god-nodes, orfani).
+
 ## v0.19.8 — 2026-07-24
 
 **Auto-routing della delega: `agent.delegate` sceglie da solo lo specialista giusto.**

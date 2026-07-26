@@ -160,8 +160,17 @@ def _build_cytoscape_elements(report: dict) -> dict:
     return {"nodes": nodes, "edges": edges, "stats": report.get("stats", {})}
 
 
+def _embed_json(obj) -> str:
+    """JSON per inline <script>: `</` → `<\\/` così un body contenente
+    '</script>' non può chiudere il tag (injection + rottura pagina)."""
+    return json.dumps(obj, ensure_ascii=False).replace("</", "<\\/")
+
+
 def write_html(root: Path, report: dict, target: Optional[Path] = None) -> Path:
-    """Genera graph.html standalone in `<wiki>/graph.html`."""
+    """Genera graph.html standalone in `<wiki>/graph.html`.
+
+    Self-contained VERO (F-OKF-B): cytoscape/marked/dompurify vendorizzati
+    inline — niente CDN, funziona offline e sotto CSP."""
     if target is None:
         target = root / ".anjawiki" / "wiki" / "graph.html"
 
@@ -169,9 +178,15 @@ def write_html(root: Path, report: dict, target: Optional[Path] = None) -> Path:
     title = root.name or "Knowledge Graph"
     template_path = _SCRIPTS_DIR / "graph_html_template.html"
     template = template_path.read_text(encoding="utf-8")
-    html = template.replace("__TITLE__", title).replace(
-        "__DATA__", json.dumps(elements, ensure_ascii=False)
-    )
+
+    vendor = _SCRIPTS_DIR / "vendor"
+    html = (template
+            .replace("__TITLE__", title)
+            .replace("__VENDOR_CYTOSCAPE__", (vendor / "cytoscape.min.js").read_text(encoding="utf-8"))
+            .replace("__VENDOR_MARKED__", (vendor / "marked.min.js").read_text(encoding="utf-8"))
+            .replace("__VENDOR_PURIFY__", (vendor / "purify.min.js").read_text(encoding="utf-8"))
+            .replace("__DATA__", _embed_json(elements))
+            .replace("__PAGES__", _embed_json(report.get("pages") or {})))
 
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(html, encoding="utf-8")
@@ -196,6 +211,7 @@ def build_and_write_html(
         include_all_code=include_all_code,
         code_limit=code_limit,
         code_granularity=code_granularity,
+        include_bodies=True,
     )
     if "error" in report:
         return report

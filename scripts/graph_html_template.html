@@ -19,10 +19,32 @@
   #app { display: flex; height: 100vh; }
   #sidebar { width: 320px; min-width: 320px; background: var(--panel); border-right: 1px solid var(--border);
              padding: 14px; overflow-y: auto; }
-  #cy { flex: 1; background: var(--bg); }
-  #details { width: 360px; background: var(--panel); border-left: 1px solid var(--border);
+  #cy { flex: 1; background: var(--bg); position: relative; overflow: hidden; }
+  #details { flex: 0 0 460px; width: 460px; min-width: 460px; background: var(--panel);
+             border-left: 1px solid var(--border);
              padding: 14px; overflow-y: auto; display: none; }
   #details.open { display: block; }
+  /* F-OKF-B: reader markdown nel pannello (stile compatto dark) */
+  .md-body { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);
+             line-height: 1.55; font-size: 12.5px; }
+  .md-body h1, .md-body h2, .md-body h3, .md-body h4 {
+    color: var(--text); text-transform: none; letter-spacing: 0; margin: 14px 0 6px 0; }
+  .md-body h1 { font-size: 14px; } .md-body h2 { font-size: 13px; } .md-body h3 { font-size: 12.5px; }
+  .md-body p { margin: 6px 0; }
+  .md-body ul, .md-body ol { margin: 6px 0; padding-left: 20px; }
+  .md-body code { background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+                  padding: 1px 4px; font-size: 11px; }
+  .md-body pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+                 padding: 8px 10px; overflow-x: auto; }
+  .md-body pre code { border: 0; padding: 0; background: transparent; }
+  .md-body table { border-collapse: collapse; margin: 8px 0; font-size: 11.5px; max-width: 100%; display: block; overflow-x: auto; }
+  .md-body th, .md-body td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; }
+  .md-body blockquote { border-left: 3px solid var(--border); margin: 8px 0; padding: 2px 12px; color: var(--text-dim); }
+  .md-body img { max-width: 100%; }
+  .md-body a { color: var(--accent); text-decoration: none; }
+  .md-body a:hover { text-decoration: underline; }
+  .md-body a.wiki-dead { color: var(--text-dim); border-bottom: 1px dashed var(--text-dim); cursor: default; }
+  .fm-meta { color: var(--text-dim); font-size: 11px; margin: 2px 0 8px 0; }
   h1 { font-size: 14px; margin: 0 0 4px 0; font-weight: 600; }
   h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim);
        margin: 16px 0 6px 0; }
@@ -56,7 +78,7 @@
   .btn { background: var(--bg); color: var(--text); border: 1px solid var(--border);
          padding: 5px 10px; border-radius: 4px; cursor: pointer; font: inherit; font-size: 12px; }
   .btn:hover { border-color: var(--accent); }
-  .cy-wrap { display: flex; flex-direction: column; flex: 1; }
+  .cy-wrap { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 </style>
 </head>
 <body>
@@ -97,6 +119,8 @@
       <button class="btn" id="layout-cose">Force</button>
       <button class="btn" id="layout-breadthfirst">Tree</button>
       <button class="btn" id="layout-concentric">Concentric</button>
+      <button class="btn" id="layout-circle">Circle</button>
+      <button class="btn" id="layout-grid">Grid</button>
       <button class="btn" id="fit-btn">Fit</button>
     </div>
     <div id="cy"></div>
@@ -107,9 +131,12 @@
   </aside>
 </div>
 
-<script src="https://unpkg.com/cytoscape@3.30.1/dist/cytoscape.min.js"></script>
+<script>__VENDOR_CYTOSCAPE__</script>
+<script>__VENDOR_MARKED__</script>
+<script>__VENDOR_PURIFY__</script>
 <script>
 const DATA = __DATA__;
+const PAGES = __PAGES__;
 const stats = DATA.stats || {};
 
 function el(tag, attrs, children) {
@@ -231,6 +258,8 @@ function applyLayout(name) {
 document.getElementById('layout-cose').onclick = function() { applyLayout('cose'); };
 document.getElementById('layout-breadthfirst').onclick = function() { applyLayout('breadthfirst'); };
 document.getElementById('layout-concentric').onclick = function() { applyLayout('concentric'); };
+document.getElementById('layout-circle').onclick = function() { applyLayout('circle'); };
+document.getElementById('layout-grid').onclick = function() { applyLayout('grid'); };
 document.getElementById('fit-btn').onclick = function() { cy.fit(undefined, 30); };
 
 function applyFilters() {
@@ -300,54 +329,153 @@ function kvRow(label, value, mono) {
   ]);
 }
 
-function showDetails(n) {
-  const details = document.getElementById('details');
-  const body = document.getElementById('details-body');
-  const d = n.data();
+// F-OKF-B: wikilink [[slug]] / [[slug|label]] / [[slug#sec]] → link markdown
+// interni (#wiki/slug), navigati DENTRO il viewer invece che come file path.
+const WIKILINK_RE = /\[\[([^\]|#\s]+)(#[^\]|]+)?(\|[^\]]+)?\]\]/g;
 
-  const neighbors = n.connectedEdges().map(function(e) {
-    const other = e.source().id() === n.id() ? e.target() : e.source();
-    return {
-      label: other.data('label'), id: other.data('id'),
-      score: e.data('score'), edge_kind: e.data('edge_kind'),
-    };
-  }).sort(function(a, b) { return (b.score || 0) - (a.score || 0); });
+function preprocessWikilinks(md) {
+  return md.replace(WIKILINK_RE, function(m, slug, sec, label) {
+    const text = label ? label.slice(1) : slug;
+    return '[' + text + '](#wiki/' + encodeURIComponent(slug) + ')';
+  });
+}
 
-  clearChildren(body);
+// Gli ID nodo/pagina hanno prefisso tipo ('concepts:rest-thin-architecture'),
+// i wikilink nei body usano lo slug nudo: stessa risoluzione di
+// graph_report._slug_to_target, lato client.
+const SLUG_INDEX = {};
+(function() {
+  const ids = new Set(Object.keys(PAGES));
+  DATA.nodes.forEach(function(n) { if (n.data.kind === 'wiki') ids.add(n.data.id); });
+  ids.forEach(function(id) {
+    SLUG_INDEX[id] = id;
+    const bare = id.split(':').pop();
+    if (!(bare in SLUG_INDEX)) SLUG_INDEX[bare] = id;
+  });
+})();
+
+function resolveSlug(slug) { return SLUG_INDEX[slug] || null; }
+
+function navigateToSlug(slug) {
+  const id = resolveSlug(slug);
+  if (!id) return;
+  const node = cy.getElementById(id);
+  if (node.length) { focusNode(node); return; }
+  // pagina senza nodo nel grafo (es. filtrata): reader-only se il body c'è
+  if (PAGES[id]) showBySlug(id);
+}
+
+function renderMdBody(md) {
+  const container = el('div', {className: 'md-body'});
+  if (!md || typeof marked === 'undefined') return container;
+  let html = marked.parse(preprocessWikilinks(md));
+  if (typeof DOMPurify !== 'undefined') html = DOMPurify.sanitize(html);
+  container.innerHTML = html;
+  container.querySelectorAll('a').forEach(function(a) {
+    const href = a.getAttribute('href') || '';
+    if (href.indexOf('#wiki/') === 0) {
+      const slug = decodeURIComponent(href.slice(6));
+      if (!resolveSlug(slug)) {
+        a.className = 'wiki-dead';            // knowledge not-yet-written
+        a.removeAttribute('href');
+        return;
+      }
+      a.onclick = function(ev) { ev.preventDefault(); navigateToSlug(slug); };
+    } else if (/^https?:\/\//.test(href)) {
+      a.target = '_blank'; a.rel = 'noopener';
+    } else {
+      a.removeAttribute('href');              // path relativi: inerti nel viewer
+    }
+  });
+  return container;
+}
+
+function neighborItem(nb) {
+  const scoreLabel = nb.score !== undefined && nb.score !== null ? nb.score.toFixed(2) : '';
+  return el('div', {className: 'item', onclick: function() {
+    const node = cy.getElementById(nb.id);
+    if (node.length) focusNode(node);
+  }}, [
+    el('span', null, [nb.label || nb.id || '']),
+    el('span', {style: {color: 'var(--text-dim)'}}, [scoreLabel]),
+  ]);
+}
+
+function neighborSection(title, items) {
+  if (!items.length) return null;
+  const s = el('div', {className: 'neighbors'}, [el('h2', null, [title + ' (' + items.length + ')'])]);
+  items.forEach(function(nb) { s.appendChild(neighborItem(nb)); });
+  return s;
+}
+
+function buildPanel(d, page, edgeSections) {
+  const fm = (page && page.fm) || {};
+  const metaBits = [];
+  if (d.page_type || (page && page.page_type)) metaBits.push(d.page_type || page.page_type);
+  if (fm.updated) metaBits.push('agg. ' + fm.updated);
+  if (fm.status && fm.status !== 'stable') metaBits.push(fm.status);
+  if (fm.tags) metaBits.push(fm.tags.replace(/[\[\]]/g, ''));
+
   const detail = el('div', {className: 'node-detail'}, [
-    el('h3', null, [d.label || '']),
-    kvRow('kind', d.kind || ''),
-    d.page_type ? kvRow('page_type', d.page_type) : null,
+    el('h3', null, [fm.title || d.label || d.id || '']),
+    metaBits.length ? el('div', {className: 'fm-meta'}, [metaBits.join(' · ')]) : null,
     d.file_path ? kvRow('file', d.file_path, true) : null,
     d.func_name ? kvRow('func', d.func_name, true) : null,
     d.degree !== undefined ? kvRow('degree', (d.incoming || 0) + ' in · ' + (d.outgoing || 0) + ' out') : null,
     d.cluster ? kvRow('cluster', d.cluster) : null,
     d.orphan ? kvRow('status', 'orphan') : null,
   ]);
+  (edgeSections || []).forEach(function(s) { if (s) detail.appendChild(s); });
+  if (page && page.body) detail.appendChild(renderMdBody(page.body));
+  return detail;
+}
 
-  const neighborsSection = el('div', {className: 'neighbors'}, [
-    el('h2', null, ['Neighbors (' + neighbors.length + ')']),
-  ]);
-  neighbors.forEach(function(nb) {
-    const scoreLabel = nb.score !== undefined ? nb.score.toFixed(2) : (nb.edge_kind || '');
-    const item = el('div', {className: 'item', dataset: {id: nb.id}, onclick: function() {
-      const node = cy.getElementById(nb.id);
-      if (node.length) focusNode(node);
-    }}, [
-      el('span', null, [nb.label || '']),
-      el('span', {style: {color: 'var(--text-dim)'}}, [scoreLabel]),
-    ]);
-    neighborsSection.appendChild(item);
+function showDetails(n) {
+  const details = document.getElementById('details');
+  const body = document.getElementById('details-body');
+  const d = n.data();
+
+  // Split OKF-style: citazioni esplicite separate dai vicini semantici
+  const citedBy = [], linksTo = [], related = [];
+  n.connectedEdges().forEach(function(e) {
+    const isSource = e.source().id() === n.id();
+    const other = isSource ? e.target() : e.source();
+    const nb = { label: other.data('label'), id: other.data('id'),
+                 score: e.data('score'), edge_kind: e.data('edge_kind') };
+    if (nb.edge_kind === 'explicit') (isSource ? linksTo : citedBy).push(nb);
+    else related.push(nb);
   });
-  detail.appendChild(neighborsSection);
+  related.sort(function(a, b) { return (b.score || 0) - (a.score || 0); });
 
-  body.appendChild(detail);
+  clearChildren(body);
+  body.appendChild(buildPanel(d, PAGES[d.id], [
+    neighborSection('Citato da', citedBy),
+    neighborSection('Linka', linksTo),
+    neighborSection('Correlati', related),
+  ]));
   details.classList.add('open');
+  details.scrollTop = 0;
+  requestAnimationFrame(function() { cy.resize(); });
+}
+
+// Reader-only: pagina presente in PAGES ma senza nodo nel grafo corrente
+function showBySlug(slug) {
+  const details = document.getElementById('details');
+  const body = document.getElementById('details-body');
+  const page = PAGES[slug];
+  clearChildren(body);
+  body.appendChild(buildPanel({id: slug, label: slug, page_type: page.page_type}, page, []));
+  details.classList.add('open');
+  details.scrollTop = 0;
+  requestAnimationFrame(function() { cy.resize(); });
 }
 
 cy.on('tap', 'node', function(evt) { showDetails(evt.target); });
 cy.on('tap', function(evt) {
-  if (evt.target === cy) document.getElementById('details').classList.remove('open');
+  if (evt.target === cy) {
+    document.getElementById('details').classList.remove('open');
+    requestAnimationFrame(function() { cy.resize(); });
+  }
 });
 
 // Obsidian-style hover-focus: highlight nodo + neighbors, dim del resto

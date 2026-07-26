@@ -283,6 +283,7 @@ def build_report(
     include_all_code: bool = False,
     code_limit: int = 2000,
     code_granularity: str = "file",
+    include_bodies: bool = False,
 ) -> dict:
     """Computa il report completo. Ritorna dict; non scrive file (vedi `write_report`).
 
@@ -474,7 +475,7 @@ def build_report(
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
-        return {
+        report = {
             "stats": stats,
             "god_nodes": god_nodes,
             "surprise_edges": surprise_edges,
@@ -486,8 +487,42 @@ def build_report(
             "code_nodes": code_nodes,
             "code_edges": code_edges,
         }
+        if include_bodies:
+            # F-OKF-B: body + frontmatter chiave per il reader di graph.html.
+            # I body sono già in memoria (caricati per il wikilink parsing).
+            report["pages"] = {
+                slug: {
+                    "page_type": p["page_type"],
+                    "body": p["body"],
+                    "fm": _frontmatter_fields(Path(p["file_path"])),
+                }
+                for slug, p in pages.items()
+            }
+        return report
     finally:
         db.close()
+
+
+_FM_SCALAR_RE = re.compile(
+    r"^(title|type|created|updated|tags|status|stale_after|description):\s*(.+)$", re.M)
+
+
+def _frontmatter_fields(md_path: Path) -> dict:
+    """Estrae i campi scalari utili dal frontmatter (stdlib, niente yaml lib).
+    I frontmatter anjawiki sono YAML flat: regex per-riga basta."""
+    try:
+        text = md_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return {}
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end < 0:
+        return {}
+    fm = {}
+    for key, val in _FM_SCALAR_RE.findall(text[:end]):
+        fm[key] = val.strip().strip('"').strip("'")
+    return fm
 
 
 # ============================================================
