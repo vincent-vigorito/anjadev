@@ -2,6 +2,17 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.20.3 — 2026-07-27
+
+**Security: `agent.delegate` isola la sessione dagli MCP user-level
+(`strict_mcp_config`).** Senza strict, la mini-sessione SDK ereditava i server
+MCP personali dell'host (Gmail, Drive, Canva, sandbox di esecuzione remota…) —
+e con `bypass_permissions` l'allowlist non li limitava: un agent delegato
+poteva operare fuori scope con i connettori dell'utente (osservato live: agent
+senza tool WP che scrive comunque sul CMS per vie traverse). Ora la sessione
+delegata vede SOLO i server montati da `agent.delegate` (hub + agent dir) —
+comportamento deterministico, niente più tool "intermittenti".
+
 ## v0.20.2 — 2026-07-27
 
 **Fix: `agent.delegate` non montava i server MCP dell'agent.** Il codice

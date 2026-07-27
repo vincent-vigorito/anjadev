@@ -1184,6 +1184,11 @@ def tool_agent_delegate(args: dict) -> dict:
             "cwd": str(sdk_cwd),
             "permission_mode": "bypassPermissions" if bypass_perms else "default",
             "allowed_tools": native_tools + mcp_patterns,
+            # Solo i server montati qui: senza strict la sessione delegata eredita
+            # gli MCP user-level dell'host (connettori personali: Gmail, Drive,
+            # sandbox di esecuzione remota...) che in bypassPermissions sono
+            # usabili senza limiti — escalation fuori scope osservata live.
+            "strict_mcp_config": True,
         }
         if mcp_servers:
             opts_kwargs["mcp_servers"] = mcp_servers
