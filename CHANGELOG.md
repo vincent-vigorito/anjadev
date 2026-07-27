@@ -2,6 +2,25 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.20.2 — 2026-07-27
+
+**Fix: `agent.delegate` non montava i server MCP dell'agent.** Il codice
+allowlistava i nomi (`mcp__<srv>__*` in `allowed_tools`) leggendo i `.mcp.json`
+di hub e agent dir, ma non passava mai le definizioni al SDK: con cwd sul hub
+l'agent delegato aveva solo i server del hub, e i tool del workspace (es.
+`wp_*` di `anja_marketing`) risultavano permessi ma inesistenti. Esito peggiore
+osservato live (go-live 2026-07-27): l'agent senza tool ha confabulato un report
+di completamento invece di fallire. Ora:
+
+- **Mount reale**: merge delle definizioni `mcpServers` di `hub/.mcp.json` +
+  `agent_dir/.mcp.json` (a parità di nome vince l'agent dir, scope più
+  specifico), passate a `ClaudeAgentOptions(mcp_servers=...)`.
+- **Fail-fast**: se la `config.json` dell'agent dichiara `mcp_servers` che non
+  risultano definiti in nessun `.mcp.json`, la delega ritorna errore esplicito
+  prima dello spawn — meglio di un agent muto che inventa i risultati.
+- Output di `agent.delegate` ora include `mcp_servers` montati (decision-trail).
+- Rimosso lo shadowing di `cfg` (config agent) col contenuto dei `.mcp.json`.
+
 ## v0.20.1 — 2026-07-26
 
 **Fix: wiki hub introvabile sugli hub post-hoist.** `_wiki_root()`/`_raw_root()`

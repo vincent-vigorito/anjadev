@@ -1054,6 +1054,23 @@ def _route_delegate_target(hub: Path, prompt: str, workspace: str = "") -> tuple
                      "reason": f"auto-route su keyword {best[4]}"}
 
 
+def _delegate_mcp_mounts(hub: Path, agent_dir: Path) -> dict:
+    """Merge delle definizioni mcpServers di hub/.mcp.json + agent_dir/.mcp.json.
+
+    A parità di nome vince l'agent dir (env con scope workspace più specifico).
+    """
+    servers: dict = {}
+    for src_dir in (hub, agent_dir):
+        mcp_file = src_dir / ".mcp.json"
+        if mcp_file.is_file():
+            try:
+                mcp_json = json.loads(mcp_file.read_text(encoding="utf-8"))
+                servers.update(mcp_json.get("mcpServers") or {})
+            except Exception:
+                pass
+    return servers
+
+
 def tool_agent_delegate(args: dict) -> dict:
     """Delega un task a un agent specializzato. Spawn mini-sessione claude-agent-sdk con cwd=agent dir.
 
@@ -1103,8 +1120,7 @@ def tool_agent_delegate(args: dict) -> dict:
     model = cfg.get("default_model", "sonnet")
     role = cfg.get("role", "")
     # F-Sec-Anjadev-DelegateBypass: bypassPermissions solo se l'agent lo dichiara
-    # esplicitamente nella sua config (default least-privilege). Letto QUI perché più
-    # sotto `cfg` viene riassegnato all'ultimo .mcp.json (shadowing).
+    # esplicitamente nella sua config (default least-privilege).
     bypass_perms = bool(cfg.get("bypass_permissions", False))
     # Tool NATIVI in delega: read-only di default. Un agent che deve PRODURRE (es. il
     # lead di un workspace marketing: generare kit, convertire immagini) li dichiara
@@ -1131,25 +1147,27 @@ def tool_agent_delegate(args: dict) -> dict:
         f"Respond focused on your domain. Output will be returned to the caller."
     )
 
-    # Auto-allowlist MCP tool patterns. Agent eredita i MCP del hub + i suoi
-    # propri (.mcp.json nella sua dir, se esiste).
-    mcp_patterns = []
-    seen = set()
-    for src_dir in (hub, agent_dir):
-        mcp_file = src_dir / ".mcp.json"
-        if mcp_file.is_file():
-            try:
-                cfg = json.loads(mcp_file.read_text(encoding="utf-8"))
-                for srv in (cfg.get("mcpServers") or {}).keys():
-                    if srv not in seen:
-                        seen.add(srv)
-                        mcp_patterns.append(f"mcp__{srv}__*")
-            except Exception:
-                pass
+    # MCP in delega: le definizioni COMPLETE (command/args/env) di hub + agent dir
+    # vengono passate al SDK via `mcp_servers`. Allowlistare solo i nomi non basta:
+    # il pattern risulta permesso ma il server non è montato, e l'agent senza tool
+    # può "riuscire" confabulando i risultati invece di fallire.
+    mcp_servers = _delegate_mcp_mounts(hub, agent_dir)
+    mcp_patterns = [f"mcp__{srv}__*" for srv in mcp_servers]
+
+    # Fail-fast: se la config dichiara mcp_servers non montabili, errore esplicito
+    # prima dello spawn.
+    required = cfg.get("mcp_servers")
+    if isinstance(required, list):
+        missing = [s for s in required if s not in mcp_servers]
+        if missing:
+            return {
+                "error": (f"agent '{target}' dichiara mcp_servers {missing} ma nessun "
+                          f".mcp.json li definisce (cercato in {hub} e {agent_dir})"),
+                "mounted": sorted(mcp_servers),
+                "hint": "aggiungi la definizione al .mcp.json dell'agent o correggi mcp_servers nella sua config.json",
+            }
 
     # cwd dell'agent SDK: usa hub dir perché lì c'è .mcp.json (l'agent eredita gli MCP).
-    # L'agent dir può non avere .mcp.json proprio. Se ne ha uno, MCP server saranno
-    # mergiati via la lista mcp_patterns sopra.
     sdk_cwd = hub if (hub / ".mcp.json").is_file() else agent_dir
 
     # Accumulo FUORI dalla coroutine: al timeout `wait_for` la cancella, ma il lavoro
@@ -1167,6 +1185,8 @@ def tool_agent_delegate(args: dict) -> dict:
             "permission_mode": "bypassPermissions" if bypass_perms else "default",
             "allowed_tools": native_tools + mcp_patterns,
         }
+        if mcp_servers:
+            opts_kwargs["mcp_servers"] = mcp_servers
         options = ClaudeAgentOptions(**opts_kwargs)
         async for msg in query(prompt=prompt, options=options):
             mtype = type(msg).__name__
@@ -1220,6 +1240,7 @@ def tool_agent_delegate(args: dict) -> dict:
         "duration_sec": round(duration, 2),
         "response": response,
         "native_tools": native_tools,
+        "mcp_servers": sorted(mcp_servers),
     }
     if routing:
         out["routing"] = routing   # perché è stato scelto quell'agent (decision-trail)
