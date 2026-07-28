@@ -902,19 +902,22 @@ def _hub_root_from_scope() -> Optional[Path]:
     return None
 
 
-def _resolve_hub_agent_dir(hub: Path, name: str) -> Optional[Path]:
-    """Agent dir per nome: <hub>/agents/ prima, poi i team dei workspace
-    (<hub>/workspaces/*/.anjawiki/agents/) — stesso lookup della webapp."""
+def _find_agent_dirs(hub: Path, name: str) -> list:
+    """Tutte le dir agent che matchano il nome: lista di (workspace, dir),
+    workspace='' per hub-level. I nomi sono duplicati tra i pod dei workspace
+    (ogni brand ha il suo seo-copy/dev/social): il chiamante DEVE disambiguare,
+    mai prendere il primo match — il target sbagliato pubblica sul brand sbagliato."""
+    out = []
     d = hub / "agents" / name
     if (d / "config.json").is_file() or (d / "AGENTS.md").is_file():
-        return d
+        out.append(("", d))
     ws_root = hub / "workspaces"
     if ws_root.is_dir():
         for ws in sorted(ws_root.iterdir()):
             cand = ws / ".anjawiki" / "agents" / name
             if (cand / "config.json").is_file() or (cand / "AGENTS.md").is_file():
-                return cand
-    return None
+                out.append((ws.name, cand))
+    return out
 
 
 def tool_agent_list(args: dict) -> dict:
@@ -1075,39 +1078,55 @@ def tool_agent_delegate(args: dict) -> dict:
     """Delega un task a un agent specializzato. Spawn mini-sessione claude-agent-sdk con cwd=agent dir.
 
     args:
-      target: str  — nome agent (es. 'social'). OPZIONALE: se assente, l'agent viene
+      target: str  — nome agent (es. 'social'), qualificabile con il workspace
+                     ('swebby/social'). OPZIONALE: se assente, l'agent viene
                      scelto automaticamente dalle `auto_route_keywords` sul prompt
-      workspace: str — restringe il routing automatico a un workspace (opz.)
+      workspace: str — vincola il target (esplicito o auto-routato) a un workspace
       prompt: str  — task da delegare
       timeout_sec: int = 120
     """
     target = (args.get("target") or "").strip()
+    workspace = (args.get("workspace") or "").strip()
     prompt = (args.get("prompt") or "").strip()
     timeout_sec = int(args.get("timeout_sec", 120))
 
     if not prompt:
         return {"error": "prompt required"}
 
-    routing = None
-    if not target:
-        _hub_for_route = _hub_root_from_scope()
-        if not _hub_for_route:
-            return {"error": "hub root not determinable"}
-        target, routing = _route_delegate_target(
-            _hub_for_route, prompt, (args.get("workspace") or "").strip())
-        if not target:
-            return {"error": routing.get("error", "routing fallito"), "hint":
-                    "passa `target` esplicito (agent.list mostra il roster)"}
+    # target qualificato 'workspace/nome' — il qualificatore vince sul param
+    if "/" in target:
+        ws_q, _, target = target.partition("/")
+        workspace = ws_q.strip() or workspace
 
     hub = _hub_root_from_scope()
     if not hub:
         return {"error": "hub root not determinable"}
-    # lookup cross-workspace (come la webapp); legacy: dir hub anche senza config
-    agent_dir = _resolve_hub_agent_dir(hub, target)
-    if agent_dir is None and (hub / "agents" / target).is_dir():
-        agent_dir = hub / "agents" / target
-    if agent_dir is None:
-        return {"error": f"agent '{target}' not found (né {hub}/agents/ né workspaces/*/.anjawiki/agents/)"}
+
+    routing = None
+    if not target:
+        target, routing = _route_delegate_target(hub, prompt, workspace)
+        if not target:
+            return {"error": routing.get("error", "routing fallito"), "hint":
+                    "passa `target` esplicito (agent.list mostra il roster)"}
+        # il workspace scelto dal routing DEVE vincolare anche la resolve:
+        # i nomi sono duplicati tra i pod e il primo match è il brand sbagliato
+        workspace = routing.get("workspace") or workspace
+
+    matches = _find_agent_dirs(hub, target)
+    if workspace:
+        matches = [m for m in matches if m[0] == workspace]
+    if not matches and not workspace and (hub / "agents" / target).is_dir():
+        matches = [("", hub / "agents" / target)]   # legacy: dir hub anche senza config
+    if not matches:
+        where = f"nel workspace '{workspace}'" if workspace else \
+                f"(né {hub}/agents/ né workspaces/*/.anjawiki/agents/)"
+        return {"error": f"agent '{target}' not found {where}"}
+    if len(matches) > 1:
+        return {"error": f"agent '{target}' ambiguo: esiste in "
+                         f"{[m[0] or 'hub' for m in matches]} — passa `workspace` "
+                         f"o un target qualificato '<workspace>/{target}'",
+                "candidates": [m[0] or "hub" for m in matches]}
+    workspace, agent_dir = matches[0]
 
     # Load agent config
     cfg_path = agent_dir / "config.json"
@@ -1241,6 +1260,7 @@ def tool_agent_delegate(args: dict) -> dict:
 
     out = {
         "agent": target,
+        "workspace": workspace or "hub",
         "model": model,
         "duration_sec": round(duration, 2),
         "response": response,

@@ -2,6 +2,27 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.20.4 — 2026-07-28
+
+**Fix: `agent.delegate` risolveva il target per solo nome, primo workspace in
+ordine alfabetico.** Con i pod multi-brand i nomi agent sono duplicati
+(`seo-copy`, `dev`, `social` esistono in ogni workspace): un `target` esplicito
+finiva SEMPRE sul primo workspace alfabetico, e l'auto-routing dichiarava il
+workspace giusto nel metadata ma poi eseguiva l'agent dell'altro brand — con le
+SUE credenziali (quasi-incidente live: carosello di un brand a un passo dal
+finire sui canali social dell'altro). Ora:
+
+- `workspace` vincola anche il target esplicito, non solo l'auto-routing.
+- Target qualificato: `swebby/seo-copy`.
+- Il workspace scelto dall'auto-routing vincola la resolve (niente più
+  metadata/esecuzione divergenti).
+- **Fail-fast su nome ambiguo**: se il nome esiste in più workspace e nessun
+  vincolo è dato, la delega ritorna errore con i candidati invece di scegliere
+  in silenzio.
+- L'output include `workspace` effettivo (decision-trail).
+- `_resolve_hub_agent_dir` (first-match) sostituita da `_find_agent_dirs`
+  (tutti i match, il chiamante disambigua).
+
 ## v0.20.3 — 2026-07-27
 
 **Security: `agent.delegate` isola la sessione dagli MCP user-level
