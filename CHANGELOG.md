@@ -2,6 +2,37 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.23.0 — 2026-08-19
+
+**Wiki steward (F-anjadev-steward, pezzo C): distill + compact.** I journal non
+diventavano wiki (overview stale da maggio). Ora `scripts/steward.py` è il notturno
+che promuove 0–N patch e toglie i diari dal retrieval.
+
+- Pass 1 triage senza LLM: session *worth* (journal_policy) nella finestra `--since`
+  (7d), non archived/distilled, cluster per giorno (merge giorni adiacenti se i
+  prompt si somigliano, Jaccard > 0.3), cap 5 cluster/run.
+- Pass 2: una call per cluster al CLI del harness (`ANJA_STEWARD_BIN` →
+  `ANJA_SUMMARY_BIN` → `harness:` → PATH; `claude -p`/`grok -p`/`codex exec`),
+  output JSON schema; JSON rotto → zero patch, cluster non distilled (riprova).
+- Pass 3 writer **fail-closed**: `upsert_concept`/`upsert_entity` su slug esistente
+  in **append** (mai replace, titolo intoccato, stamp `steward, data, cluster`),
+  pagina nuova solo se la rationale cita ≥2 session (mai in lazy mode),
+  `append_overview` solo `## Recent` ≤80 parole (+ `stale_after` +90d se overview
+  > 60 gg), `log_append`; vietati analysis/source/delete/rename/SOUL. Max 3 patch
+  accettate (una vietata non consuma slot). `generated.by = anjadev/steward/<ver>`
+  via `ANJA_ACTOR`. Session del cluster → `distilled: true` (anche con
+  `nothing_to_promote`), poi compact (distilled/short vecchie archiviate; le
+  machine qui solo archiviate, mai purgate).
+- Modalità: dry-run (default) · `--propose` (pending file, wiki intatto) ·
+  `--apply` · `--apply-pending [id…]`. Lock `.anjawiki/.steward.lock` (TTL 30 min),
+  `.steward-last`, opt-out `ANJA_STEWARD=0`. Stdout JSON.
+- **Lazy SessionStart** (`session_start.py`): ogni `ANJA_STEWARD_EVERY_H` (24h) spawna
+  `steward.py --propose` detached (mai da sessioni sdk/programmatiche) e mostra
+  "N patch proposte → /anja-steward" se c'è un pending. Nessuna scrittura wiki
+  automatica all'avvio: l'apply è umano (slash) o della routine notturna.
+- Slash `/anja-steward`: mostra pending/dry-run per cluster, conferma, `--apply-pending`.
+- Test `tests/test_steward.py` (27, LLM mock): §7.3 del design.
+
 ## v0.22.0 — 2026-08-19
 
 **Journal onesto + sessioni fuori dal retrieval (F-anjadev-steward, pezzi A+B).**

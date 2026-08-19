@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.22.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.23.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -222,6 +222,7 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 | `/anja-task add\|list\|done\|triage` | Gestione roadmap.md |
 | `/anja-config` | AskUserQuestion: provider + model embed (scrive in `.mcp.json`) |
 | `/anja-index-code` | Build/refresh vector index del codebase |
+| `/anja-steward` | Wiki steward: rivedi/applica le patch distillate dai journal, compact dei diari |
 | `/anja-upgrade` | Migra progetto/hub con wiki di versione precedente al layout corrente (triade + composed + MCP + schema-version) |
 | `/anja-evolve-skills` | Review auto-improvement delle skill (pattern Hermes): legge inbox PostToolUse, propone patch SKILL.md, applica dopo conferma |
 
@@ -257,6 +258,19 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 `sessions.summarize` (delega a `scripts/summarize_session_bg.py`: CLI del harness,
 `claude -p`/`grok -p`/`codex exec`, override `ANJA_SUMMARY_BIN`)
 
+> **Wiki steward (v0.23).** `scripts/steward.py --root <proj>` — triage senza LLM delle
+> sessioni *worth* della settimana (cluster per giorno), **una** call LLM per cluster (max 5)
+> che propone 0–3 patch in JSON, scrittura **fail-closed**: pagine esistenti solo in
+> **append** (stamp `steward, data, cluster`), pagina nuova solo se la rationale cita ≥2
+> session, overview mai riscritto (solo `## Recent` ≤80 parole; overview > 60 gg →
+> `stale_after` +90d), `log_append` sempre; niente analysis/delete/rename/SOUL. Le session
+> dei cluster diventano `distilled: true` e il compact le archivia dopo 14 gg. Modalità:
+> dry-run (default) · `--propose` (scrive `.anjawiki/.steward-pending.json`, nessuna
+> scrittura wiki — è quello che fa il **lazy SessionStart ogni 24h**) · `--apply` (routine
+> notturna) · `--apply-pending [id…]` (dopo la revisione con `/anja-steward`). Lock 30 min,
+> opt-out `ANJA_STEWARD=0`. È un altro job rispetto al *dreaming* di AnjaHub (identità
+> utente): steward = "cosa sa il repo".
+>
 > **Sessioni ≠ wiki (v0.22).** I journal in `sessions/` sono diari, non conoscenza: `wiki.search`,
 > `wiki.search_semantic`, `graph.search_text` (filter `all`/`wiki`) e l'embedding li escludono
 > di default (`include_sessions=true` per includerli). Il hook SessionEnd **non journala** le
@@ -322,6 +336,11 @@ Il layout `.anjawiki/` è un **contratto pubblico** descritto in [`SCHEMA.md`](.
 | `ANJA_SUMMARY_MODEL` | `haiku` | modello per `claude -p` |
 | `ANJA_JOURNAL` | `1` | `0` = questa sessione non è un journal (lo settano gli spawner programmatici) |
 | `ANJA_HARNESS` | auto | forza il harness nel journal (`claude` \| `grok` \| `codex` \| `opencode`) |
+| `ANJA_STEWARD` | `1` | `0` = niente steward (lazy start, slash lo spiega) |
+| `ANJA_STEWARD_BIN` | `ANJA_SUMMARY_BIN` → harness → PATH | CLI per il distill (`claude` \| `grok` \| `codex` \| path \| `none`) |
+| `ANJA_STEWARD_MODEL` | `haiku` | modello per `claude -p` nel distill |
+| `ANJA_STEWARD_EVERY_H` | `24` | ore fra due lazy start (`--propose`) |
+| `ANJA_STEWARD_ARCHIVE_AFTER` | `14` | giorni dopo cui distilled/short vengono archiviate dal compact |
 | `ANJA_HUB` | — | Override path hub (per scope=project che vuole user-global) |
 
 ## Filosofia

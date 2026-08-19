@@ -9,6 +9,7 @@ Schema sessions: file-per-session in wiki/sessions/<date>/<id>.md, scritto a Ses
 con metadata reali estratti dal transcript JSONL.
 """
 
+import json
 import os
 import re
 import subprocess
@@ -253,6 +254,67 @@ def _sweep_pending_summaries(root: Path, kind: str) -> None:
             pass
 
 
+_STEWARD_EVERY_SEC = int(float(os.environ.get("ANJA_STEWARD_EVERY_H", "24")) * 3600)
+
+
+def _steward_state_dir(root: Path) -> Path:
+    return root / ".anjawiki" if (root / ".anjawiki").is_dir() else root
+
+
+def steward_lazy_decision(root: Path, env: dict) -> str:
+    """spawn | skip:<motivo>. Il lazy start PROPONE soltanto (--propose): scrive
+    .steward-pending.json, non tocca il wiki; l'apply è da /anja-steward o dalla routine."""
+    if env.get("ANJA_STEWARD", "1") == "0":
+        return "skip:opt-out"
+    if env.get("ANJA_JOURNAL", "1") == "0" or (env.get("CLAUDE_CODE_ENTRYPOINT") or "cli").startswith("sdk"):
+        return "skip:programmatic"      # mai dal summarizer/steward/SDK stessi
+    sd = _steward_state_dir(root)
+    last = sd / ".steward-last"
+    if last.is_file():
+        try:
+            if time.time() - float(last.read_text().strip()) < _STEWARD_EVERY_SEC:
+                return "skip:recent"
+        except Exception:
+            pass
+    lock = sd / ".steward.lock"
+    if lock.is_file() and time.time() - lock.stat().st_mtime < 1800:
+        return "skip:lock"
+    return "spawn"
+
+
+def _maybe_spawn_steward(root: Path) -> None:
+    """Lazy SessionStart dello steward (F-anjadev-steward C3): cap 1, detached,
+    start_new_session (stesso pattern dello sweep summary). Niente LLM se non ci sono
+    cluster worth: il triage è gratis."""
+    decision = steward_lazy_decision(root, os.environ)
+    if decision != "spawn":
+        return
+    script = Path(__file__).resolve().parent.parent / "scripts" / "steward.py"
+    if not script.is_file():
+        return
+    child_env = os.environ.copy()
+    child_env.update({"ANJA_JOURNAL": "0", "ANJA_AUTO_SUMMARY": "0", "ANJA_WIKI_EMBED": "0"})
+    try:
+        subprocess.Popen([sys.executable, str(script), "--root", str(root), "--propose"],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True, env=child_env)
+    except Exception:
+        pass
+
+
+def _print_steward_pending(root: Path) -> None:
+    pf = _steward_state_dir(root) / ".steward-pending.json"
+    if not pf.is_file():
+        return
+    try:
+        d = json.loads(pf.read_text(encoding="utf-8"))
+        n = sum(len(c.get("patches", [])) for c in d.get("clusters", []))
+        if n:
+            print(f"  🌙 wiki steward: {n} patch proposte ({len(d.get('clusters', []))} cluster) → /anja-steward per rivederle")
+    except Exception:
+        pass
+
+
 def main() -> None:
     found = find_anja_root(Path.cwd())
     if found is None:
@@ -263,6 +325,8 @@ def main() -> None:
     # Safety net: recupera summary mancanti delle sessioni recenti lunghe.
     # Spostato qui da session_end perché il detached spawn a /exit veniva killato da CC.
     _sweep_pending_summaries(root, kind)
+    # Steward lazy (propose-only, ogni 24h) — dopo lo sweep, mai a SessionEnd.
+    _maybe_spawn_steward(root)
 
     last_entries = []
     if log_file.is_file():
@@ -271,6 +335,7 @@ def main() -> None:
         last_entries = entries[-5:]
 
     print(f"[anja] Sessione aperta ({kind}): {root.name}")
+    _print_steward_pending(root)
     if last_entries:
         print("  Ultime 5 entry log:")
         for d, t, desc in last_entries:
