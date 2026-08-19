@@ -435,8 +435,11 @@ def run(root: Path, mode: str, since: str = "7d", only_clusters: list[str] | Non
     wroot, sroot = wiki_root_for(root), sessions_root_for(root)
     rep = {"root": str(root), "mode": mode, "version": STEWARD_VERSION, "clusters": [], "patches_applied": 0,
            "patches_rejected": 0, "distilled": 0, "errors": [], "compact": None}
-    if wroot is None or sroot is None:
-        rep["errors"].append("wiki o sessions non trovati"); return rep
+    if wroot is None:
+        rep["errors"].append("wiki non trovato"); return rep
+    if sroot is None or not sroot.is_dir():
+        rep["triage"] = {"clusters": 0, "skipped": {}, "deferred": 0, "note": "nessuna cartella sessions"}
+        return rep
     if os.environ.get("ANJA_STEWARD", "1") == "0":
         rep["errors"].append("ANJA_STEWARD=0 (opt-out)"); return rep
     lock = Lock(root)

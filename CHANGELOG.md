@@ -2,6 +2,11 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.23.1 — 2026-08-19
+
+- steward: un wiki senza cartella `sessions/` (workspace appena nati) non è un errore —
+  triage vuoto, exit 0 (la routine hub itera più root e non deve sporcare il report).
+
 ## v0.23.0 — 2026-08-19
 
 **Wiki steward (F-anjadev-steward, pezzo C): distill + compact.** I journal non
