@@ -2,6 +2,50 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.22.0 — 2026-08-19
+
+**Journal onesto + sessioni fuori dal retrieval (F-anjadev-steward, pezzi A+B).**
+Misura che l'ha motivato (wiki AnjaHub): 493 session, di cui **456 sessioni-macchina**
+(Agent SDK `sdk-py`, `claude -p` `sdk-cli`, 0-1 messaggio, secondi) — commitment
+sensor, summarizer, e2e — **tutte riassunte da haiku** perché lo spawn del summary a
+SessionEnd era incondizionato. Le umane erano 37, già riassunte.
+
+- `hooks/journal_policy.py` (nuovo, py3.9-safe, condiviso con lo steward): harness
+  dall'env (`CLAUDECODE`/`CLAUDE_CODE_ENTRYPOINT`, override `ANJA_HARNESS`),
+  `is_programmatic` (entrypoint `sdk-*`, `ANJA_JOURNAL=0`, 0 messaggi, 1 messaggio
+  <30 s con reason `other`), `is_worth` (≥3 msg, ≥5 min, e ≥8 msg / tool di
+  scrittura / keyword di segnale).
+- `session_end.py`: **niente journal per le sessioni-macchina**; frontmatter
+  `harness:` + `entrypoint:`; default `agent` **`cli-unknown`** (non più
+  `cli-claude`: Grok non si maschera da Claude); harness ignoto → payload stdin
+  salvato in `.anjawiki/.hook-payloads.log` (spike A0 "in produzione"); auto-summary
+  solo se *worth*. `session_start.py`: lo sweep usa la stessa policy (via la soglia
+  fissa 15 msg), salta gli `archived`.
+- `summarize_session_bg.py` **harness-agnostico**: `ANJA_SUMMARY_BIN`
+  (`claude|grok|codex|<path>|none`) → `harness:` del file → primo CLI in PATH →
+  skip (rc 0, journal ok). `claude -p --model`, `grok -p`, `codex exec`. La sessione
+  del summarizer porta `ANJA_JOURNAL=0`. `sessions.summarize` (MCP) delega allo
+  script (era una copia con `claude` hardcoded senza injection-wrap). `code.search`
+  rerank idem (`ANJA_JOURNAL=0`).
+- Retrieval: `graph.search_text` con filter `all`/`wiki` **esclude le session** salvo
+  `include_sessions=true` (breaking minore); `wiki.embed` default `include_sessions=false`
+  (`wiki_embed.py --with-sessions` per l'opt-in); `sessions.list` esclude
+  `sessions/archive/` (`include_archived=true`); `wiki.stats` espone
+  `archived_session_count`; `wiki.lint` warning `session-volume` se i diari > 3× le
+  pagine entity/concept.
+- `scripts/compact_sessions.py` (nuovo, no LLM, dry-run di default): machine →
+  **purge** (`--purge-machine`) o archive, short vecchie → archive (stub con
+  frontmatter + `archived: true` + Summary + transcript_path in `sessions/archive/<date>/`),
+  `distilled: true` vecchie → archive, worth → intatte. Idempotente.
+- Test: `tests/test_journal_policy.py` (33: policy, hook e2e con transcript finto e
+  varianti env, summarizer senza CLI / CLI finto), `tests/test_compact_sessions.py` (17).
+- README: Grok trust + memoria, `ANJA_SUMMARY_BIN`/`ANJA_JOURNAL`/`ANJA_HARNESS`,
+  "sessioni ≠ wiki", compact.
+
+Nota: le sessioni Agent SDK della webapp AnjaHub non vengono più journalate dal
+plugin (l'hub persiste già le sue conversazioni); lo stesso vale per qualunque
+`claude -p` lanciato da script.
+
 ## v0.21.0 — 2026-08-19
 
 **anjadev core split (F-AnjadevCoreSplit): il server MCP è di nuovo il plugin

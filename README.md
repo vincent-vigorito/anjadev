@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.21.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.22.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -120,6 +120,14 @@ Unico passo richiesto: dare il **trust al progetto** dentro la TUI (`/hooks` →
 project*, oppure dal pannello `/plugins` → tab Hooks) — senza trust, MCP e hook restano
 bloccati per sicurezza e l'agente ripiega sull'accesso bash-native. Diagnostica:
 `grok mcp doctor` e `grok inspect`.
+
+> **Memoria che sopravvive alla sessione (v0.22)**: senza trust, Grok *lavora* ma **non
+> scrive il journal** (sessione reale 2026-08-19: zero file `*-cli-grok-*`). Con trust il
+> hook SessionEnd gira; l'harness viene riconosciuto dall'env (Claude: `CLAUDECODE=1`;
+> override `ANJA_HARNESS=grok`) e, se non riconosciuto, il journal dice `cli-unknown` e il
+> payload dell'hook viene salvato in `.anjawiki/.hook-payloads.log` — è lì che si legge il
+> wire format per scrivere l'adapter. Fallback per harness senza hook: journal via
+> `/anja-session-save` (vedi *Bootstrap* nel context composto).
 
 (Il grok-cli open-source di superagent-ai è un tool diverso: lì serve `.grok/settings.json`
 con `mcpServers` stile Claude.)
@@ -245,7 +253,19 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 `memory.recall`, `memory.write`, `memory.timeline`
 
 ### Gruppo `sessions` (3 tool)
-`sessions.list`, `sessions.read`, `sessions.summarize` (claude CLI haiku subprocess)
+`sessions.list` (esclude `archive/`; `include_archived=true`), `sessions.read`,
+`sessions.summarize` (delega a `scripts/summarize_session_bg.py`: CLI del harness,
+`claude -p`/`grok -p`/`codex exec`, override `ANJA_SUMMARY_BIN`)
+
+> **Sessioni ≠ wiki (v0.22).** I journal in `sessions/` sono diari, non conoscenza: `wiki.search`,
+> `wiki.search_semantic`, `graph.search_text` (filter `all`/`wiki`) e l'embedding li escludono
+> di default (`include_sessions=true` per includerli). Il hook SessionEnd **non journala** le
+> sessioni-macchina (Agent SDK / `claude -p` / `ANJA_JOURNAL=0`, entrypoint `sdk-*`, 0 messaggi)
+> e l'auto-summary parte solo se la sessione *vale* (≥3 messaggi, ≥5 min, e volume o tool di
+> scrittura o parole di segnale). I diari vecchi si compattano senza LLM:
+> `python3 scripts/compact_sessions.py --root <proj> [--apply] [--purge-machine]` — le
+> sessioni-macchina vengono cancellate, le short archiviate come stub in `sessions/archive/`
+> (frontmatter + Summary + transcript_path), le *worth* restano per lo steward.
 
 ### Altri gruppi
 `soul` (2), `user` (2), `roadmap` (6), `graph` (7, opt-in: vuole l'index)
@@ -298,6 +318,10 @@ Il layout `.anjawiki/` è un **contratto pubblico** descritto in [`SCHEMA.md`](.
 | `ANJA_EMBED_PROVIDER` | `openrouter` | `openrouter` \| `voyage` \| `openai` \| `local` |
 | `ANJA_EMBED_MODEL` | provider-default | es. `qwen/qwen3-embedding-8b` per openrouter |
 | `ANJA_AUTO_SUMMARY` | `1` | `0` per disabilitare auto-summary background |
+| `ANJA_SUMMARY_BIN` | harness → PATH | CLI per i summary: `claude` \| `grok` \| `codex` \| path \| `none` |
+| `ANJA_SUMMARY_MODEL` | `haiku` | modello per `claude -p` |
+| `ANJA_JOURNAL` | `1` | `0` = questa sessione non è un journal (lo settano gli spawner programmatici) |
+| `ANJA_HARNESS` | auto | forza il harness nel journal (`claude` \| `grok` \| `codex` \| `opencode`) |
 | `ANJA_HUB` | — | Override path hub (per scope=project che vuole user-global) |
 
 ## Filosofia

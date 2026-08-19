@@ -29,6 +29,9 @@ from collections import Counter
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import journal_policy  # noqa: E402  (hooks/journal_policy.py, condiviso con steward)
+
 
 def find_anja_root(start: Path):
     """Risale dalla cwd cercando un anja root.
@@ -100,6 +103,7 @@ def parse_transcript(path: str) -> dict:
         "assistant_messages_count": 0,
         "tools_used": Counter(),
         "total_lines": 0,
+        "entrypoint": "",      # cli | sdk-py | sdk-cli … (CC lo scrive su ogni evento)
     }
     p = Path(path)
     if not p.is_file():
@@ -116,6 +120,8 @@ def parse_transcript(path: str) -> dict:
                 except Exception:
                     continue
                 info["total_lines"] += 1
+                if not info["entrypoint"] and ev.get("entrypoint"):
+                    info["entrypoint"] = str(ev.get("entrypoint"))
 
                 ts = ev.get("timestamp")
                 if ts:
@@ -231,16 +237,31 @@ def _extract_populated_summary(path: Path) -> str | None:
     return body
 
 
+def _duration_seconds(start_iso: str, end_iso: str) -> float:
+    try:
+        s = datetime.fromisoformat((start_iso or "").replace("Z", "+00:00"))
+        e = datetime.fromisoformat((end_iso or "").replace("Z", "+00:00"))
+        return max(0.0, (e - s).total_seconds())
+    except Exception:
+        return 0.0
+
+
 def write_session_file(sessions_root: Path, kind: str, session_meta: dict, transcript_info: dict) -> Path:
     """Crea (o aggiorna, upsert per cc_session_id) il file-per-session.
 
     sessions_root: <project>/.anjawiki/wiki/sessions/ (project) o <hub>/sessions/ (hub).
     kind: 'project' | 'hub' (scrive nel frontmatter scope).
+    `session_meta["agent"]` lo mette il chiamante (hook CC o adapter); se manca il file
+    dice `cli-unknown` — mai mascherare un harness da Claude.
     """
     now_local = datetime.now().astimezone()
     hms = now_local.strftime("%H%M%S")
     short_hash = secrets.token_hex(2)
-    agent = session_meta.get("agent", "cli-claude")
+    agent = session_meta.get("agent") or "cli-unknown"
+    if not session_meta.get("agent"):
+        print("[anja] WARNING: session_meta senza `agent` → cli-unknown", file=sys.stderr)
+    harness = session_meta.get("harness") or (agent[4:] if agent.startswith("cli-") else "unknown")
+    entrypoint = session_meta.get("entrypoint") or transcript_info.get("entrypoint") or ""
     anja_id = f"{hms}-{agent}-{short_hash}"
 
     cc_session_id = session_meta.get("session_id", "")
@@ -296,6 +317,9 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
     lines.append(f"duration: {duration}")
     lines.append(f"scope: {kind}")
     lines.append(f"agent: {agent}")
+    lines.append(f"harness: {harness}")
+    if entrypoint:
+        lines.append(f"entrypoint: {entrypoint}")
     lines.append(f"date: {today}")
     lines.append(f"end_reason: {reason}")
     lines.append(f"messages_user: {len(user_messages)}")
@@ -370,16 +394,22 @@ def best_effort_post_session_hooks(project_root: Path) -> None:
             pass
 
 
-def spawn_bg_summarize(session_file: Path) -> None:
+def spawn_bg_summarize(session_file: Path, transcript_info: dict = None, duration_sec: float = 0.0) -> None:
     """Spawn `summarize_session_bg.py` come processo DETACHED — non blocca /exit.
 
     Il subprocess continua dopo che l'hook session_end termina (start_new_session
-    + stdin/stdout/stderr chiusi). Genera il summary via `claude -p haiku` e lo
+    + stdin/stdout/stderr chiusi). Genera il summary via `<harness> -p` e lo
     scrive nella sezione `## Summary` del session file in ~30-60s tipicamente.
 
-    Skip silenzioso se ANJA_AUTO_SUMMARY=0 nell'env (opt-out).
+    Skip silenzioso se ANJA_AUTO_SUMMARY=0 nell'env (opt-out), o se la sessione non
+    vale un summary (journal_policy.is_worth — prima lo spawn era incondizionato:
+    456 call haiku su sessioni-macchina di pochi secondi, misura 2026-08-19).
     """
     if os.environ.get("ANJA_AUTO_SUMMARY", "1") == "0":
+        return
+    if transcript_info is not None and not journal_policy.is_worth(
+            len(transcript_info.get("user_messages", [])), duration_sec,
+            list(transcript_info.get("tools_used", {}).keys()), transcript_info.get("user_messages", [])):
         return
     here = Path(__file__).resolve()
     script = here.parent.parent / "scripts" / "summarize_session_bg.py"
@@ -391,6 +421,7 @@ def spawn_bg_summarize(session_file: Path) -> None:
     child_env = os.environ.copy()
     child_env["ANJA_AUTO_SUMMARY"] = "0"
     child_env["ANJA_WIKI_EMBED"] = "0"
+    child_env["ANJA_JOURNAL"] = "0"      # la sessione del summarizer non è un journal
     try:
         subprocess.Popen(
             [sys.executable, str(script), "--session-file", str(session_file)],
@@ -431,6 +462,26 @@ def spawn_bg_wiki_embed_check(project_root: Path) -> None:
         pass
 
 
+def _capture_unknown_payload(root: Path, session_meta: dict) -> None:
+    """Harness non riconosciuto (es. Grok Build che carica gli hook CC): appende payload
+    stdin + hint env in `<root>/.anjawiki/.hook-payloads.log` (cap 200 KB). È lo spike
+    A0 del design steward fatto "in produzione": la prossima sessione Grok lascia qui
+    il suo wire format, e l'adapter si scrive sui dati, non a memoria."""
+    try:
+        base = root / ".anjawiki" if (root / ".anjawiki").is_dir() else root
+        log = base / ".hook-payloads.log"
+        if log.is_file() and log.stat().st_size > 200_000:
+            return
+        hints = {k: v for k, v in os.environ.items()
+                 if k.startswith(("CLAUDE", "GROK", "CODEX", "OPENCODE", "ANJA_HARNESS"))}
+        entry = {"ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                 "cwd": str(Path.cwd()), "payload": session_meta, "env_hints": hints}
+        with log.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False)[:4000] + "\n")
+    except Exception:
+        pass
+
+
 def main() -> None:
     session_meta = parse_stdin()
 
@@ -456,12 +507,31 @@ def main() -> None:
     if transcript_path:
         transcript_info = parse_transcript(transcript_path)
 
+    # Chi siamo: harness (claude/codex/grok/opencode/unknown) ed entrypoint (cli/sdk-*).
+    # Gli adapter (codex_adapter) passano `agent` esplicito; il path CC lo deriva dall'env.
+    harness = session_meta.get("harness") or journal_policy.detect_harness(os.environ, session_meta)
+    session_meta.setdefault("harness", harness)
+    session_meta.setdefault("agent", journal_policy.agent_for(harness))
+    entrypoint = journal_policy.detect_entrypoint(os.environ, transcript_info.get("entrypoint", ""))
+    session_meta.setdefault("entrypoint", entrypoint)
+    if harness == "unknown":
+        _capture_unknown_payload(root, session_meta)   # spike: impara il wire format del harness
+
+    # Sessioni-macchina (SDK, `claude -p`, nostri spawner, 0 messaggi): niente journal,
+    # niente summary. Erano il 92% dei file in sessions/ (misura 2026-08-19).
+    duration_sec = _duration_seconds(transcript_info.get("started") or "", transcript_info.get("ended") or "")
+    why = journal_policy.is_programmatic(os.environ, entrypoint,
+                                         len(transcript_info.get("user_messages", [])), duration_sec, reason)
+    if why:
+        print(f"[anja] journal skipped ({why})", file=sys.stderr)
+        sys.exit(0)
+
     try:
         session_file = write_session_file(sessions_dir, kind, session_meta, transcript_info)
         rel = session_file.relative_to(root)
         print(f"[anja] Session file ({kind}) → {rel}", file=sys.stderr)
-        # Spawn auto-summary in background (detached, non blocca /exit)
-        spawn_bg_summarize(session_file)
+        # Spawn auto-summary in background (detached, non blocca /exit) — solo se worth
+        spawn_bg_summarize(session_file, transcript_info, duration_sec)
     except Exception as e:
         print(f"[anja] WARNING: session file write failed: {e}", file=sys.stderr)
 

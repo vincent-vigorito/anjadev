@@ -221,10 +221,12 @@ def search_level_1(query: str, root: Path, limit: int = 10, lang: Optional[str] 
 
     claude_bin = os.environ.get("ANJA_CLAUDE_BIN", "claude")
     model = os.environ.get("ANJA_SEARCH_RERANK_MODEL", "haiku")
+    # Sessione-macchina: niente journal/summary/embed dalla sub-sessione di rerank.
+    child_env = dict(os.environ, ANJA_JOURNAL="0", ANJA_AUTO_SUMMARY="0", ANJA_WIKI_EMBED="0")
     try:
         result = subprocess.run(
             [claude_bin, "-p", prompt, "--model", model],
-            capture_output=True, timeout=90, text=True,
+            capture_output=True, timeout=90, text=True, env=child_env,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         # Fallback level 0 se claude non disponibile

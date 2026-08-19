@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """summarize_session_bg.py — generatore auto-summary in background.
 
-Spawnato detached da session_end.py al termine di una sessione CC. NON blocca
-il /exit (hook ritorna subito). Spawna `claude -p ... --model haiku` sul
-session file, scrive il risultato nella sezione `## Summary` sostituendo il
-placeholder. Skip se Summary già popolato (idempotente).
+Spawnato detached da session_end.py al termine di una sessione. NON blocca
+il /exit (hook ritorna subito). Chiama il CLI del harness in modalità
+non-interattiva (`claude -p … --model haiku`, `grok -p …`, `codex exec …`) sul
+session file e scrive il risultato nella sezione `## Summary` sostituendo il
+placeholder. Skip se Summary già popolato (idempotente). Harness-agnostico
+(F-anjadev-steward A3): niente `claude` hardcoded.
 
 Usage:
   python3 summarize_session_bg.py --session-file <path>
 
 Env opzionale:
-  ANJA_CLAUDE_BIN     — path al binario claude (default: 'claude' nel PATH)
-  ANJA_SUMMARY_MODEL  — modello: haiku|sonnet|opus (default 'haiku')
+  ANJA_SUMMARY_BIN    — binario da usare: nome (claude|grok|codex), path assoluto, o
+                        `none` (nessun summary LLM). Se assente: harness del session file
+                        (frontmatter `harness:`), poi il primo tra claude/grok/codex nel
+                        PATH (+ ~/.local/bin, /opt/homebrew/bin…); nessuno → skip (rc 0).
+  ANJA_CLAUDE_BIN     — legacy, equivalente a ANJA_SUMMARY_BIN=<path>
+  ANJA_SUMMARY_MODEL  — modello per claude: haiku|sonnet|opus (default 'haiku')
 
 Niente output verso stdout/stderr quando lanciato in background. Logging in
 `<wiki>/.bg-summarize.log` per debug post-mortem.
@@ -30,32 +36,53 @@ from datetime import datetime
 from pathlib import Path
 
 
-def _resolve_claude_bin(explicit: str | None = None) -> str | None:
-    """Risolve il path assoluto del binario `claude`.
+_KNOWN_BINS = ("claude", "grok", "codex")
+_EXTRA_DIRS = (Path.home() / ".local" / "bin", Path("/usr/local/bin"), Path("/opt/homebrew/bin"),
+               Path.home() / ".claude" / "local", Path("/usr/bin"))
 
-    Quando il summarizer è spawnato da un hook CC, il PATH ereditato è minimale
-    e NON include ~/.local/bin (dove vive `claude` tipicamente). Cercare il
-    comando nudo fallisce con FileNotFoundError → summary mai generato.
-    Risolviamo esplicitamente: env override → which → path noti per OS.
-    """
-    if explicit and explicit != "claude":
-        return explicit  # path esplicito passato dall'utente
-    # 1. shutil.which con PATH corrente (funziona se lanciato da shell completa)
-    found = shutil.which("claude")
+
+def _which(name: str) -> str | None:
+    """which + location note: il PATH ereditato da un hook è minimale (niente ~/.local/bin)."""
+    found = shutil.which(name)
     if found:
         return found
-    # 2. PATH allargato con le location note (hook env minimale)
-    candidates = [
-        Path.home() / ".local" / "bin" / "claude",
-        Path("/usr/local/bin/claude"),
-        Path("/opt/homebrew/bin/claude"),
-        Path.home() / ".claude" / "local" / "claude",
-        Path("/usr/bin/claude"),
-    ]
-    for c in candidates:
+    for d in _EXTRA_DIRS:
+        c = d / name
         if c.is_file() and os.access(c, os.X_OK):
             return str(c)
     return None
+
+
+def _resolve_bin(explicit: str | None, harness: str | None) -> tuple[str | None, str]:
+    """(path, kind) del CLI da usare. kind ∈ claude|grok|codex|other.
+
+    Ordine: ANJA_SUMMARY_BIN/--bin esplicito → harness del session file → primo
+    noto nel PATH. (None, "") se nessuno: non è un errore della sessione."""
+    if explicit and explicit.lower() in ("none", "off", "0"):
+        return None, ""          # opt-out esplicito: nessun LLM per i summary
+    if explicit:
+        name = Path(explicit).name
+        kind = next((k for k in _KNOWN_BINS if name.startswith(k)), "other")
+        if "/" in explicit:
+            return (explicit if os.access(explicit, os.X_OK) else None), kind
+        return _which(explicit), kind
+    if harness in _KNOWN_BINS:
+        found = _which(harness)
+        if found:
+            return found, harness
+    for k in _KNOWN_BINS:
+        found = _which(k)
+        if found:
+            return found, k
+    return None, ""
+
+
+def _command(bin_path: str, kind: str, prompt: str, model: str) -> list[str]:
+    if kind == "claude":
+        return [bin_path, "-p", prompt, "--model", model]
+    if kind == "codex":
+        return [bin_path, "exec", prompt]
+    return [bin_path, "-p", prompt]          # grok (Grok Build ha -p) e altri CC-compat
 
 
 def _log(msg: str, log_path: Path | None = None) -> None:
@@ -69,25 +96,31 @@ def _log(msg: str, log_path: Path | None = None) -> None:
             pass
 
 
-def summarize(session_file: Path, model: str = "haiku", claude_bin: str = "claude",
-              log_path: Path | None = None) -> int:
+LAST_SUMMARY: str = ""     # ultimo summary prodotto (per il tool MCP che importa il modulo)
+
+
+def summarize(session_file: Path, model: str = "haiku", bin_override: str | None = None,
+              log_path: Path | None = None, force: bool = False) -> int:
+    global LAST_SUMMARY
+    LAST_SUMMARY = ""
     if not session_file.is_file():
         _log(f"ERROR session not found: {session_file}", log_path)
         return 2
 
-    resolved_bin = _resolve_claude_bin(claude_bin)
-    if not resolved_bin:
-        _log(f"ERROR claude binary not found (PATH minimale? cercato ~/.local/bin, /usr/local/bin, /opt/homebrew/bin)", log_path)
-        return 3
-    claude_bin = resolved_bin
-
     content = session_file.read_text(encoding="utf-8")
+    hm = re.search(r"^harness:\s*(\S+)", content, re.M)
+    harness = hm.group(1).strip() if hm else None
+    bin_path, kind = _resolve_bin(bin_override, harness)
+    if not bin_path:
+        _log(f"SKIP no LLM CLI (claude/grok/codex) in PATH per {session_file.name} — journal ok, summary resta placeholder", log_path)
+        return 0
     summary_re = re.compile(r"(^## Summary\s*\n)(.*?)(?=\n## |\Z)", re.M | re.DOTALL)
     m = summary_re.search(content)
     existing = (m.group(2).strip() if m else "")
     is_placeholder = (not existing) or existing.startswith("<!--")
-    if existing and not is_placeholder:
+    if existing and not is_placeholder and not force:
         _log(f"SKIP already summarized: {session_file.name}", log_path)
+        LAST_SUMMARY = existing
         return 0
 
     # F-Sec-Anjadev-SummarizeInjection: il content (prompt utente + materiale ingerito,
@@ -104,25 +137,28 @@ def summarize(session_file: Path, model: str = "haiku", claude_bin: str = "claud
         "<session_file>\n" + safe_content + "\n</session_file>"
     )
 
+    # La sessione del summarizer NON è un journal (ANJA_JOURNAL=0) e non si riassume.
+    child_env = os.environ.copy()
+    child_env.update({"ANJA_JOURNAL": "0", "ANJA_AUTO_SUMMARY": "0", "ANJA_WIKI_EMBED": "0"})
     try:
         result = subprocess.run(
-            [claude_bin, "-p", prompt, "--model", model],
-            capture_output=True, timeout=180, text=True,
+            _command(bin_path, kind, prompt, model),
+            capture_output=True, timeout=180, text=True, env=child_env,
         )
     except FileNotFoundError:
-        _log(f"ERROR claude CLI not in PATH ('{claude_bin}')", log_path)
+        _log(f"ERROR CLI not executable ('{bin_path}')", log_path)
         return 3
     except subprocess.TimeoutExpired:
-        _log(f"ERROR claude timeout 180s: {session_file.name}", log_path)
+        _log(f"ERROR {kind} timeout 180s: {session_file.name}", log_path)
         return 4
 
     if result.returncode != 0:
-        _log(f"ERROR claude rc={result.returncode} stderr={result.stderr[:300]}", log_path)
+        _log(f"ERROR {kind} rc={result.returncode} stderr={result.stderr[:300]}", log_path)
         return result.returncode
 
     summary = result.stdout.strip()
     if not summary:
-        _log(f"ERROR empty summary from claude: {session_file.name}", log_path)
+        _log(f"ERROR empty summary from {kind}: {session_file.name}", log_path)
         return 5
 
     new_block = f"## Summary\n\n{summary}\n"
@@ -131,8 +167,9 @@ def summarize(session_file: Path, model: str = "haiku", claude_bin: str = "claud
     else:
         new_content = content.rstrip() + "\n\n" + new_block
     session_file.write_text(new_content, encoding="utf-8")
+    LAST_SUMMARY = summary
 
-    _log(f"OK summarized {session_file.name} ({len(summary)} chars, model={model})", log_path)
+    _log(f"OK summarized {session_file.name} ({len(summary)} chars, {kind}{' model=' + model if kind == 'claude' else ''})", log_path)
     return 0
 
 
@@ -140,7 +177,9 @@ def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--session-file", required=True, help="Path al session .md")
     p.add_argument("--model", default=os.environ.get("ANJA_SUMMARY_MODEL", "haiku"))
-    p.add_argument("--claude-bin", default=os.environ.get("ANJA_CLAUDE_BIN", "claude"))
+    p.add_argument("--bin", "--claude-bin", dest="bin",
+                   default=os.environ.get("ANJA_SUMMARY_BIN") or os.environ.get("ANJA_CLAUDE_BIN") or None,
+                   help="CLI: claude|grok|codex o path (default: harness del file, poi PATH)")
     p.add_argument("--log-path", help="Path file log per debug (default: <wiki>/.bg-summarize.log)")
     args = p.parse_args()
 
@@ -157,7 +196,7 @@ def main() -> None:
 
     _log(f"STARTED {session_file.name} (pid={os.getpid()})", log_path)
     try:
-        rc = summarize(session_file, model=args.model, claude_bin=args.claude_bin, log_path=log_path)
+        rc = summarize(session_file, model=args.model, bin_override=args.bin, log_path=log_path)
         sys.exit(rc)
     except Exception as e:
         _log(f"FATAL {e}\n{traceback.format_exc()}", log_path)

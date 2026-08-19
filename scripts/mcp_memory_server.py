@@ -328,15 +328,18 @@ def tool_sessions_list(args: dict) -> dict:
     - Target (M-Mem 2+): wiki/sessions/<date>/<HHMMSS-kind-agent-hash>.md
     """
     limit = int(args.get("limit", 20))
+    include_archived = bool(args.get("include_archived", False))
     sessions_root = _sessions_root()
     if not sessions_root.is_dir():
         return {"sessions": []}
 
     entries = []
-    # File-per-session (target schema)
-    for date_dir in sorted(sessions_root.iterdir(), reverse=True):
-        if not date_dir.is_dir():
-            continue
+    # File-per-session (target schema). `archive/` (compact: stub + transcript_path)
+    # fuori di default — sessions.read per id li trova comunque (rglob).
+    date_dirs = [d for d in sorted(sessions_root.iterdir(), reverse=True) if d.is_dir() and d.name != "archive"]
+    if include_archived and (sessions_root / "archive").is_dir():
+        date_dirs += [d for d in sorted((sessions_root / "archive").iterdir(), reverse=True) if d.is_dir()]
+    for date_dir in date_dirs:
         for f in sorted(date_dir.glob("*.md"), reverse=True):
             entries.append(_parse_session_file(f, date_dir.name))
             if len(entries) >= limit:
@@ -436,14 +439,13 @@ def tool_sessions_read(args: dict) -> dict:
 
 
 def tool_sessions_summarize(args: dict) -> dict:
-    """Genera auto-summary per una sessione spawnando `claude` CLI subprocess.
-
-    Sostituisce il placeholder `## Summary` del session file con 3-5 bullet
-    point sintetizzati dal session content (frontmatter + stats + user prompts).
+    """Genera l'auto-summary di una sessione delegando a `scripts/summarize_session_bg.py`
+    (unico summarizer: harness-agnostico claude/grok/codex via ANJA_SUMMARY_BIN o
+    frontmatter `harness:`, injection-wrap, la sessione del summarizer non è un journal).
 
     args:
       session_id: filename stem del session file (es. '194849-cli-claude-d9e6')
-      model:     opzionale, 'haiku'|'sonnet'|'opus' (default 'haiku', veloce)
+      model:     opzionale, 'haiku'|'sonnet'|'opus' (default 'haiku'; usato da claude)
       force:     opzionale, True per sovrascrivere Summary già popolato
     """
     session_id = (args.get("session_id") or "").strip()
@@ -455,7 +457,6 @@ def tool_sessions_summarize(args: dict) -> dict:
     sessions_root = _sessions_root()
     if not sessions_root.is_dir():
         return {"error": f"sessions dir not found: {sessions_root}"}
-
     target_file: Optional[Path] = None
     for f in sessions_root.rglob(f"{session_id}.md"):
         target_file = f
@@ -463,54 +464,22 @@ def tool_sessions_summarize(args: dict) -> dict:
     if not target_file:
         return {"error": f"session not found: {session_id}"}
 
-    content = target_file.read_text(encoding="utf-8")
-
-    summary_re = re.compile(r"(^## Summary\s*\n)(.*?)(?=\n## |\Z)", re.M | re.DOTALL)
-    m = summary_re.search(content)
-    existing = (m.group(2).strip() if m else "")
-    is_placeholder = (not existing) or existing.startswith("<!--")
-    if existing and not is_placeholder and not force:
-        return {
-            "error": "Summary already populated. Use force=true to overwrite.",
-            "existing_preview": existing[:200],
-        }
-
-    prompt = (
-        "Leggi il seguente file di sessione di Claude Code (markdown con "
-        "frontmatter + stats + lista user prompts). Produci un summary conciso "
-        "in italiano: 3-5 bullet point che coprano cosa è stato fatto, decisioni "
-        "chiave, e outcome. NIENTE preambolo, NIENTE 'ecco il summary'. Solo "
-        "bullet diretti, niente headings.\n\n---\n" + content + "\n---"
-    )
-
-    claude_bin = os.environ.get("ANJA_CLAUDE_BIN", "claude")
     try:
-        result = subprocess.run(
-            [claude_bin, "-p", prompt, "--model", model],
-            capture_output=True, timeout=180, text=True,
-        )
-    except FileNotFoundError:
-        return {"error": f"claude CLI not in PATH (tried '{claude_bin}'). Set ANJA_CLAUDE_BIN."}
-    except subprocess.TimeoutExpired:
-        return {"error": "claude CLI timeout (>180s)"}
-
-    if result.returncode != 0:
-        return {"error": f"claude CLI rc={result.returncode}: {result.stderr[:500]}"}
-
-    summary = result.stdout.strip()
-    if not summary:
-        return {"error": "claude returned empty summary"}
-
-    new_block = f"## Summary\n\n{summary}\n"
-    if m:
-        new_content = content[:m.start()] + new_block + content[m.end():]
-    else:
-        new_content = content.rstrip() + "\n\n" + new_block
-
-    target_file.write_text(new_content, encoding="utf-8")
-
+        import importlib.util
+        sp = Path(__file__).resolve().parent / "summarize_session_bg.py"
+        spec = importlib.util.spec_from_file_location("summarize_session_bg", sp)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    except Exception as e:
+        return {"error": f"summarizer not loadable: {e}"}
+    rc = mod.summarize(target_file, model=model, bin_override=os.environ.get("ANJA_SUMMARY_BIN") or None,
+                       force=force)
+    if rc != 0:
+        return {"error": f"summarizer rc={rc} (vedi <wiki>/.bg-summarize.log; 3=CLI non eseguibile, 4=timeout, 5=output vuoto)"}
+    if not mod.LAST_SUMMARY:
+        return {"error": "no LLM CLI (claude/grok/codex) in PATH: set ANJA_SUMMARY_BIN", "written": False}
     return {
-        "summary": summary,
+        "summary": mod.LAST_SUMMARY,
         "session_file": str(target_file.relative_to(ROOT)),
         "written": True,
         "model_used": model,
@@ -2444,6 +2413,20 @@ def tool_wiki_lint(args: dict) -> dict:
         result["summary"]["stale_after_expired"] = len(expired)
         result["summary"]["trust_tiers"] = tiers
 
+    # Segnale (non errore): i diari crescono più della conoscenza → serve compact/steward.
+    # Misura che l'ha motivato: 493 session vs 37 pagine (AnjaHub, 2026-08-19).
+    sess_dir = wiki / "sessions"
+    n_sess = sum(1 for f in sess_dir.rglob("*.md")
+                 if f.is_file() and "archive" not in f.relative_to(sess_dir).parts) if sess_dir.is_dir() else 0
+    n_know = sum(1 for p in pages.values() if p["type"] in ("entity", "concept"))
+    if n_sess > 3 * max(1, n_know):
+        result["warnings"] = result.get("warnings", []) + [{
+            "code": "session-volume",
+            "message": f"{n_sess} session vs {n_know} pagine entity/concept (> 3×): i journal non sono "
+                       f"conoscenza — lancia scripts/compact_sessions.py (o lo steward) e promuovi al wiki",
+        }]
+    result["summary"]["session_volume"] = {"sessions": n_sess, "knowledge_pages": n_know}
+
     result["summary"]["pages_scanned"] = len(pages)
     result["summary"]["stale_threshold_days"] = stale_days
     return result
@@ -2593,8 +2576,15 @@ def tool_wiki_stats(args: dict) -> dict:
     # Session count = file .md ricorsivi in sessions/ (struttura sub-cartelle date)
     sessions_dir = wiki / "sessions"
     session_count = 0
+    archived_count = 0
     if sessions_dir.is_dir():
-        session_count = sum(1 for f in sessions_dir.rglob("*.md") if f.is_file() and not f.name.startswith("."))
+        for f in sessions_dir.rglob("*.md"):
+            if not f.is_file() or f.name.startswith("."):
+                continue
+            if "archive" in f.relative_to(sessions_dir).parts:
+                archived_count += 1
+            else:
+                session_count += 1
 
     return {
         "wiki_root": str(wiki),
@@ -2606,6 +2596,7 @@ def tool_wiki_stats(args: dict) -> dict:
         "last_updated": last_updated,
         "log_entries": log_entries,
         "session_count": session_count,
+        "archived_session_count": archived_count,
         "orphan_count": sum(1 for c in incoming.values() if c == 0),
     }
 
@@ -3435,7 +3426,7 @@ def tool_wiki_embed(args: dict) -> dict:
 
     args:
       force: bool = False        — re-embed tutto, ignora dirty check
-      include_sessions: bool = True
+      include_sessions: bool = False   (v0.22: i diari non sono conoscenza; prima True)
       single_page: str = ""      — path assoluto a una singola .md (più rapido)
 
     Ritorna stats: scanned, embedded, skipped_unchanged, deleted_orphans, errors, ms.
@@ -3452,7 +3443,7 @@ def tool_wiki_embed(args: dict) -> dict:
     return we.embed_wiki(
         ROOT,
         force=bool(args.get("force", False)),
-        include_sessions=bool(args.get("include_sessions", True)),
+        include_sessions=bool(args.get("include_sessions", False)),
     )
 
 
@@ -3505,6 +3496,7 @@ def tool_graph_search_text(args: dict) -> dict:
     args:
       query: str (required)
       filter: 'wiki' | 'code' | 'sessions' | 'all' = 'all'
+      include_sessions: bool = False — con all/wiki includi i journal (v0.22: esclusi di default)
       k: int = 10
       min_score: float = 0.5
       page_type: str — filtro extra per pagine wiki (es. 'entity', 'session')
@@ -3514,6 +3506,9 @@ def tool_graph_search_text(args: dict) -> dict:
         return {"error": "query required"}
 
     filter_kind = (args.get("filter") or "all").strip()
+    # v0.22: con filter 'all'/'wiki' i journal (type=session) restano FUORI salvo
+    # include_sessions=true o filter='sessions' — i diari non sono conoscenza.
+    include_sessions = bool(args.get("include_sessions", False))
     page_type = (args.get("page_type") or "").strip() or None
     k = int(args.get("k", 10))
     min_score = float(args.get("min_score", 0.5))
@@ -3572,6 +3567,9 @@ def tool_graph_search_text(args: dict) -> dict:
         results = []
         for r in raw:
             if page_type_required and r["lang"] != page_type_required:
+                continue
+            if (filter_kind in ("all", "wiki") and not include_sessions
+                    and r["kind"] == "wiki" and r["lang"] == "session"):
                 continue
             score = 1.0 - float(r["distance"])
             if score < min_score:
@@ -3939,6 +3937,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
+                "include_archived": {"type": "boolean", "default": False, "description": "Include sessions/archive/ (stub post-compact)"},
                 "limit": {"type": "integer", "default": 20, "description": "Numero massimo di sessioni"},
             },
         },
@@ -4692,7 +4691,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "force": {"type": "boolean", "default": False, "description": "Re-embed all, ignore dirty check"},
-                "include_sessions": {"type": "boolean", "default": True, "description": "Include wiki/sessions/"},
+                "include_sessions": {"type": "boolean", "default": False, "description": "Include wiki/sessions/ (default false dal v0.22: i journal non sono conoscenza)"},
                 "single_page": {"type": "string", "description": "Path assoluto a una singola .md (più rapido per refresh post-modifica)"},
             },
         },
@@ -4732,6 +4731,7 @@ TOOLS = [
             "properties": {
                 "query": {"type": "string", "description": "Query libera (lingua naturale)"},
                 "filter": {"type": "string", "enum": ["wiki", "code", "sessions", "all"], "default": "all"},
+                "include_sessions": {"type": "boolean", "default": False, "description": "Con filter all/wiki includi anche le pagine session (default false dal v0.22)"},
                 "k": {"type": "integer", "default": 10},
                 "min_score": {"type": "number", "default": 0.5},
                 "page_type": {"type": "string", "description": "Filtro extra wiki: 'entity' | 'concept' | 'source' | 'analysis' | 'session'"},

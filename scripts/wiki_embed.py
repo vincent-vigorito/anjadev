@@ -126,7 +126,7 @@ def _slug_from_path(md_path: Path, wiki_root: Path) -> str:
 def embed_wiki(
     root: Path,
     force: bool = False,
-    include_sessions: bool = True,
+    include_sessions: bool = False,
     batch_size: int = 16,
     verbose: bool = False,
 ) -> dict:
@@ -326,7 +326,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="Embed wiki pages into code-index DB")
     ap.add_argument("root", help="project root (parent of .anjawiki/)")
     ap.add_argument("--force", action="store_true", help="re-embed all pages, ignore dirty check")
-    ap.add_argument("--no-sessions", action="store_true", help="skip wiki/sessions/")
+    ap.add_argument("--no-sessions", action="store_true", help="(default dal v0.22) skip wiki/sessions/")
+    ap.add_argument("--with-sessions", action="store_true", help="includi wiki/sessions/ nell'indice (opt-in)")
     ap.add_argument("--single", help="embed only this single file (absolute path)")
     ap.add_argument("--verbose", "-v", action="store_true")
     args = ap.parse_args()
@@ -347,7 +348,7 @@ if __name__ == "__main__":
         result = embed_wiki(
             root,
             force=args.force,
-            include_sessions=not args.no_sessions,
+            include_sessions=bool(args.with_sessions) and not args.no_sessions,
             verbose=args.verbose,
         )
 

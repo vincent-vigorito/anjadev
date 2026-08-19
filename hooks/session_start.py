@@ -16,11 +16,17 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import journal_policy  # noqa: E402
+
 
 LOG_HEADER_RE = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (\w[\w-]*) \| (.+?)$", re.M)
 
 # Auto-summary sweep config
-_SUMMARY_MIN_USER_MSGS = int(os.environ.get("ANJA_SUMMARY_MIN_MSGS", "15"))
+# Soglia fissa (15 msg) sostituita da journal_policy.is_worth (≥3 msg, ≥5 min, e
+# volume/tool di scrittura/keyword): una sessione da 4 turni su uno split vale, venti
+# "ok" no. ANJA_SUMMARY_MIN_MSGS resta come override grezzo (0 = solo policy).
+_SUMMARY_MIN_USER_MSGS = int(os.environ.get("ANJA_SUMMARY_MIN_MSGS", "0"))
 _SUMMARY_MAX_AGE_H = 48      # solo session recenti (evita backlog infinito)
 _SUMMARY_MAX_SPAWN = 3       # cap spawn per SessionStart (no flood)
 
@@ -202,7 +208,7 @@ def _sweep_pending_summaries(root: Path, kind: str) -> None:
     e ancora con placeholder. Robusto vs il detached da session_end (che CC killa a
     /exit): qui l'ambiente è stabile (sessione vecchia già morta, nuova in boot).
 
-    Filtri: mtime < 48h, messages_user >= soglia (default 15), Summary placeholder.
+    Filtri: mtime < 48h, journal_policy.is_worth, Summary placeholder.
     Cap a 3 spawn per SessionStart. Opt-out via ANJA_AUTO_SUMMARY=0.
     """
     if os.environ.get("ANJA_AUTO_SUMMARY", "1") == "0":
@@ -225,9 +231,12 @@ def _sweep_pending_summaries(root: Path, kind: str) -> None:
             continue
         if not _summary_is_placeholder(text):
             continue
-        m = re.search(r"^messages_user:\s*(\d+)", text, re.M)
-        n_user = int(m.group(1)) if m else 0
-        if n_user < _SUMMARY_MIN_USER_MSGS:
+        st = journal_policy.session_stats(text)
+        if st["messages_user"] < _SUMMARY_MIN_USER_MSGS:
+            continue
+        if not journal_policy.is_worth(st["messages_user"], st["duration_sec"], st["tools"], st["prompts"]):
+            continue
+        if st["frontmatter"].get("archived") == "true":
             continue
         candidates.append((f.stat().st_mtime, f))
 
