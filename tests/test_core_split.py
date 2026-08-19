@@ -25,7 +25,8 @@ INIT = PLUGIN_ROOT / "scripts" / "init_project.py"
 PYTHON = "/opt/homebrew/opt/python@3.12/bin/python3.12" if Path(
     "/opt/homebrew/opt/python@3.12/bin/python3.12").is_file() else sys.executable
 
-HUB_PREFIXES = ("agent.", "task.", "workspace.", "kanban.", "goal.", "pp.")
+# tools/list emette i nomi flat (wire): `kanban_show`, non `kanban.show`
+HUB_PREFIXES = ("agent_", "task_", "workspace_", "kanban_", "goal_", "pp_")
 HUB_GROUPS = ("agents", "tasks", "workspace", "kanban", "goals", "pp")
 CORE_GROUPS = ("memory", "sessions", "soul", "user", "skills", "wiki", "roadmap", "code")
 HUB_IMPORT_RE = re.compile(r"kanban_io|goal_io|workspace_scaffold|pp_integration|ANJA_HUB_WEBAPP|_load_webapp_module|_hub_webapp_path")
@@ -93,15 +94,16 @@ def main() -> None:
     names = [t["name"] for t in out[2]["result"]["tools"]]
     hub_leak = [n for n in names if n.startswith(HUB_PREFIXES)]
     check(f"nessun tool hub esposto (trovati {len(names)})", not hub_leak, str(hub_leak[:8]))
-    check("i core ci sono (wiki.read, memory.recall, roadmap.list, code.status, skill.load)",
-          all(n in names for n in ("wiki.read", "memory.recall", "roadmap.list", "code.status", "skill.load")), str(names[:10]))
+    check("i core ci sono (wiki_read, memory_recall, roadmap_list, code_status, skill_load — nomi flat sul wire)",
+          all(n in names for n in ("wiki_read", "memory_recall", "roadmap_list", "code_status", "skill_load")), str(names[:10]))
+    check("nessun punto nei nomi sul wire", not any("." in n for n in names), str([n for n in names if "." in n][:5]))
 
     print("§5.2b gruppo hub/orfano in ANJA_TOOL_GROUPS → warning stderr, ignorato, server up")
     out, err = rpc(project, [{"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}],
                    {"ANJA_TOOL_GROUPS": "memory,kanban,goals"})
     names = [t["name"] for t in out.get(2, {}).get("result", {}).get("tools", [])]
     check("server risponde", 2 in out, str(err[-300:]))
-    check("solo memory.*", names and all(n.startswith("memory.") for n in names), str(names))
+    check("solo memory_*", names and all(n.startswith("memory_") for n in names), str(names))
     check("warning su kanban/goals in stderr", "kanban" in err and "goals" in err and "WARN" in err.upper(), err[-300:])
 
     print("§5.3 nessun import/sys.path verso anja-hub/webapp in anjadev")

@@ -230,6 +230,10 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 
 Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 
+> **Nomi sul wire (v0.24+)**: i nomi canonici sotto sono puntati (`wiki.read`), ma `tools/list`
+> li emette **flat** (`wiki_read`) — Grok Build e i client OpenAI-style scartano i nomi col punto,
+> Claude Code li mostrava già così (`mcp__anja_memory__wiki_read`). `tools/call` accetta entrambe le forme.
+
 ### Gruppo `wiki` (18 tool)
 `wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
 

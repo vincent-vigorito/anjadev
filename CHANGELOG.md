@@ -2,6 +2,15 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.24.0 — 2026-08-19
+
+**Nomi tool flat sul wire.** `mcp_memory_server` emette in `tools/list` i nomi con
+underscore (`wiki_read`, `memory_recall`) invece dei canonici puntati: Grok Build
+(`search_tool`/`use_tool`) e i client OpenAI-style **nascondono** i tool col punto nel
+nome — verificato su grok 1.0.5, `total_hidden_tools`. Per Claude Code non cambia nulla
+(mostrava già `mcp__anja_memory__wiki_read`). `tools/call` accetta entrambe le forme;
+registry, handler, gruppi e `_allowed_tool_names` restano canonici. SERVER_VERSION 2.1.0.
+
 ## v0.23.1 — 2026-08-19
 
 - steward: un wiki senza cartella `sessions/` (workspace appena nati) non è un errore —

@@ -55,7 +55,7 @@ from typing import Optional
 
 PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_memory"
-SERVER_VERSION = "2.0.0"
+SERVER_VERSION = "2.1.0"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "project")  # project | hub | agent
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
@@ -4881,6 +4881,21 @@ TOOL_HANDLERS = {
 }
 
 
+# Nomi sul wire: i tool hanno nomi canonici puntati (`wiki.read`) ma alcuni client
+# (Grok Build, OpenAI-style function calling) scartano i nomi con il punto — Claude
+# Code li mostra già come `mcp__anja_memory__wiki_read`. tools/list emette la forma
+# flat, tools/call accetta entrambe. Registry/handler/gruppi restano canonici.
+def _wire_name(name: str) -> str:
+    return name.replace(".", "_")
+
+
+_CANONICAL_BY_WIRE = {_wire_name(t["name"]): t["name"] for t in TOOLS}
+
+
+def _canonical_name(name: str) -> str:
+    return _CANONICAL_BY_WIRE.get(name, name)
+
+
 # ============================================================
 # JSON-RPC 2.0 dispatcher
 # ============================================================
@@ -4903,11 +4918,11 @@ def handle_request(req: dict) -> dict:
 
     if method == "tools/list":
         allowed = _allowed_tool_names()
-        filtered = [t for t in TOOLS if t["name"] in allowed]
+        filtered = [{**t, "name": _wire_name(t["name"])} for t in TOOLS if t["name"] in allowed]
         return _ok(req_id, {"tools": filtered})
 
     if method == "tools/call":
-        name = params.get("name")
+        name = _canonical_name(params.get("name") or "")
         args = params.get("arguments") or {}
         # Fase 16: rispetta filter group per call (security: client non può chiamare tool nascosti)
         if name not in _allowed_tool_names():
