@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.18.1 — usable in production. Estratto da AnjaHub monorepo. License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.21.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -248,7 +248,12 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 `sessions.list`, `sessions.read`, `sessions.summarize` (claude CLI haiku subprocess)
 
 ### Altri gruppi
-`soul` (2), `user` (2), `agents` (2), `tasks` (3), `workspace` (5), `kanban` (8), `goals` (7), `pp` (3)
+`soul` (2), `user` (2), `roadmap` (6), `graph` (7, opt-in: vuole l'index)
+
+> Dal **v0.21** questo server espone SOLO i gruppi core del plugin CLI. I tool
+> hub-only (`agents`, `tasks`, `workspace`, `kanban`, `goals`, `pp`) sono stati
+> spostati in AnjaHub (`anja_hub_runtime`): se un `.mcp.json` vecchio li elenca
+> in `ANJA_TOOL_GROUPS`, il server parte comunque e stampa un warning su stderr.
 
 ## Architettura
 
@@ -360,9 +365,9 @@ Storia completa e dettagliata in **[`CHANGELOG.md`](./CHANGELOG.md)**. Ultime re
 
 ## Rapporto con AnjaHub
 
-`anjadev` è stato estratto come repo pubblico standalone (MIT). La piattaforma `AnjaHub` (webapp Mission Control + Telegram bot + routines daemon + workspace + goals) resta privata e usa questo plugin via marketplace + schema condiviso `.anjawiki/` (wire format pubblico, vedi [`SCHEMA.md`](./SCHEMA.md)).
+`anjadev` è il **formato + il plugin CLI** (wiki, identità, code search) per qualunque harness. [Anja Hub](https://github.com/vincent-vigorito/anja-hub) (webapp Mission Control + Telegram bot + routines daemon + workspace + goals, MIT) è un **consumer**: lo monta via marketplace e condivide lo schema `.anjawiki/` (wire format pubblico, vedi [`SCHEMA.md`](./SCHEMA.md)).
 
-L'hub legge i wiki dei progetti dev via filesystem usando lo schema documentato qui; opzionalmente può chiamare il server MCP via subprocess per scritture. Nessuna dipendenza di codice tra i due repo.
+La direzione di dipendenza è una sola: **AnjaHub usa anjadev, anjadev non sa che AnjaHub esiste**. Dal v0.21 il server MCP non importa nulla dalla webapp dell'hub; i tool di piano di lavoro degli agent (kanban, goals, delega, workspace, task one-shot, catalogo PP) vivono nell'hub, nel server `anja_hub_runtime`, con gli stessi nomi di prima.
 
 ## Licenza
 

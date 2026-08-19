@@ -111,10 +111,13 @@ def _write_schema_version(target: Path) -> None:
         sv.write_text(SCHEMA_VERSION + "\n", encoding="utf-8")
 
 
-# Tool groups attivi nel plugin standalone (Fase P-Plugin).
-# Esclude: agents, tasks (scheduling), workspace, kanban, goals (richiedono hub/daemon).
-# Include: memory, sessions, soul, user (Identity), skills, wiki.
-PLUGIN_DEFAULT_TOOL_GROUPS = "memory,sessions,soul,user,skills,wiki"
+# Tool groups attivi nel plugin standalone (Fase P-Plugin, F-AnjadevCoreSplit v0.21).
+# Core CLI: memory, sessions, soul, user (Identity), skills, wiki, roadmap, code.
+# `graph` resta opt-in (/anja-config o /anja-index-code lo aggiunge: vuole un index).
+# I gruppi hub (agents/tasks/workspace/kanban/goals/pp) NON esistono più qui:
+# vivono nel server `anja_hub_runtime` di AnjaHub.
+PLUGIN_DEFAULT_TOOL_GROUPS = "memory,sessions,soul,user,skills,wiki,roadmap,code"
+_HUB_GROUPS_MOVED = ("agents", "tasks", "workspace", "kanban", "goals", "pp")
 
 
 def _register_anja_memory_mcp(project_root: Path, *, force_update_env: bool = False) -> None:
@@ -157,14 +160,24 @@ def _register_anja_memory_mcp(project_root: Path, *, force_update_env: bool = Fa
             env["ANJA_TOOL_GROUPS"] = PLUGIN_DEFAULT_TOOL_GROUPS
             print(f"[anja] backfilled ANJA_TOOL_GROUPS in existing anja_memory MCP")
         elif env.get("ANJA_TOOL_GROUPS"):
-            # Ensure 'wiki' è incluso (Fase P-Plugin added later)
+            # Backfill dei gruppi core aggiunti dopo (wiki, roadmap, code) e rimozione dei
+            # gruppi hub spostati in anja_hub_runtime (v0.21): il server li ignorerebbe
+            # con un warning, meglio non lasciarli nel file.
             groups = [g.strip() for g in env["ANJA_TOOL_GROUPS"].split(",") if g.strip()]
-            if "wiki" not in groups:
-                groups.append("wiki")
-                env["ANJA_TOOL_GROUPS"] = ",".join(groups)
-                print(f"[anja] added 'wiki' to ANJA_TOOL_GROUPS")
-            else:
+            changed = False
+            for g in ("wiki", "roadmap", "code"):
+                if g not in groups:
+                    groups.append(g)
+                    changed = True
+                    print(f"[anja] added '{g}' to ANJA_TOOL_GROUPS")
+            moved = [g for g in groups if g in _HUB_GROUPS_MOVED]
+            if moved:
+                groups = [g for g in groups if g not in _HUB_GROUPS_MOVED]
+                changed = True
+                print(f"[anja] removed hub groups {moved} from ANJA_TOOL_GROUPS (now in anja_hub_runtime)")
+            if not changed:
                 return
+            env["ANJA_TOOL_GROUPS"] = ",".join(groups)
         else:
             env["ANJA_TOOL_GROUPS"] = PLUGIN_DEFAULT_TOOL_GROUPS
     else:

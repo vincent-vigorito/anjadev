@@ -2,6 +2,38 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.21.0 — 2026-08-19
+
+**anjadev core split (F-AnjadevCoreSplit): il server MCP è di nuovo il plugin
+CLI puro.** Chiude la seconda metà di F-PluginSplit (2026-05): dopo lo
+spostamento di images/videos/office, dentro `mcp_memory_server.py` erano
+ricresciuti i tool hub-only (kanban, goals, agent.delegate, workspace.*,
+task.schedule_*, pp.*) con un import della webapp AnjaHub per path indovinato
+(`ANJA_HUB_WEBAPP`). Ora:
+
+- **Rimossi** i 6 gruppi hub (`agents`, `tasks`, `workspace`, `kanban`, `goals`,
+  `pp`, 28 tool) e tutta la catena `_load_webapp_module`/`ANJA_HUB_WEBAPP`.
+  Vivono in AnjaHub, server `anja_hub_runtime`
+  (`anja-hub/scripts/mcp_hub_runtime.py`), **stessi nomi tool**: gli agent
+  non se ne accorgono, cambia solo l'entry nel `.mcp.json`.
+- **Zero import** dalla webapp anja-hub: il plugin funziona completo su una
+  macchina senza AnjaHub (test di accettazione `tests/test_core_split.py`).
+- `ANJA_TOOL_GROUPS` con un gruppo spostato o sconosciuto → **warning su
+  stderr, gruppo ignorato, server up** (i `.mcp.json` vecchi non crashano).
+- **Default `/anja-init`**: `memory,sessions,soul,user,skills,wiki,roadmap,code`
+  (roadmap e code erano headline del README ma fuori dal default; `graph`
+  resta opt-in). `/anja-upgrade` backfilla roadmap/code e toglie i gruppi hub
+  dai progetti esistenti.
+- `memory.timeline`: categorie `log` + `sessions`; `kanban`/`goals` accettate e
+  ignorate (il planning si interroga sui tool del runtime hub).
+- Profilo utente globale del plugin standalone: **`~/.anja/user.md`**
+  (`~/.anjahub/…` letto ancora come alias deprecato, con warning).
+- README: versione allineata, sezione "AnjaHub è un consumer".
+
+Breaking solo per chi puntava `kanban`/`goals`/… a questo processo (cioè i
+workspace di AnjaHub, migrati dallo script `migrate_memory_hub_split.py`
+dell'hub), non per un progetto nato da `/anja-init`.
+
 ## v0.20.4 — 2026-07-28
 
 **Fix: `agent.delegate` risolveva il target per solo nome, primo workspace in

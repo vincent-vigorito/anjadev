@@ -191,7 +191,7 @@ def run_smoke_tests() -> tuple[int, int]:
         if call["name"] in ("memory.recall", "memory.timeline"):
             allow = ("not found", "no sessions", "empty")
         elif call["name"] == "skill.list":
-            # Hub-only tool: senza ANJA_HUB_WEBAPP ritorna errore "not available"
+            # Senza skill installate può rispondere "not available"
             allow = ("not available", "requires the anja-hub")
         ok, msg = _is_ok(resp, allow_error_keys=allow)
         status = "✓" if ok else "✗"
