@@ -1,4 +1,8 @@
-"""Attiva coverage nei sottoprocessi (server MCP via stdio, steward, hook) quando la CI
+"""Fallback: attiva coverage nei sottoprocessi quando coverage NON ha installato il proprio
+.pth (versioni vecchie / install --user). Con coverage ≥ 7 il .pth parte prima di questo file:
+esporta ANJA_COV_ROOT e COVERAGE_FILE nell'env (vedi ci.yml).
+
+Attiva coverage nei sottoprocessi (server MCP via stdio, steward, hook) quando la CI
 esporta PYTHONPATH=<root>/tests/_coverage_hook e COVERAGE_PROCESS_START=<root>/pyproject.toml.
 Senza quelle env non fa nulla.
 

@@ -19,5 +19,8 @@ def cov_env() -> dict:
             paths.append(pkg_root)
     except ImportError:
         pass
-    return {"COVERAGE_PROCESS_START": os.environ["COVERAGE_PROCESS_START"],
-            "PYTHONPATH": os.pathsep.join(paths)}
+    out = {"COVERAGE_PROCESS_START": os.environ["COVERAGE_PROCESS_START"], "PYTHONPATH": os.pathsep.join(paths)}
+    for k in ("ANJA_COV_ROOT", "COVERAGE_FILE"):
+        if k in os.environ:
+            out[k] = os.environ[k]
+    return out

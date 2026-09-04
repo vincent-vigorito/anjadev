@@ -22,6 +22,8 @@
 │   ├── meta.yaml               ← identità del progetto (token, name, type)
 │   ├── CLAUDE.md               ← manuale operativo del wiki per LLM agent
 │   ├── code-index.db           ← sqlite-vec store opzionale (gitignored)
+│   ├── .steward.lock / .steward-last / .steward-pending.json   ← stato dello steward (ignorabili)
+│   ├── .steward/runs/*.json    ← audit dei run dello steward (ignorabili, ritenzione 200)
 │   ├── raw/                    ← fonti immutabili (mai modificate da agent)
 │   │   └── <topic>/...
 │   └── wiki/                   ← contenuto generato (owned by agent)

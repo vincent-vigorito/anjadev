@@ -80,14 +80,35 @@ def _init_schema(db: sqlite3.Connection, dim: int) -> None:
             f"DB dim mismatch: existing={existing_dim} requested={dim}. "
             f"Run reindex --force (drops + rebuilds) per cambiare provider/model."
         )
-    db.execute(f"""
-        CREATE VIRTUAL TABLE IF NOT EXISTS chunk_vec USING vec0(
-            embedding float[{dim}]
-        );
-    """)
+    _ensure_vec_table(db, dim)
     set_meta(db, "embed_dim", str(dim))
     _migrate_kind_column(db)
     db.commit()
+
+
+VEC_METRIC = "cosine"
+
+
+def _ensure_vec_table(db: sqlite3.Connection, dim: int) -> None:
+    """chunk_vec con metrica coseno: `distance` = 1 - cos, quindi lo `score = 1 - distance`
+    dei tool è una similarità coseno vera (prima era 1 - L2: ranking giusto, valori
+    fuorvianti rispetto alle soglie 0.5/0.85 documentate come "cosine").
+
+    DB creati con la metrica L2 (nessuna meta `embed_metric`) vengono migrati in place:
+    i vettori sono gli stessi, si ricrea solo la tabella virtuale. Nessun re-embedding."""
+    exists = db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='chunk_vec'").fetchone()
+    metric = get_meta(db, "embed_metric")
+    if exists and metric != VEC_METRIC:
+        rows = db.execute("SELECT rowid, embedding FROM chunk_vec").fetchall()
+        db.execute("DROP TABLE chunk_vec")
+        db.execute(f"CREATE VIRTUAL TABLE chunk_vec USING vec0(embedding float[{dim}] distance_metric={VEC_METRIC})")
+        db.executemany("INSERT INTO chunk_vec(rowid, embedding) VALUES (?, ?)", [(r[0], r[1]) for r in rows])
+        set_meta(db, "embed_metric", VEC_METRIC)
+        set_meta(db, "embed_metric_migrated_rows", str(len(rows)))
+        return
+    if not exists:
+        db.execute(f"CREATE VIRTUAL TABLE chunk_vec USING vec0(embedding float[{dim}] distance_metric={VEC_METRIC})")
+        set_meta(db, "embed_metric", VEC_METRIC)
 
 
 def _migrate_kind_column(db: sqlite3.Connection) -> None:

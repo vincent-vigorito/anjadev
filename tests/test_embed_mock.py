@@ -86,8 +86,8 @@ def main() -> None:
         "def compute_invoice_total(items):\n    '''billing: sum invoice line prices with tax'''\n"
         "    return sum(i['price'] for i in items) * 1.22\n", encoding="utf-8")
 
-    # NB: lo score dei tool è 1 - distanza L2 fra vettori normalizzati: col mock (bag-of-words)
-    # i valori assoluti sono bassi, conta il RANKING → soglie a 0 / -1 nelle call.
+    # Score = similarità coseno (v0.27, metrica cosine in sqlite-vec). Col mock bag-of-words le
+    # pagine auth stanno a ~0.65, auth↔billing a ~0.2: soglia 0.5 per i duplicati, -1 per le ricerche.
     auth_text = "Servizio di autenticazione: login utente, verifica password, emissione session token."
     calls = [
         ("wiki.upsert_concept", {"slug": "auth-service", "title": "Auth service", "sections": {"Definizione": auth_text}}),
@@ -96,7 +96,7 @@ def main() -> None:
         ("wiki.upsert_concept", {"slug": "billing-invoices", "title": "Billing",
                                  "sections": {"Definizione": "Fatturazione: totale fattura, righe, prezzi, IVA, pagamenti."}}),
         ("wiki.embed", {"force": True}),
-        ("wiki.find_duplicates", {"threshold": 0.0, "types": ["concept"]}),
+        ("wiki.find_duplicates", {"threshold": 0.5, "types": ["concept"]}),
         ("wiki.search_semantic", {"query": "login utente session token password", "k": 3, "min_score": -1}),
         ("code.reindex", {"force": True}),
         ("code.status", {}),
@@ -134,6 +134,31 @@ def main() -> None:
     check("graph.html scrive un file", "error" not in html and any(Path(str(v)).is_file() for v in html.values() if isinstance(v, str) and v.endswith(".html")), str(html)[:200])
     gs = json.dumps(by["graph.search_text"])
     check("graph.search_text cross-kind trova billing", "error" not in by["graph.search_text"] and "billing" in gs, gs[:300])
+
+    print("§4 metrica coseno + migrazione DB legacy (L2)")
+    probe = r"""
+import sqlite3, sys, struct
+sys.path.insert(0, sys.argv[1])
+import code_db
+from pathlib import Path
+root = Path(sys.argv[2]); root.mkdir()
+# DB legacy: tabella vec senza metrica (L2), come creata prima della v0.27
+db = sqlite3.connect(str(root / "code-index.db")); code_db._ensure_sqlite_vec(db)
+db.executescript("CREATE TABLE chunks (id INTEGER PRIMARY KEY, file_path TEXT NOT NULL, func_name TEXT, line_start INTEGER, line_end INTEGER, content TEXT NOT NULL, lang TEXT, last_modified TEXT, content_sha TEXT, kind TEXT NOT NULL DEFAULT 'code'); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT); CREATE VIRTUAL TABLE chunk_vec USING vec0(embedding float[3]);")
+db.execute("INSERT INTO meta VALUES ('embed_dim','3')")
+f = lambda v: struct.pack('3f', *v)
+db.execute("INSERT INTO chunks(id, file_path, content) VALUES (1, 'a.py', 'a')"); db.execute("INSERT INTO chunk_vec(rowid, embedding) VALUES (1, ?)", (f([1, 0, 0]),))
+db.execute("INSERT INTO chunks(id, file_path, content) VALUES (2, 'b.py', 'b')"); db.execute("INSERT INTO chunk_vec(rowid, embedding) VALUES (2, ?)", (f([0.6, 0.8, 0]),))
+db.commit(); db.close()
+db = code_db.open_db(root, dim=3)
+res = code_db.vector_search(db, [1.0, 0.0, 0.0], limit=2)
+print(code_db.get_meta(db, "embed_metric"), code_db.get_meta(db, "embed_metric_migrated_rows"), [(r["id"], round(r["distance"], 3)) for r in res])
+"""
+    legacy = tmp / "legacy"
+    r = subprocess.run([PY, "-c", probe, str(PLUGIN / "scripts"), str(legacy)], capture_output=True, text=True, timeout=60)
+    out = r.stdout.strip()
+    check("DB legacy migrato a coseno senza re-embedding (2 righe)", out.startswith("cosine 2"), out or r.stderr[-300:])
+    check("distance = 1 - cos (0.0 per identico, 0.4 per cos 0.6)", "[(1, 0.0), (2, 0.4)]" in out, out)
 
     shutil.rmtree(tmp, ignore_errors=True)
     print("=" * 44)

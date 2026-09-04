@@ -2,6 +2,27 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.27.0 — 2026-09-04
+
+**Similarità coseno vera + CI coverage riparata.**
+
+- **Metrica coseno in sqlite-vec** (`code_db._ensure_vec_table`): `chunk_vec` è creata con
+  `distance_metric=cosine`, quindi lo `score = 1 - distance` che `wiki.search_semantic`,
+  `graph.*`, `code.search` L2 e `wiki.find_duplicates` riportano è una **similarità coseno**
+  reale. Prima era `1 - distanza L2`: ranking corretto ma valori fuorvianti (un duplicato vero
+  stava a ~0.55 con soglia di default 0.85 "cosine"). I DB esistenti vengono **migrati in
+  place** alla prima apertura (stessi vettori, si ricrea solo la tabella virtuale: nessun
+  re-embedding; meta `embed_metric` = `cosine`). Test §4 in `test_embed_mock`.
+- **CI coverage**: coverage ≥ 7 avvia `process_startup()` da un `.pth` prima di
+  `sitecustomize`, quindi `${ANJA_COV_ROOT}` nella config non era definito e i sottoprocessi
+  non venivano misurati (22% invece di 58%). Ora `ANJA_COV_ROOT`, `COVERAGE_FILE`,
+  `COVERAGE_PROCESS_START` sono esportati esplicitamente (ci.yml, README) e propagati dai
+  test; soglia CI 56%.
+- Prima corsa CI (v0.26.0): 6/6 job di test verdi su ubuntu/macos × 3.9/3.10/3.12, ruff e
+  check di coerenza verdi.
+- `SCHEMA.md`: file di stato dello steward (`.steward*`, `.steward/runs/`) elencati come
+  ignorabili dai consumatori esterni.
+
 ## v0.26.0 — 2026-09-04
 
 **Server in package per dominio, logging opt-in, audit dello steward (PIANO.md Fase 4).**

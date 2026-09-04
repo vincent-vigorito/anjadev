@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.26.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.27.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -485,6 +485,8 @@ cd ~/Documents/my-project
 python3 -m pytest                      # tutta la suite (ogni file gira anche standalone: python3 tests/test_x.py)
 ANJA_TEST_PYTHON=/opt/homebrew/opt/python@3.12/bin/python3.12 python3 -m pytest   # sottoprocessi con un altro interprete
 python3 -m ruff check .                # lint (config in pyproject.toml)
+ANJA_COV_ROOT=$PWD COVERAGE_FILE=$PWD/.coverage COVERAGE_PROCESS_START=$PWD/pyproject.toml \
+  PYTHONPATH=$PWD/tests/_coverage_hook python3 -m coverage run -m pytest && python3 -m coverage combine && python3 -m coverage report
 python3 scripts/gen_tools_doc.py --check    # sezione MCP tools del README == registry
 python3 scripts/release_check.py            # versioni, conteggi, test raccoglibili
 ```
