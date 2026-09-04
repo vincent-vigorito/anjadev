@@ -26,7 +26,7 @@ from typing import Optional
 
 PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_code"
-SERVER_VERSION = "0.28.0"
+SERVER_VERSION = "0.28.1"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "hub")
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()

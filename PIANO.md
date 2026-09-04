@@ -108,7 +108,7 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
 - [x] **4.3** Classificazione componenti in README: **core** (server memory, hook, comandi, steward), **adapter** (codex, opencode, grok config), **sperimentale** (`anja_code`, `graph.html`), **legacy** (script migrazione CC memory). Ogni script in `scripts/` appartiene a una classe. — **S**
 - [x] **4.4** Steward osservabile: ogni run scrive `.anjawiki/.steward/runs/<timestamp>.json` con cluster, patch proposte/accettate/rifiutate e motivo. `/anja-steward --history` le mostra. — **M** — `scripts/steward.py`, `commands/anja-steward.md`
 
-## Fase 5 — Distribuzione ✅ v0.28.0 (2026-09-04)
+## Fase 5 — Distribuzione ✅ v0.28.0, poi RIMOSSA in v0.28.1 (2026-09-04): non serve, anja resta un plugin
 
 - [x] **5.1** `pyproject.toml` con entry point `anja-memory-server` e `anja-code-server`, pubblicabile su PyPI o installabile con `pipx install git+...`. Gli host non-Claude smettono di dipendere da symlink e `PLUGIN_ROOT`. Il plugin Claude Code resta un wrapper che punta al pacchetto. — **L**
   *Prerequisito:* Fase 4.1 (il package esiste già).
@@ -154,7 +154,8 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
 - Fase 4: il monolite è stato diviso con uno splitter `ast` (assegnazione helper per uso, check
   dei cicli, ordine del wire conservato) e verificato con `cmp` sul `tools/list`. Il modulo `wiki`
   ha richiesto tre file (`wiki`, `wiki_maint`, `wiki_io`) per restare sotto le 1.000 righe.
-- Fase 5 fatta senza spostare file: `package-dir` mappa `scripts/` e `scripts/anja/`; il nome della
+- Fase 5 fatta (v0.28.0) e rimossa lo stesso giorno (v0.28.1) su decisione di Vincent: la distribuzione
+  pip non interessa. Era stata fatta senza spostare file: `package-dir` mappa `scripts/` e `scripts/anja/`; il nome della
   distribuzione è `anjadev` (come il repo). Pubblicazione su PyPI non fatta: `pipx install git+…` basta.
 - Prima CI reale (v0.26.0): matrice di test verde al primo colpo; coverage rotta dal `.pth` di
   coverage ≥ 7 (fix in v0.27.0).

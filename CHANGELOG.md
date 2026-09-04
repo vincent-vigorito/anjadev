@@ -2,6 +2,13 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.28.1 — 2026-09-04
+
+**Packaging pip rimosso** (decisione: anja si distribuisce solo come plugin — Claude Code
+marketplace, Codex plugin, adapter OpenCode/Grok). Via `[project]`/`[build-system]` da
+`pyproject.toml`, `scripts/__init__.py`, il fallback `anja_scripts` in `config.SCRIPTS_DIR`,
+il job CI `package` e la sezione README. `pyproject.toml` resta solo per pytest/ruff/coverage.
+
 ## v0.28.0 — 2026-09-04
 
 **Pacchetto pip/pipx (PIANO.md Fase 5).** `pipx install git+https://github.com/vincent-vigorito/anjadev`

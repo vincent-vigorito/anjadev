@@ -59,24 +59,3 @@ jobs:
         env:
           COV_MIN: "56"   # baseline 58.7% su py3.12+sqlite-vec (2026-09-04) meno 2 punti; alzare a ogni release
 
-  package:
-    name: pip install . → entry point sul wire
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: python -m pip install --quiet .
-      - name: anja-memory-server risponde a initialize + tools/list (57 tool) da una cwd esterna
-        run: |
-          cd /tmp
-          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-            | ANJA_SCOPE=project ANJA_ROOT=/tmp anja-memory-server \
-            | python -c "import sys,json; r=[json.loads(l) for l in sys.stdin]; n=len(r[1]['result']['tools']); print('tools', n); assert n==57"
-      - name: anja-code-server parte (opt-in disattivo → tools/list vuoto)
-        run: |
-          cd /tmp
-          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
-            | ANJA_SCOPE=project ANJA_ROOT=/tmp anja-code-server \
-            | python -c "import sys,json; r=[json.loads(l) for l in sys.stdin]; assert r[1]['result']['tools']==[]; print('ok')"

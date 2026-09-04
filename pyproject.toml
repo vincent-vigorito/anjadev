@@ -1,47 +1,5 @@
-# Packaging (PIANO.md Fase 5) + config strumenti di sviluppo. Nessuna dipendenza runtime: il core
-# resta stdlib. Il layout del repo è quello del plugin Claude Code; il pacchetto pip mappa le stesse
-# cartelle senza spostare file:  anja ← scripts/anja  ·  anja_scripts ← scripts (moduli CLI condivisi).
-#   pipx install git+https://github.com/vincent-vigorito/anjadev   →  anja-memory-server, anja-code-server
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "anjadev"
-dynamic = ["version"]
-description = "anja: wiki self-maintained + memoria identitaria + ricerca semantica del codice, come server MCP stdio per qualunque host (Claude Code, Codex, OpenCode, Grok)"
-readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.9"
-authors = [{name = "Vincent Vigorito", email = "vvigorito@vigesrl.it"}]
-keywords = ["mcp", "wiki", "knowledge-base", "memory", "code-search", "semantic-search"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-dependencies = []
-
-[project.optional-dependencies]
-vector = ["sqlite-vec>=0.1.6", "httpx>=0.27"]
-dev = ["pytest", "ruff", "coverage", "sqlite-vec", "httpx"]
-
-[project.scripts]
-anja-memory-server = "anja.server:main"
-anja-code-server = "anja_scripts.mcp_code_server:main"
-
-[project.urls]
-Homepage = "https://github.com/vincent-vigorito/anjadev"
-Changelog = "https://github.com/vincent-vigorito/anjadev/blob/main/CHANGELOG.md"
-
-[tool.setuptools]
-packages = ["anja", "anja_scripts"]
-package-dir = {anja = "scripts/anja", anja_scripts = "scripts"}
-
-[tool.setuptools.dynamic]
-version = {attr = "anja.config.SERVER_VERSION"}
-
+# Config strumenti di sviluppo (pytest / ruff / coverage). Nessun packaging: anja si distribuisce
+# come plugin (Claude Code marketplace, Codex plugin, adapter OpenCode/Grok), non come pacchetto pip.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

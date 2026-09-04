@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.28.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.28.1 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -189,36 +189,6 @@ Non editare i generati: il context vive in `AGENTS.src.md`.
 >
 > Nota Codex: alcune versioni hanno avuto bug nel leggere `mcp_servers` da `config.toml`
 > ([openai/codex#3441](https://github.com/openai/codex/issues/3441)) — verifica con la tua release.
-
-### Install come pacchetto Python (qualunque host MCP)
-
-Il core è anche un pacchetto pip: stesse cartelle del repo, nessun file spostato, zero
-dipendenze obbligatorie.
-
-```bash
-pipx install "git+https://github.com/vincent-vigorito/anjadev"          # → anja-memory-server, anja-code-server
-pipx install "anjadev[vector] @ git+https://github.com/vincent-vigorito/anjadev"   # + sqlite-vec/httpx per code search e graph
-```
-
-Poi in qualunque `.mcp.json` / config del host:
-
-```json
-{ "mcpServers": { "anja_memory": {
-    "command": "anja-memory-server",
-    "env": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/path/progetto" } } } }
-```
-
-`anja-code-server` è lo stesso `anja_code` (opt-in `ANJA_CODE_EXEC=1`). Il pacchetto contiene
-solo i server e i moduli CLI (`anja`, `anja_scripts`): hook, slash command e template restano
-roba del plugin Claude Code. Differenze fra le due installazioni: vedi sotto.
-
-| | plugin (marketplace CC / Codex) | pacchetto pip / pipx |
-|---|---|---|
-| cosa installa | repo intero: server + hook + comandi + skill + template | solo `scripts/` (server MCP + moduli CLI) |
-| chi lancia il server | il host, via `python3 <PLUGIN_ROOT>/scripts/mcp_memory_server.py` | il comando `anja-memory-server` nel PATH del venv pipx |
-| aggiornamento | `/plugin update` (cache per numero di versione) | `pipx upgrade anjadev` (o reinstall dal git) |
-| SessionStart/End, `/anja-*`, steward lazy | sì | no (solo i tool MCP; lo steward va lanciato a mano o da cron) |
-| Python usato | quello del host (`python3` nel PATH) | quello del venv pipx (isolato, con `[vector]` se richiesto) |
 
 ### Install come plugin Codex (esperienza piena)
 
@@ -431,7 +401,7 @@ anja/
 ├── tests/                       # pytest: registry, smoke su tutti i tool, steward, adapter
 ├── SCHEMA.md                    # wire format pubblico .anjawiki/
 ├── SECURITY.md                  # garanzie, assunzioni, cosa NON è garantito (anja_code)
-├── pyproject.toml               # packaging pip (anja + anja_scripts, entry point anja-*-server) + config pytest/ruff/coverage
+├── pyproject.toml               # config pytest / ruff / coverage (nessuna dipendenza runtime)
 ├── .github/workflows/ci.yml     # test matrix + lint + coerenza + coverage
 └── README.md                    # questo file
 ```
@@ -444,7 +414,7 @@ anja/
 | **adapter** | `.codex-plugin/`, `.mcp.codex.json`, `hooks/codex_adapter.py`, `install_codex_hooks.py`, `.opencode/`, `.agents/` (Grok) | best-effort, validati sul campo e con test di traduzione |
 | **sperimentale** | `mcp_code_server.py` (`anja_code`, opt-in), `graph_html.py` / `graph_report.py`, provider `local` | possono cambiare senza MAJOR; `anja_code` non è un confine di sicurezza (SECURITY.md) |
 | **legacy** | `migrate_cc_memory.py`, `cc_memory_to_soul.py`, `cc_memory_sync.py` (import della memoria nativa di Claude Code) | mantenuti finché servono alle migrazioni, esclusi dalla coverage |
-| **dev** | `gen_tools_doc.py`, `release_check.py`, `bump.sh`, `tests/`, `.github/` | strumenti del repo, non distribuiti come funzionalità |
+| **dev** | `gen_tools_doc.py`, `release_check.py`, `bump.sh`, `tests/`, `pyproject.toml`, `.github/` | strumenti del repo, non distribuiti come funzionalità |
 
 ### Wire format pubblico
 
