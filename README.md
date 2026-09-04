@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.23.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.24.1 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -77,7 +77,7 @@ Code. Stessi 3 env ovunque: `ANJA_SCOPE` (`project`|`hub`|`agent`), `ANJA_ROOT` 
 root), `ANJA_TOOL_GROUPS` (filtro opzionale, default tutti i gruppi).
 
 Verificato con handshake `initialize` + `tools/list` su stdio puro: `anja_memory` espone
-27 tool (con `memory,wiki,roadmap`), `anja_code` 1 tool (`execute_python`). Nessuna
+28 tool (con `memory,wiki,roadmap`), `anja_code` 1 tool (`execute_python`). Nessuna
 modifica al plugin: cambia solo *dove* dichiari il server. `<ANJADEV>` = path del plugin
 installato (`~/.claude/plugins/marketplaces/anjadev`) o di un clone locale del repo.
 
@@ -226,27 +226,29 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 | `/anja-upgrade` | Migra progetto/hub con wiki di versione precedente al layout corrente (triade + composed + MCP + schema-version) |
 | `/anja-evolve-skills` | Review auto-improvement delle skill (pattern Hermes): legge inbox PostToolUse, propone patch SKILL.md, applica dopo conferma |
 
-## MCP tools (81 totali via `mcp_memory_server`)
+## MCP tools (57 totali via `mcp_memory_server`)
 
-Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
+Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi).
 
 > **Nomi sul wire (v0.24+)**: i nomi canonici sotto sono puntati (`wiki.read`), ma `tools/list`
 > li emette **flat** (`wiki_read`) — Grok Build e i client OpenAI-style scartano i nomi col punto,
 > Claude Code li mostrava già così (`mcp__anja_memory__wiki_read`). `tools/call` accetta entrambe le forme.
 
-### Gruppo `wiki` (18 tool)
-`wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
+### Gruppo `wiki` (19 tool)
+`wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.verify`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
 
-### Gruppo `skills` (9 tool) — v0.8.0
+### Gruppo `skills` (11 tool) — v0.8.0
 **Read-side (Level 0/1/2)**: `skill.list`, `skill.load`, `skill.read_file`
 **Write-side (agent-managed)**: `skill.save`, `skill.patch` (find/replace mirato), `skill.edit`, `skill.delete`, `skill.write_file`, `skill.remove_file`
+**Versioning**: `skill.history`, `skill.rollback`
 
-### Gruppo `graph` (7 tool) — v0.9.0 + v0.9.1
+### Gruppo `graph` (8 tool) — v0.9.0 + v0.9.1
 **Embedding pipeline**: `wiki.embed` (incremental, dirty-check, multi-trigger inline+hook+session-end).
 **Query by ID (cross-kind)**: `graph.semantic_neighbors` (k-NN dato source slug o file path, filter per kind).
 **Query by text** (v0.9.1): `graph.search_text` (embedda query libera → k-NN cross-kind), `wiki.search_semantic` (sugar wiki-only), `sessions.search_semantic` (sugar session journals).
 **Report agent-friendly**: `graph.report` (scrive `GRAPH_REPORT.md` con god nodes + cluster + surprise edges + wiki↔code anchors + orphans).
 **Visualizer standalone**: `graph.html` (Cytoscape single-file Obsidian-style, file-aggregated, hover-focus mode, sidebar search/filtri, apri nel browser).
+**Dedup wiki-wide**: `wiki.find_duplicates` (coppie di pagine troppo simili via embedding, candidati da fondere; dal v0.24.1 raggiungibile — era fuori da ogni gruppo).
 
 ### Gruppo `roadmap` (6 tool)
 `roadmap.list`, `roadmap.add`, `roadmap.update`, `roadmap.complete`, `roadmap.block`, `roadmap.archive`
@@ -286,7 +288,7 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (15 gruppi).
 > (frontmatter + Summary + transcript_path), le *worth* restano per lo steward.
 
 ### Altri gruppi
-`soul` (2), `user` (2), `roadmap` (6), `graph` (7, opt-in: vuole l'index)
+`soul` (2), `user` (2), `roadmap` (6), `graph` (8, opt-in: vuole l'index)
 
 > Dal **v0.21** questo server espone SOLO i gruppi core del plugin CLI. I tool
 > hub-only (`agents`, `tasks`, `workspace`, `kanban`, `goals`, `pp`) sono stati
@@ -301,13 +303,13 @@ anja/
 ├── .codex-plugin/plugin.json    # manifest plugin Codex
 ├── bump.sh                      # release: allinea le versioni nei 3 manifest in un colpo
 ├── CHANGELOG.md                 # storia release
-├── commands/                    # 11 slash command (.md)
+├── commands/                    # 12 slash command (.md)
 ├── hooks/
 │   ├── session_start.py         # carica focus roadmap + ultime 5 log
 │   └── session_end.py           # write session file + spawn auto-summary bg
 ├── agents/                      # subagent (wiki-maintainer)
 ├── scripts/
-│   ├── mcp_memory_server.py     # MCP server stdio (81 tool, 15 gruppi)
+│   ├── mcp_memory_server.py     # MCP server stdio (57 tool, 9 gruppi)
 │   ├── code_db.py + code_index.py + code_search.py + embed_providers.py
 │   ├── roadmap_io.py
 │   ├── summarize_session_bg.py  # detached process per auto-summary

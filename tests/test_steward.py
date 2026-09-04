@@ -25,7 +25,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parents[1]
-PY = "/opt/homebrew/opt/python@3.12/bin/python3.12" if Path("/opt/homebrew/opt/python@3.12/bin/python3.12").is_file() else sys.executable
+PY = os.environ.get("ANJA_TEST_PYTHON") or sys.executable
 sys.path.insert(0, str(PLUGIN / "hooks"))
 PASS = FAIL = 0
 

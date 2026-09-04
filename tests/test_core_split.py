@@ -22,8 +22,7 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 SERVER = PLUGIN_ROOT / "scripts" / "mcp_memory_server.py"
 INIT = PLUGIN_ROOT / "scripts" / "init_project.py"
-PYTHON = "/opt/homebrew/opt/python@3.12/bin/python3.12" if Path(
-    "/opt/homebrew/opt/python@3.12/bin/python3.12").is_file() else sys.executable
+PYTHON = os.environ.get("ANJA_TEST_PYTHON") or sys.executable
 
 # tools/list emette i nomi flat (wire): `kanban_show`, non `kanban.show`
 HUB_PREFIXES = ("agent_", "task_", "workspace_", "kanban_", "goal_", "pp_")
@@ -47,7 +46,7 @@ def check(label, cond, detail=""):
 def rpc(project: Path, msgs: list[dict], env_extra: dict | None = None) -> tuple[dict, str]:
     """Server via stdio, env MINIMO (niente ANJA_HUB / ANJA_HUB_WEBAPP: macchina senza AnjaHub)."""
     env = {"ANJA_SCOPE": "project", "ANJA_ROOT": str(project),
-           "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
+           "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
            "HOME": os.environ.get("HOME", "/tmp")}
     env.update(env_extra or {})
     all_msgs = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}] + msgs

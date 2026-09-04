@@ -9,6 +9,9 @@
 #   .claude-plugin/plugin.json       (versione plugin — quella che CC confronta)
 #   .claude-plugin/marketplace.json  (versione marketplace + versione plugin elencata)
 #   .codex-plugin/plugin.json        (versione plugin Codex)
+#   README.md                        (riga "**Stato**: vX.Y.Z")
+#   scripts/mcp_memory_server.py     (SERVER_VERSION)
+#   scripts/mcp_code_server.py       (SERVER_VERSION)
 #
 # Uso:  ./bump.sh 0.18.1
 # Poi:  aggiorna CHANGELOG.md, git commit, git push, git tag v0.18.1 && git push --tags
@@ -32,8 +35,16 @@ for f in "${FILES[@]}"; do
   NEW="$NEW" perl -i -pe 's/("version"\s*:\s*")[^"]*(")/$1 . $ENV{NEW} . $2/ge' "$f"
 done
 
+# README: riga "**Stato**: vX.Y.Z" + SERVER_VERSION dei due server MCP (stessa versione del plugin)
+NEW="$NEW" perl -i -pe 's/(\*\*Stato\*\*: v)[0-9]+\.[0-9]+\.[0-9]+/$1 . $ENV{NEW}/e' "$ROOT/README.md"
+for srv in "$ROOT/scripts/mcp_memory_server.py" "$ROOT/scripts/mcp_code_server.py"; do
+  NEW="$NEW" perl -i -pe 's/^(SERVER_VERSION\s*=\s*")[^"]*(")/$1 . $ENV{NEW} . $2/e' "$srv"
+done
+
 echo "✓ versione → $NEW. Stato dei manifest:"
 grep -Hn '"version"' "${FILES[@]}"
+grep -Hn '^\*\*Stato\*\*' "$ROOT/README.md"
+grep -Hn '^SERVER_VERSION' "$ROOT/scripts/mcp_memory_server.py" "$ROOT/scripts/mcp_code_server.py"
 
 # Sanity: tutte le occorrenze devono ora essere $NEW
 if grep -h '"version"' "${FILES[@]}" | grep -qv "\"$NEW\""; then

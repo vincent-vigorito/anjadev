@@ -78,5 +78,9 @@ def main():
     print("\nOK 3/3")
 
 
+def test_codex_adapter():
+    main()
+
+
 if __name__ == "__main__":
     main()

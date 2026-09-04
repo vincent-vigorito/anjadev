@@ -53,21 +53,33 @@ def _has_vector_index(project_root: Path) -> bool:
     return (project_root / ".anjawiki" / "code-index.db").exists()
 
 
-def _quick_loc_count(project_root: Path) -> int:
-    """Conta LOC totali per linguaggi rilevanti. Cap timeout 5s."""
-    extensions = ["py", "ts", "tsx", "js", "jsx", "go", "rs", "java", "kt", "rb", "php", "c", "cpp"]
-    patterns = " -o ".join(f"-name '*.{e}'" for e in extensions)
-    cmd = (
-        f"find {project_root} -type f \\( {patterns} \\) "
-        "-not -path '*/node_modules/*' -not -path '*/.git/*' "
-        "-not -path '*/__pycache__/*' -not -path '*/dist/*' "
-        "| xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}'"
-    )
+_LOC_EXTENSIONS = {".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".java",
+                   ".kt", ".rb", ".php", ".c", ".cpp"}
+_LOC_SKIP_DIRS = {"node_modules", ".git", "__pycache__", "dist"}
+
+
+def _quick_loc_count(project_root: Path, budget_sec: float = 5.0) -> int:
+    """Conta LOC totali per linguaggi rilevanti. Nessuna shell (il path del progetto
+    può contenere spazi/apici). Budget 5s: oltre, ritorna il parziale."""
+    import time as _time
+    deadline = _time.monotonic() + budget_sec
+    total = 0
     try:
-        r = subprocess.run(["sh", "-c", cmd], capture_output=True, timeout=5, text=True)
-        return int((r.stdout.strip() or "0").split()[0])
+        for dirpath, dirnames, filenames in os.walk(project_root):
+            dirnames[:] = [d for d in dirnames if d not in _LOC_SKIP_DIRS]
+            for fn in filenames:
+                if os.path.splitext(fn)[1] not in _LOC_EXTENSIONS:
+                    continue
+                try:
+                    with open(os.path.join(dirpath, fn), "rb") as fh:
+                        total += sum(1 for _ in fh)
+                except OSError:
+                    continue
+            if _time.monotonic() > deadline:
+                break
     except Exception:
-        return 0
+        return total
+    return total
 
 
 def infer_default_level(project_root: Path) -> int:

@@ -39,5 +39,9 @@ def main():
     print("OK installer Codex preserva config, aggiunge hook Anja ed e idempotente")
 
 
+def test_install_codex_hooks():
+    main()
+
+
 if __name__ == "__main__":
     main()

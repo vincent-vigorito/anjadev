@@ -55,7 +55,7 @@ from typing import Optional
 
 PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_memory"
-SERVER_VERSION = "2.1.0"
+SERVER_VERSION = "0.24.1"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "project")  # project | hub | agent
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
@@ -3850,6 +3850,7 @@ TOOL_GROUPS = {
     "graph": [
         "wiki.embed", "graph.semantic_neighbors", "graph.report", "graph.html",
         "graph.search_text", "wiki.search_semantic", "sessions.search_semantic",
+        "wiki.find_duplicates",
     ],
 }
 

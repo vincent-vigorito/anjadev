@@ -2,6 +2,24 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.24.1 — 2026-09-04
+
+**Igiene (Fase 0 di PIANO.md).** Nessun cambio al wire tranne un tool ripristinato.
+
+- `wiki.find_duplicates` era nel registry dal v0.15.0 ma in **nessun gruppo** di
+  `TOOL_GROUPS` → filtrato da `_allowed_tool_names`, irraggiungibile da sempre. Ora vive
+  nel gruppo `graph` (dipende dall'index embedding come gli altri): 57 tool in 9 gruppi.
+- README/manifest allineati ai numeri reali: 57 tool / 9 gruppi (era 27/81/82 e 15 gruppi),
+  gruppo `wiki` 19, `skills` 11 (`history`, `rollback` mancavano), `graph` 8, 12 slash command.
+- `code_search._quick_loc_count`: niente più `sh -c` con il path del progetto interpolato
+  senza quoting (un path con spazio o apice rompeva il comando) → `os.walk` puro con budget 5s.
+- Test: i tre adapter (`codex`, `install_codex_hooks`, `opencode`) ora hanno il wrapper
+  `test_*` → pytest raccoglie 8/8 (erano 5). Rimosso l'interprete Homebrew 3.12 hard-coded e
+  il PATH macOS-only: `sys.executable` (override `ANJA_TEST_PYTHON`) e PATH corrente.
+- `bump.sh` aggiorna anche la riga **Stato** del README e `SERVER_VERSION` dei due server.
+- Rimosso `scripts/mcp_bybit_lite.py` (server Bybit, 814 righe, mai referenziato dal plugin).
+- `PIANO.md`: piano d'azione verificato (fatti F1–F18, fasi 0–5, decisioni).
+
 ## v0.24.0 — 2026-08-19
 
 **Nomi tool flat sul wire.** `mcp_memory_server` emette in `tools/list` i nomi con

@@ -23,7 +23,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parents[1]
-PYTHON = "/opt/homebrew/opt/python@3.12/bin/python3.12" if Path("/opt/homebrew/opt/python@3.12/bin/python3.12").is_file() else sys.executable
+PYTHON = os.environ.get("ANJA_TEST_PYTHON") or sys.executable
 spec = importlib.util.spec_from_file_location("compact", PLUGIN / "scripts" / "compact_sessions.py")
 cs = importlib.util.module_from_spec(spec); spec.loader.exec_module(cs)
 

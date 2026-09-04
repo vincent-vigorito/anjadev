@@ -31,9 +31,7 @@ from pathlib import Path
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 SERVER_PATH = PLUGIN_ROOT / "scripts" / "mcp_memory_server.py"
 INIT_SCRIPT = PLUGIN_ROOT / "scripts" / "init_project.py"
-PYTHON = "/opt/homebrew/opt/python@3.12/bin/python3.12" if Path(
-    "/opt/homebrew/opt/python@3.12/bin/python3.12"
-).is_file() else sys.executable
+PYTHON = os.environ.get("ANJA_TEST_PYTHON") or sys.executable
 
 
 def _setup_test_project() -> Path:
@@ -77,7 +75,7 @@ def _call_server(project_root: Path, calls: list[dict]) -> list[dict]:
         env={
             "ANJA_SCOPE": "project",
             "ANJA_ROOT": str(project_root),
-            "PATH": "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin",
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             "HOME": os.environ.get("HOME", "/tmp"),
         },
     )
