@@ -226,43 +226,118 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 | `/anja-upgrade` | Migra progetto/hub con wiki di versione precedente al layout corrente (triade + composed + MCP + schema-version) |
 | `/anja-evolve-skills` | Review auto-improvement delle skill (pattern Hermes): legge inbox PostToolUse, propone patch SKILL.md, applica dopo conferma |
 
+<!-- anja:tools:start -->
 ## MCP tools (57 totali via `mcp_memory_server`)
 
-Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi).
-
-> **Nomi sul wire (v0.24+)**: i nomi canonici sotto sono puntati (`wiki.read`), ma `tools/list`
-> li emette **flat** (`wiki_read`) — Grok Build e i client OpenAI-style scartano i nomi col punto,
-> Claude Code li mostrava già così (`mcp__anja_memory__wiki_read`). `tools/call` accetta entrambe le forme.
-
-### Gruppo `wiki` (19 tool)
-`wiki.search`, `wiki.read`, `wiki.upsert_entity`, `wiki.upsert_concept`, `wiki.upsert_source`, `wiki.upsert_analysis`, `wiki.update_overview`, `wiki.index_update`, `wiki.log_append`, `wiki.backlinks`, `wiki.lint`, `wiki.verify`, `wiki.rename`, `wiki.replace_links`, `wiki.delete`, `wiki.tree`, `wiki.stats`, `wiki.export`, `wiki.attach_image`
-
-### Gruppo `skills` (11 tool) — v0.8.0
-**Read-side (Level 0/1/2)**: `skill.list`, `skill.load`, `skill.read_file`
-**Write-side (agent-managed)**: `skill.save`, `skill.patch` (find/replace mirato), `skill.edit`, `skill.delete`, `skill.write_file`, `skill.remove_file`
-**Versioning**: `skill.history`, `skill.rollback`
-
-### Gruppo `graph` (8 tool) — v0.9.0 + v0.9.1
-**Embedding pipeline**: `wiki.embed` (incremental, dirty-check, multi-trigger inline+hook+session-end).
-**Query by ID (cross-kind)**: `graph.semantic_neighbors` (k-NN dato source slug o file path, filter per kind).
-**Query by text** (v0.9.1): `graph.search_text` (embedda query libera → k-NN cross-kind), `wiki.search_semantic` (sugar wiki-only), `sessions.search_semantic` (sugar session journals).
-**Report agent-friendly**: `graph.report` (scrive `GRAPH_REPORT.md` con god nodes + cluster + surprise edges + wiki↔code anchors + orphans).
-**Visualizer standalone**: `graph.html` (Cytoscape single-file Obsidian-style, file-aggregated, hover-focus mode, sidebar search/filtri, apri nel browser).
-**Dedup wiki-wide**: `wiki.find_duplicates` (coppie di pagine troppo simili via embedding, candidati da fondere; dal v0.24.1 raggiungibile — era fuori da ogni gruppo).
-
-### Gruppo `roadmap` (6 tool)
-`roadmap.list`, `roadmap.add`, `roadmap.update`, `roadmap.complete`, `roadmap.block`, `roadmap.archive`
-
-### Gruppo `code` (3 tool)
-`code.search` (hybrid 3-livelli), `code.reindex` (build/refresh vector index), `code.status` (stats index)
+Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi: `memory`, `sessions`, `soul`, `user`, `skills`, `wiki`, `roadmap`, `code`, `graph`). Sezione generata da `scripts/gen_tools_doc.py` dal registry del server: non editare a mano.
 
 ### Gruppo `memory` (3 tool)
-`memory.recall`, `memory.write`, `memory.timeline`
+
+| Tool | Descrizione |
+|------|-------------|
+| `memory.recall` | Cerca pagine wiki rilevanti per un topic (keyword grep+rank). |
+| `memory.write` | Scrivi una nota in \<raw\>/notes/\<date\>-\<slug\>.md. |
+| `memory.timeline` | 🕒 MEMORY aggregator temporale: combina log entries + sessions in una vista cronologica. |
 
 ### Gruppo `sessions` (3 tool)
-`sessions.list` (esclude `archive/`; `include_archived=true`), `sessions.read`,
-`sessions.summarize` (delega a `scripts/summarize_session_bg.py`: CLI del harness,
-`claude -p`/`grok -p`/`codex exec`, override `ANJA_SUMMARY_BIN`)
+
+| Tool | Descrizione |
+|------|-------------|
+| `sessions.list` | Lista sessioni recenti (chat + routine) ordinate per data desc. |
+| `sessions.read` | Read full content di una specifica sessione. |
+| `sessions.summarize` | 📝 Genera auto-summary on-demand per una sessione e lo scrive nella sezione `## Summary` del session file. |
+
+### Gruppo `soul` (2 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `soul.show` | Read SOUL.md (identity + user preferences + memorable feedback + relationship facts). |
+| `soul.update` | Append una entry a SOUL.md. |
+
+### Gruppo `user` (2 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `user.read` | Read profilo utente — HOT (default, ~500 token, sempre sapevi questo già) o DETAIL on-demand. |
+| `user.update` | Aggiorna profilo utente: append (default) o replace di una sezione. |
+
+### Gruppo `skills` (11 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `skill.list` | Catalog skills disponibili (workflow plugin/hub/workspace). |
+| `skill.load` | Carica body SKILL.md completo per uno skill specifico. |
+| `skill.read_file` | Level 2: leggi un file di reference dentro la skill (references/, scripts/, templates/). |
+| `skill.save` | Crea una nuova skill (Hermes skill_manage analog). |
+| `skill.patch` | Patch mirato del SKILL.md via find/replace (preferito a edit, più sicuro). |
+| `skill.history` | Lista backup disponibili di una skill (file in \<skill\>/.history/). |
+| `skill.rollback` | Ripristina SKILL.md da un backup in .history/. |
+| `skill.edit` | Riscrive l'intero SKILL.md. |
+| `skill.delete` | Cancella una skill (rimuove la directory intera). |
+| `skill.write_file` | Scrive un file di reference dentro la skill (references/, scripts/, templates/). |
+| `skill.remove_file` | Rimuove un file di reference dalla skill. |
+
+### Gruppo `wiki` (19 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `wiki.search` | 📚 Cerca nelle pagine del wiki di questo scope (project/hub/workspace). |
+| `wiki.read` | 📚 Legge una pagina wiki per slug. |
+| `wiki.upsert_entity` | 📝 WIKI write: crea o aggiorna una entity page (modulo, servizio, persona, prodotto, sistema esterno) in wiki/entities/\<slug\>.md. |
+| `wiki.upsert_concept` | 📝 WIKI write: crea o aggiorna una concept page (pattern, idea, architettura, convenzione) in wiki/concepts/\<slug\>.md. |
+| `wiki.upsert_source` | 📝 WIKI write: crea o aggiorna una source page in wiki/sources/\<slug\>.md (riassunto di una fonte ingerita: articolo, paper, doc, codebase-sn… |
+| `wiki.upsert_analysis` | 📝 WIKI write: crea o aggiorna una analysis page in wiki/analysis/\<slug\>.md (query trasformata in pagina, confronti, lint report). |
+| `wiki.update_overview` | 📝 WIKI write: aggiorna `wiki/overview.md` (sintesi di alto livello — 'cosa abbiamo capito'). |
+| `wiki.index_update` | 📝 WIKI write: manutenzione di `wiki/index.md`. |
+| `wiki.backlinks` | 🔍 WIKI nav: trova tutte le pagine che linkano allo slug via [[link]]. |
+| `wiki.lint` | 🔍 WIKI health check: orfani (pagine non linkate da nessuno), broken_links ([[X]] dove X non esiste), stale (updated \> N giorni ma ancora at… |
+| `wiki.verify` | ✅ WIKI trust (schema 1.1): registra un evento di verifica su una pagina (frontmatter `verified`, append). |
+| `wiki.rename` | ✏️ WIKI maintenance: rinomina una pagina preservando TUTTI i [[link]] cross-wiki (replace `[[old]]`, `[[old\|label]]`, `[[old#section]]` → `… |
+| `wiki.replace_links` | ✏️ WIKI maintenance: replace `[[old]]` → `[[new]]` cross-wiki SENZA rinominare file. |
+| `wiki.delete` | 🗑️ WIKI maintenance: cancella una pagina. |
+| `wiki.tree` | 🌳 WIKI explore: struttura ad albero del wiki. |
+| `wiki.stats` | 📊 WIKI explore: statistiche di salute del wiki. |
+| `wiki.attach_image` | 🖼️ WIKI write: allega immagine a pagina entity/concept/source/analysis. |
+| `wiki.export` | 📦 WIKI export: dump dell'intero wiki in formato md (zip), json (dump strutturato per import/training/tool esterni), o html (static site con… |
+| `wiki.log_append` | 📝 WIKI write: append entry strict-format a wiki/log.md (memoria episodica). |
+
+### Gruppo `roadmap` (6 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `roadmap.list` | 📋 ROADMAP: lista task del progetto da `wiki/roadmap.md`. |
+| `roadmap.add` | 📋 ROADMAP: aggiungi nuovo task in stato open. |
+| `roadmap.update` | 📋 ROADMAP: modifica metadata di un task per id. |
+| `roadmap.complete` | 📋 ROADMAP: shortcut completion. |
+| `roadmap.block` | 📋 ROADMAP: shortcut blocking. |
+| `roadmap.archive` | 📋 ROADMAP: archivia task done più vecchi di N giorni (default 30) in `wiki/archive/roadmap-YYYY-QN.md`. |
+
+### Gruppo `code` (3 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `code.search` | 🔎 CODE.SEARCH: ricerca nel codebase del progetto ospitante. |
+| `code.reindex` | 🔎 CODE: build/refresh vector index per il codebase del progetto in `.anjawiki/code-index.db`. |
+| `code.status` | 🔎 CODE: stato del vector index del codebase. |
+
+### Gruppo `graph` (8 tool)
+
+| Tool | Descrizione |
+|------|-------------|
+| `wiki.find_duplicates` | 🔎 Trova coppie di pagine wiki semanticamente troppo simili (candidati duplicati / da fondere o contraddittorie) via embeddings condivisi. |
+| `wiki.embed` | 🔗 GRAPH: embed incrementale delle pagine wiki nello stesso spazio vettoriale del code-index → abilita k-NN cross-kind (wiki ↔ code) via gra… |
+| `graph.report` | 🔗 GRAPH: compute knowledge graph report (god nodes + clusters + surprise edges + wiki↔code anchors + orphans). |
+| `graph.search_text` | 🔗 GRAPH: semantic search cross-kind via query libera. |
+| `wiki.search_semantic` | 📚 WIKI: semantic search del wiki (sessions escluse di default). |
+| `sessions.search_semantic` | 🧠 SESSIONS: semantic search nelle session journal. |
+| `graph.html` | 🔗 GRAPH: genera `\<wiki\>/graph.html` standalone visualizer (Cytoscape). |
+| `graph.semantic_neighbors` | 🔗 GRAPH: k-NN nello spazio embedding unificato wiki+code. |
+
+<!-- anja:tools:end -->
+
+> **Nomi sul wire (v0.24+)**: i nomi canonici nelle tabelle sopra sono puntati (`wiki.read`), ma `tools/list`
+> li emette **flat** (`wiki_read`) — Grok Build e i client OpenAI-style scartano i nomi col punto,
+> Claude Code li mostrava già così (`mcp__anja_memory__wiki_read`). `tools/call` accetta entrambe le forme.
 
 > **Wiki steward (v0.23).** `scripts/steward.py --root <proj>` — triage senza LLM delle
 > sessioni *worth* della settimana (cluster per giorno), **una** call LLM per cluster (max 5)
@@ -286,9 +361,6 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi).
 > `python3 scripts/compact_sessions.py --root <proj> [--apply] [--purge-machine]` — le
 > sessioni-macchina vengono cancellate, le short archiviate come stub in `sessions/archive/`
 > (frontmatter + Summary + transcript_path), le *worth* restano per lo steward.
-
-### Altri gruppi
-`soul` (2), `user` (2), `roadmap` (6), `graph` (8, opt-in: vuole l'index)
 
 > Dal **v0.21** questo server espone SOLO i gruppi core del plugin CLI. I tool
 > hub-only (`agents`, `tasks`, `workspace`, `kanban`, `goals`, `pp`) sono stati
@@ -314,12 +386,15 @@ anja/
 │   ├── roadmap_io.py
 │   ├── summarize_session_bg.py  # detached process per auto-summary
 │   ├── init_project.py          # scaffolding /anja-init
+│   ├── gen_tools_doc.py         # sezione MCP tools del README generata dal registry (--check in CI)
+│   ├── release_check.py         # coerenza versioni/conteggi/test prima di una release
 │   └── ... (lint_checks, slugify, compose_claude_md, status, ecc.)
 ├── templates/
 │   ├── project-skeleton/        # struttura .anjawiki/ scaffoldata da /anja-init
 │   ├── soul-baselines/          # personality presets per type (dev/research/...)
 │   └── triade-skeleton/         # AGENTS/SOUL/TOOLS scaffolding
 ├── skills/                      # skill descrittive workflow (ingest, query, lint, refresh, init-analyze)
+├── tests/                       # pytest: registry, smoke su tutti i tool, steward, adapter
 ├── SCHEMA.md                    # wire format pubblico .anjawiki/
 └── README.md                    # questo file
 ```

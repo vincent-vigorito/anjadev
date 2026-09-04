@@ -3816,43 +3816,9 @@ def tool_graph_semantic_neighbors(args: dict) -> dict:
 # Default (env vuoto): tutti i gruppi core. I gruppi hub rimossi nel v0.21
 # (agents/tasks/workspace/kanban/goals/pp) in ANJA_TOOL_GROUPS → warning, ignorati:
 # i .mcp.json vecchi avviano comunque il server (senza quei tool).
-TOOL_GROUPS = {
-    "memory": ["memory.recall", "memory.write", "memory.timeline"],
-    "sessions": ["sessions.list", "sessions.read", "sessions.summarize"],
-    "soul": ["soul.show", "soul.update"],
-    "user": ["user.read", "user.update"],
-    # Fase 16-bis — Skill lazy disclosure (Hermes-style)
-    "skills": [
-        "skill.list", "skill.load", "skill.read_file",
-        "skill.save", "skill.patch", "skill.edit", "skill.delete",
-        "skill.write_file", "skill.remove_file",
-        "skill.history", "skill.rollback",
-    ],
-    # Fase P-Plugin — Wiki tools (read + 4 upsert + 2 special-file + log + 4 maintenance)
-    "wiki": [
-        "wiki.search", "wiki.read",
-        "wiki.upsert_entity", "wiki.upsert_concept",
-        "wiki.upsert_source", "wiki.upsert_analysis",
-        "wiki.update_overview", "wiki.index_update",
-        "wiki.log_append",
-        "wiki.backlinks", "wiki.lint", "wiki.verify",
-        "wiki.rename", "wiki.replace_links", "wiki.delete",
-        "wiki.tree", "wiki.stats", "wiki.export", "wiki.attach_image",
-    ],
-    # F-TaskMgmt-Plugin — Roadmap task management (4° file speciale del wiki)
-    "roadmap": [
-        "roadmap.list", "roadmap.add", "roadmap.update",
-        "roadmap.complete", "roadmap.block", "roadmap.archive",
-    ],
-    # F-CodeSearch — ricerca nel codebase ospitante (3 livelli: ripgrep/LLM rerank/vector)
-    "code": ["code.search", "code.reindex", "code.status"],
-    # Wiki embedding + semantic graph (cross-kind k-NN wiki ↔ code) + report + html viz
-    "graph": [
-        "wiki.embed", "graph.semantic_neighbors", "graph.report", "graph.html",
-        "graph.search_text", "wiki.search_semantic", "sessions.search_semantic",
-        "wiki.find_duplicates",
-    ],
-}
+# Ordine dei gruppi (docs, warning, tools/list). I membri sono derivati da TOOLS: vedi
+# _build_registry() in fondo al file — TOOLS è l'unica fonte di gruppi, handler e nomi wire.
+GROUP_ORDER = ("memory", "sessions", "soul", "user", "skills", "wiki", "roadmap", "code", "graph")
 
 
 _HUB_GROUPS_MOVED = ("agents", "tasks", "workspace", "kanban", "goals", "pp")
@@ -3887,6 +3853,7 @@ def _allowed_tool_names() -> set:
 TOOLS = [
     {
         "name": "memory.recall",
+        "group": "memory",
         "description": "Cerca pagine wiki rilevanti per un topic (keyword grep+rank). Usa per richiamare conoscenza dal wiki anja del progetto/hub corrente.",
         "inputSchema": {
             "type": "object",
@@ -3899,6 +3866,7 @@ TOOLS = [
     },
     {
         "name": "memory.write",
+        "group": "memory",
         "description": "Scrivi una nota in <raw>/notes/<date>-<slug>.md. Usa per salvare idee, pensieri, info da tornare a leggere.",
         "inputSchema": {
             "type": "object",
@@ -3912,6 +3880,7 @@ TOOLS = [
     },
     {
         "name": "memory.timeline",
+        "group": "memory",
         "description": (
             "🕒 MEMORY aggregator temporale: combina log entries + sessions in una "
             "vista cronologica. Risponde a 'cosa è successo nel periodo X', 'cosa "
@@ -3934,6 +3903,7 @@ TOOLS = [
     },
     {
         "name": "sessions.list",
+        "group": "sessions",
         "description": "Lista sessioni recenti (chat + routine) ordinate per data desc. Ogni entry ha id, path, summary breve.",
         "inputSchema": {
             "type": "object",
@@ -3945,6 +3915,7 @@ TOOLS = [
     },
     {
         "name": "sessions.read",
+        "group": "sessions",
         "description": "Read full content di una specifica sessione. Specifica `id` (filename stem) o `path` (relativo a root).",
         "inputSchema": {
             "type": "object",
@@ -3956,6 +3927,7 @@ TOOLS = [
     },
     {
         "name": "sessions.summarize",
+        "group": "sessions",
         "description": (
             "📝 Genera auto-summary on-demand per una sessione e lo scrive nella "
             "sezione `## Summary` del session file. Spawn `claude` CLI subprocess "
@@ -3975,11 +3947,13 @@ TOOLS = [
     },
     {
         "name": "soul.show",
+        "group": "soul",
         "description": "Read SOUL.md (identity + user preferences + memorable feedback + relationship facts).",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "soul.update",
+        "group": "soul",
         "description": "Append una entry a SOUL.md. type=feedback|preference|preference-pos|preference-neg|fact.",
         "inputSchema": {
             "type": "object",
@@ -3992,6 +3966,7 @@ TOOLS = [
     },
     {
         "name": "user.read",
+        "group": "user",
         "description": "Read profilo utente — HOT (default, ~500 token, sempre sapevi questo già) o DETAIL on-demand. Usa DETAIL quando l'utente menziona qualcosa di personale che potrebbe essere registrato (gusti, hobby, persone, episodi). Se torni vuoto: profilo non esiste ancora.",
         "inputSchema": {
             "type": "object",
@@ -4003,6 +3978,7 @@ TOOLS = [
     },
     {
         "name": "user.update",
+        "group": "user",
         "description": "Aggiorna profilo utente: append (default) o replace di una sezione. Per fatti permanenti core (ruolo, lingua, contesto operativo) usa detail=False. Per gusti/hobby/persone/episodi/preferenze granulari usa detail=true. Esempi: 'mi piace il jazz' → section='Gusti e preferenze', detail=true, mode='append'. 'cambio lingua a inglese' → section='Preferenze di comunicazione', detail=false, mode='replace'.",
         "inputSchema": {
             "type": "object",
@@ -4021,11 +3997,13 @@ TOOLS = [
     # Fase 16-bis — Skill lazy disclosure
     {
         "name": "skill.list",
+        "group": "skills",
         "description": "Catalog skills disponibili (workflow plugin/hub/workspace). Ritorna nomi + 1-line desc. Auto-iniettato nel system prompt; usa skill.load per body completo on-demand.",
         "inputSchema": {"type": "object", "properties": {}},
     },
     {
         "name": "skill.load",
+        "group": "skills",
         "description": "Carica body SKILL.md completo per uno skill specifico. Usa DOPO aver visto il catalog quando ti serve eseguire un workflow specifico (es. ingest, query, lint).",
         "inputSchema": {
             "type": "object",
@@ -4035,6 +4013,7 @@ TOOLS = [
     },
     {
         "name": "skill.read_file",
+        "group": "skills",
         "description": "Level 2: leggi un file di reference dentro la skill (references/, scripts/, templates/). Usa quando la SKILL.md menziona un file specifico (es. 'vedere references/api.md').",
         "inputSchema": {
             "type": "object",
@@ -4047,6 +4026,7 @@ TOOLS = [
     },
     {
         "name": "skill.save",
+        "group": "skills",
         "description": "Crea una nuova skill (Hermes skill_manage analog). Usa quando un workflow non-triviale merita di essere salvato come memoria procedurale (5+ tool call, scoperta di pattern, correzione utente). Scope default da SCOPE env.",
         "inputSchema": {
             "type": "object",
@@ -4060,6 +4040,7 @@ TOOLS = [
     },
     {
         "name": "skill.patch",
+        "group": "skills",
         "description": "Patch mirato del SKILL.md via find/replace (preferito a edit, più sicuro). old_string deve essere unico nel file. Backup automatico in <skill>/.history/<ts>.SKILL.md prima della modifica (recoverable via skill.rollback).",
         "inputSchema": {
             "type": "object",
@@ -4073,6 +4054,7 @@ TOOLS = [
     },
     {
         "name": "skill.history",
+        "group": "skills",
         "description": "Lista backup disponibili di una skill (file in <skill>/.history/). Backup creati automaticamente prima di ogni skill.patch/skill.edit/skill.save. Max 20 backup tenuti per skill (LRU).",
         "inputSchema": {
             "type": "object",
@@ -4084,6 +4066,7 @@ TOOLS = [
     },
     {
         "name": "skill.rollback",
+        "group": "skills",
         "description": "Ripristina SKILL.md da un backup in .history/. Default: ultimo backup. Opzionale: timestamp specifico (formato YYYYMMDD-HHMMSS). Lo stato corrente viene a sua volta backuppato prima del rollback (reversibile).",
         "inputSchema": {
             "type": "object",
@@ -4096,6 +4079,7 @@ TOOLS = [
     },
     {
         "name": "skill.edit",
+        "group": "skills",
         "description": "Riscrive l'intero SKILL.md. Usa skill.patch quando possibile (più sicuro per modifiche piccole).",
         "inputSchema": {
             "type": "object",
@@ -4108,6 +4092,7 @@ TOOLS = [
     },
     {
         "name": "skill.delete",
+        "group": "skills",
         "description": "Cancella una skill (rimuove la directory intera). Solo scope writable (project/hub/user-global).",
         "inputSchema": {
             "type": "object",
@@ -4117,6 +4102,7 @@ TOOLS = [
     },
     {
         "name": "skill.write_file",
+        "group": "skills",
         "description": "Scrive un file di reference dentro la skill (references/, scripts/, templates/). Usa per aggiungere doc esempi, template, script helper.",
         "inputSchema": {
             "type": "object",
@@ -4130,6 +4116,7 @@ TOOLS = [
     },
     {
         "name": "skill.remove_file",
+        "group": "skills",
         "description": "Rimuove un file di reference dalla skill. NON cancella la skill (per quello usa skill.delete).",
         "inputSchema": {
             "type": "object",
@@ -4143,6 +4130,7 @@ TOOLS = [
     # Fase P-Plugin — Wiki tools (full-text search + read by slug, scope wiki/)
     {
         "name": "wiki.search",
+        "group": "wiki",
         "description": (
             "📚 Cerca nelle pagine del wiki di questo scope (project/hub/workspace). "
             "IBRIDA di default: fonde keyword + ricerca semantica via Reciprocal Rank "
@@ -4165,6 +4153,7 @@ TOOLS = [
     },
     {
         "name": "wiki.find_duplicates",
+        "group": "graph",
         "description": (
             "🔎 Trova coppie di pagine wiki semanticamente troppo simili (candidati duplicati / "
             "da fondere o contraddittorie) via embeddings condivisi. Vede ciò che il match esatto "
@@ -4181,6 +4170,7 @@ TOOLS = [
     },
     {
         "name": "wiki.read",
+        "group": "wiki",
         "description": (
             "📚 Legge una pagina wiki per slug. Usa DOPO wiki.search per leggere il contenuto pieno. "
             "Cap a 10k chars (~2500 token) di default; passa max_chars per override."
@@ -4196,6 +4186,7 @@ TOOLS = [
     },
     {
         "name": "wiki.upsert_entity",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: crea o aggiorna una entity page (modulo, servizio, persona, "
             "prodotto, sistema esterno) in wiki/entities/<slug>.md. Se la pagina esiste, "
@@ -4223,6 +4214,7 @@ TOOLS = [
     },
     {
         "name": "wiki.upsert_concept",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: crea o aggiorna una concept page (pattern, idea, architettura, "
             "convenzione) in wiki/concepts/<slug>.md. Stesso MERGE-pattern di "
@@ -4245,6 +4237,7 @@ TOOLS = [
     },
     {
         "name": "wiki.upsert_source",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: crea o aggiorna una source page in wiki/sources/<slug>.md "
             "(riassunto di una fonte ingerita: articolo, paper, doc, codebase-snapshot). "
@@ -4272,6 +4265,7 @@ TOOLS = [
     },
     {
         "name": "wiki.upsert_analysis",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: crea o aggiorna una analysis page in wiki/analysis/<slug>.md "
             "(query trasformata in pagina, confronti, lint report). Stesso MERGE-pattern. "
@@ -4296,6 +4290,7 @@ TOOLS = [
     },
     {
         "name": "wiki.update_overview",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: aggiorna `wiki/overview.md` (sintesi di alto livello — 'cosa "
             "abbiamo capito'). Stesso MERGE-pattern: replace per sezione, lascia intatte "
@@ -4313,6 +4308,7 @@ TOOLS = [
     },
     {
         "name": "wiki.index_update",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: manutenzione di `wiki/index.md`. Per una `category` (heading "
             "di livello 2, es. 'Sources', 'Entities', 'Concepts', 'Analysis') fa append "
@@ -4331,6 +4327,7 @@ TOOLS = [
     },
     {
         "name": "wiki.backlinks",
+        "group": "wiki",
         "description": (
             "🔍 WIKI nav: trova tutte le pagine che linkano allo slug via [[link]]. "
             "Riconosce [[slug]], [[slug|label]], [[slug#section]], [[slug#section|label]]. "
@@ -4347,6 +4344,7 @@ TOOLS = [
     },
     {
         "name": "wiki.lint",
+        "group": "wiki",
         "description": (
             "🔍 WIKI health check: orfani (pagine non linkate da nessuno), broken_links "
             "([[X]] dove X non esiste), stale (updated > N giorni ma ancora attive), "
@@ -4368,6 +4366,7 @@ TOOLS = [
     },
     {
         "name": "wiki.verify",
+        "group": "wiki",
         "description": (
             "\u2705 WIKI trust (schema 1.1): registra un evento di verifica su una pagina "
             "(frontmatter `verified`, append). USE quando l'utente CONFERMA che una pagina "
@@ -4386,6 +4385,7 @@ TOOLS = [
     },
     {
         "name": "wiki.rename",
+        "group": "wiki",
         "description": (
             "✏️ WIKI maintenance: rinomina una pagina preservando TUTTI i [[link]] "
             "cross-wiki (replace `[[old]]`, `[[old|label]]`, `[[old#section]]` "
@@ -4402,6 +4402,7 @@ TOOLS = [
     },
     {
         "name": "wiki.replace_links",
+        "group": "wiki",
         "description": (
             "✏️ WIKI maintenance: replace `[[old]]` → `[[new]]` cross-wiki SENZA "
             "rinominare file. Utile per fixare convenzioni inconsistenti in massa "
@@ -4420,6 +4421,7 @@ TOOLS = [
     },
     {
         "name": "wiki.delete",
+        "group": "wiki",
         "description": (
             "🗑️ WIKI maintenance: cancella una pagina. SAFETY: confirm=false (default) "
             "ritorna preview con backlinks che diventerebbero rotti. confirm=true esegue. "
@@ -4436,6 +4438,7 @@ TOOLS = [
     },
     {
         "name": "wiki.tree",
+        "group": "wiki",
         "description": (
             "🌳 WIKI explore: struttura ad albero del wiki. Mostra 4 file speciali "
             "(index/log/overview/roadmap) + 5 categorie (entities/concepts/sources/analysis/sessions) "
@@ -4451,6 +4454,7 @@ TOOLS = [
     },
     {
         "name": "wiki.stats",
+        "group": "wiki",
         "description": (
             "📊 WIKI explore: statistiche di salute del wiki. Counts per type, top-N "
             "pagine più linkate, top-N più recenti aggiornate, size totale, count entry "
@@ -4465,6 +4469,7 @@ TOOLS = [
     },
     {
         "name": "wiki.attach_image",
+        "group": "wiki",
         "description": (
             "🖼️ WIKI write: allega immagine a pagina entity/concept/source/analysis. "
             "Copia/scarica l'immagine in raw/<topic>/ + append `![alt](rel-path)` "
@@ -4486,6 +4491,7 @@ TOOLS = [
     },
     {
         "name": "wiki.export",
+        "group": "wiki",
         "description": (
             "📦 WIKI export: dump dell'intero wiki in formato md (zip), json "
             "(dump strutturato per import/training/tool esterni), o html "
@@ -4505,6 +4511,7 @@ TOOLS = [
     },
     {
         "name": "wiki.log_append",
+        "group": "wiki",
         "description": (
             "📝 WIKI write: append entry strict-format a wiki/log.md (memoria episodica). "
             "Format auto: `## [YYYY-MM-DD] type | description`. Tipi convenzionali: "
@@ -4524,6 +4531,7 @@ TOOLS = [
     # F-TaskMgmt-Plugin — Roadmap tools (4° file speciale del wiki)
     {
         "name": "roadmap.list",
+        "group": "roadmap",
         "description": (
             "📋 ROADMAP: lista task del progetto da `wiki/roadmap.md`. Filtra per "
             "status/priority/owner. Restituisce list + summary count per status. "
@@ -4540,6 +4548,7 @@ TOOLS = [
     },
     {
         "name": "roadmap.add",
+        "group": "roadmap",
         "description": (
             "📋 ROADMAP: aggiungi nuovo task in stato open. ID auto-generato come "
             "slug del title. USE quando l'utente dice 'aggiungi task X', 'metti in "
@@ -4558,6 +4567,7 @@ TOOLS = [
     },
     {
         "name": "roadmap.update",
+        "group": "roadmap",
         "description": (
             "📋 ROADMAP: modifica metadata di un task per id. Se cambia `status` "
             "sposta auto nella sezione canonica (Open/Done/Blocked). USE per "
@@ -4583,6 +4593,7 @@ TOOLS = [
     },
     {
         "name": "roadmap.complete",
+        "group": "roadmap",
         "description": (
             "📋 ROADMAP: shortcut completion. Setta status=done, done=today, "
             "took opzionale, sposta in Done. USE per 'task X done', 'completato Y'."
@@ -4598,6 +4609,7 @@ TOOLS = [
     },
     {
         "name": "roadmap.block",
+        "group": "roadmap",
         "description": (
             "📋 ROADMAP: shortcut blocking. Setta status=blocked + blocker=<reason>, "
             "sposta in Blocked. USE per 'task X bloccato da Y'."
@@ -4613,6 +4625,7 @@ TOOLS = [
     },
     {
         "name": "roadmap.archive",
+        "group": "roadmap",
         "description": (
             "📋 ROADMAP: archivia task done più vecchi di N giorni (default 30) in "
             "`wiki/archive/roadmap-YYYY-QN.md`. Mantiene Done section snella. "
@@ -4628,6 +4641,7 @@ TOOLS = [
     # F-CodeSearch — code search nel codebase ospitante (3 livelli hybrid)
     {
         "name": "code.search",
+        "group": "code",
         "description": (
             "🔎 CODE.SEARCH: ricerca nel codebase del progetto ospitante. "
             "USE PRIMA di Grep/Glob quando la query è SEMANTICA/CONCETTUALE: "
@@ -4656,6 +4670,7 @@ TOOLS = [
     },
     {
         "name": "code.reindex",
+        "group": "code",
         "description": (
             "🔎 CODE: build/refresh vector index per il codebase del progetto in "
             "`.anjawiki/code-index.db`. Incremental di default (git diff vs last_indexed_sha), "
@@ -4672,6 +4687,7 @@ TOOLS = [
     },
     {
         "name": "code.status",
+        "group": "code",
         "description": (
             "🔎 CODE: stato del vector index del codebase. Restituisce: chunks totali, "
             "by-lang, provider/model usato, last_indexed_sha, size DB su disco. "
@@ -4682,6 +4698,7 @@ TOOLS = [
     # Wiki embedding + semantic graph cross-kind (wiki ↔ code)
     {
         "name": "wiki.embed",
+        "group": "graph",
         "description": (
             "🔗 GRAPH: embed incrementale delle pagine wiki nello stesso spazio vettoriale "
             "del code-index → abilita k-NN cross-kind (wiki ↔ code) via "
@@ -4699,6 +4716,7 @@ TOOLS = [
     },
     {
         "name": "graph.report",
+        "group": "graph",
         "description": (
             "🔗 GRAPH: compute knowledge graph report (god nodes + clusters + surprise edges + "
             "wiki↔code anchors + orphans). Scrive `wiki/GRAPH_REPORT.md` agent-readable. "
@@ -4721,6 +4739,7 @@ TOOLS = [
     },
     {
         "name": "graph.search_text",
+        "group": "graph",
         "description": (
             "🔗 GRAPH: semantic search cross-kind via query libera. Embedda la query "
             "nello stesso spazio del wiki+code → k-NN. USE FOR: 'trova pagine/file su X', "
@@ -4742,6 +4761,7 @@ TOOLS = [
     },
     {
         "name": "wiki.search_semantic",
+        "group": "graph",
         "description": (
             "📚 WIKI: semantic search del wiki (sessions escluse di default). "
             "Sugar di graph.search_text con filter='wiki'. USE FOR: 'pagine sul concetto X', "
@@ -4763,6 +4783,7 @@ TOOLS = [
     },
     {
         "name": "sessions.search_semantic",
+        "group": "graph",
         "description": (
             "🧠 SESSIONS: semantic search nelle session journal. USE FOR: 'ricorda di cosa "
             "abbiamo parlato', 'session passata su X', 'quando ho discusso Y'. Richiede che "
@@ -4780,6 +4801,7 @@ TOOLS = [
     },
     {
         "name": "graph.html",
+        "group": "graph",
         "description": (
             "🔗 GRAPH: genera `<wiki>/graph.html` standalone visualizer (Cytoscape). "
             "Single-file con dati embedded, sidebar search/filtri, click su nodo per dettagli. "
@@ -4794,6 +4816,7 @@ TOOLS = [
     },
     {
         "name": "graph.semantic_neighbors",
+        "group": "graph",
         "description": (
             "🔗 GRAPH: k-NN nello spazio embedding unificato wiki+code. "
             "Trova pagine wiki e/o file di codice semanticamente simili a una source data. "
@@ -4816,71 +4839,12 @@ TOOLS = [
     },
 ]
 
-TOOL_HANDLERS = {
-    "memory.recall": tool_memory_recall,
-    "memory.write": tool_memory_write,
-    "memory.timeline": tool_memory_timeline,
-    "sessions.list": tool_sessions_list,
-    "sessions.read": tool_sessions_read,
-    "sessions.summarize": tool_sessions_summarize,
-    "soul.show": tool_soul_show,
-    "soul.update": tool_soul_update,
-    "user.read": tool_user_read,
-    "user.update": tool_user_update,
-    # Fase 16-bis — Skill lazy
-    "skill.list": tool_skill_list,
-    "skill.load": tool_skill_load,
-    "skill.read_file": tool_skill_read_file,
-    "skill.save": tool_skill_save,
-    "skill.patch": tool_skill_patch,
-    "skill.history": tool_skill_history,
-    "skill.rollback": tool_skill_rollback,
-    "skill.edit": tool_skill_edit,
-    "skill.delete": tool_skill_delete,
-    "skill.write_file": tool_skill_write_file,
-    "skill.remove_file": tool_skill_remove_file,
-    # Fase P-Plugin — Wiki tools
-    "wiki.search": tool_wiki_search_hybrid,
-    "wiki.search_keyword": tool_wiki_search,
-    "wiki.find_duplicates": tool_wiki_find_duplicates,
-    "wiki.read": tool_wiki_read,
-    "wiki.upsert_entity": tool_wiki_upsert_entity,
-    "wiki.upsert_concept": tool_wiki_upsert_concept,
-    "wiki.upsert_source": tool_wiki_upsert_source,
-    "wiki.upsert_analysis": tool_wiki_upsert_analysis,
-    "wiki.update_overview": tool_wiki_update_overview,
-    "wiki.index_update": tool_wiki_index_update,
-    "wiki.log_append": tool_wiki_log_append,
-    "wiki.backlinks": tool_wiki_backlinks,
-    "wiki.lint": tool_wiki_lint,
-    "wiki.verify": tool_wiki_verify,
-    "wiki.rename": tool_wiki_rename,
-    "wiki.replace_links": tool_wiki_replace_links,
-    "wiki.delete": tool_wiki_delete,
-    "wiki.tree": tool_wiki_tree,
-    "wiki.stats": tool_wiki_stats,
-    "wiki.export": tool_wiki_export,
-    "wiki.attach_image": tool_wiki_attach_image,
-    # F-TaskMgmt-Plugin — Roadmap tools
-    "roadmap.list": tool_roadmap_list,
-    "roadmap.add": tool_roadmap_add,
-    "roadmap.update": tool_roadmap_update,
-    "roadmap.complete": tool_roadmap_complete,
-    "roadmap.block": tool_roadmap_block,
-    "roadmap.archive": tool_roadmap_archive,
-    # F-CodeSearch — Code search tools (3 livelli + index)
-    "code.search": tool_code_search,
-    "code.reindex": tool_code_reindex,
-    "code.status": tool_code_status,
-    "wiki.embed": tool_wiki_embed,
-    "graph.semantic_neighbors": tool_graph_semantic_neighbors,
-    "graph.report": tool_graph_report,
-    "graph.html": tool_graph_html,
-    "graph.search_text": tool_graph_search_text,
-    "wiki.search_semantic": tool_wiki_search_semantic,
-    "sessions.search_semantic": tool_sessions_search_semantic,
-}
-
+# ============================================================
+# Registry derivato — TOOLS è l'unica fonte di verità.
+# Gruppi (TOOL_GROUPS), handler (TOOL_HANDLERS) e nomi wire ne discendono; una
+# incoerenza (tool senza gruppo, handler mancante, collisione di nomi) fa fallire
+# l'import: la cattura tests/test_registry.py, mai un utente a runtime.
+# ============================================================
 
 # Nomi sul wire: i tool hanno nomi canonici puntati (`wiki.read`) ma alcuni client
 # (Grok Build, OpenAI-style function calling) scartano i nomi con il punto — Claude
@@ -4890,7 +4854,48 @@ def _wire_name(name: str) -> str:
     return name.replace(".", "_")
 
 
-_CANONICAL_BY_WIRE = {_wire_name(t["name"]): t["name"] for t in TOOLS}
+# Handler non deducibili dalla convenzione `tool_<nome flat>`.
+_HANDLER_OVERRIDES = {
+    "wiki.search": tool_wiki_search_hybrid,   # tool_wiki_search è la sola-keyword, usata dall'ibrida
+}
+
+
+def _build_registry() -> tuple:
+    groups: dict = {g: [] for g in GROUP_ORDER}
+    handlers: dict = {}
+    by_wire: dict = {}
+    problems: list = []
+    seen: set = set()
+    for t in TOOLS:
+        name = t.get("name") or "<senza nome>"
+        if name in seen:
+            problems.append(f"{name}: nome duplicato")
+        seen.add(name)
+        group = t.get("group")
+        if group not in groups:
+            problems.append(f"{name}: gruppo {group!r} non in GROUP_ORDER {GROUP_ORDER}")
+        else:
+            groups[group].append(name)
+        if not isinstance(t.get("inputSchema"), dict) or not t.get("description"):
+            problems.append(f"{name}: inputSchema/description mancanti")
+        wire = _wire_name(name)
+        if wire in by_wire:
+            problems.append(f"{name}: nome wire '{wire}' collide con {by_wire[wire]}")
+        by_wire[wire] = name
+        fn = _HANDLER_OVERRIDES.get(name) or globals().get("tool_" + wire)
+        if not callable(fn):
+            problems.append(f"{name}: handler tool_{wire} mancante")
+        else:
+            handlers[name] = fn
+    for g, names in groups.items():
+        if not names:
+            problems.append(f"gruppo '{g}' vuoto")
+    if problems:
+        raise RuntimeError("[anja_memory] registry incoerente:\n  " + "\n  ".join(problems))
+    return groups, handlers, by_wire
+
+
+TOOL_GROUPS, TOOL_HANDLERS, _CANONICAL_BY_WIRE = _build_registry()
 
 
 def _canonical_name(name: str) -> str:
@@ -4919,7 +4924,9 @@ def handle_request(req: dict) -> dict:
 
     if method == "tools/list":
         allowed = _allowed_tool_names()
-        filtered = [{**t, "name": _wire_name(t["name"])} for t in TOOLS if t["name"] in allowed]
+        # `group` è metadato interno del registry: sul wire vanno solo i campi MCP.
+        filtered = [{**{k: v for k, v in t.items() if k != "group"}, "name": _wire_name(t["name"])}
+                    for t in TOOLS if t["name"] in allowed]
         return _ok(req_id, {"tools": filtered})
 
     if method == "tools/call":

@@ -118,8 +118,10 @@ def main() -> None:
                 hits.append(f.name)
     check("grep hub-imports = 0", not hits, str(hits))
     src = SERVER.read_text(encoding="utf-8")
-    check("TOOL_GROUPS senza gruppi hub",
-          not any(f'"{g}":' in src.split("TOOL_GROUPS = {", 1)[1].split("\n}\n", 1)[0] for g in HUB_GROUPS))
+    # v0.25: i gruppi sono derivati da TOOLS (campo "group") + GROUP_ORDER, non più un literal.
+    group_order = src.split("GROUP_ORDER = (", 1)[1].split(")", 1)[0]
+    check("GROUP_ORDER senza gruppi hub", not any(f'"{g}"' in group_order for g in HUB_GROUPS))
+    check("nessun tool con group hub", not any(f'"group": "{g}"' in src for g in HUB_GROUPS))
 
     print("§5.4 smoke core senza AnjaHub: roadmap.add + code.status L0 + wiki upsert")
     out, err = rpc(project, [

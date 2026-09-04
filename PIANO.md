@@ -64,18 +64,18 @@ Tutto meccanico, nessun rischio, un pomeriggio. Sblocca le fasi successive.
   *Accettazione:* `./bump.sh 0.24.1` seguito da `grep -rn "0.24.1"` mostra README + 3 manifest + 2 server.
 - [x] **0.8** CHANGELOG v0.24.1, commit, tag.
 
-## Fase 1 — Registry verificabile → release v0.25.0
+## Fase 1 — Registry verificabile → release v0.25.0 ✅ (2026-09-04)
 
 Chiude la causa strutturale della deriva (F2–F5, F18). Prerequisito della Fase 4.
 
-- [ ] **1.1** Unica struttura `TOOLS: list[ToolSpec]` con `name, group, schema, handler`. `TOOL_GROUPS`, `TOOL_DEFS` e `HANDLERS` diventano derivati da essa (comprehension), non più tre liste scritte a mano. — **M** — `scripts/mcp_memory_server.py:3819-4860`
+- [x] **1.1** Unica struttura `TOOLS: list[ToolSpec]` con `name, group, schema, handler`. `TOOL_GROUPS`, `TOOL_DEFS` e `HANDLERS` diventano derivati da essa (comprehension), non più tre liste scritte a mano. — **M** — `scripts/mcp_memory_server.py:3819-4860`
   *Accettazione:* diff del wire (`tools/list` prima/dopo, nomi flat e canonici) vuoto. Il test 1.2 passa.
-- [ ] **1.2** Test di corrispondenza: ogni spec ha handler callable, ogni handler è in una spec, ogni nome appartiene a un solo gruppo, il nome flat (`wiki_read`) è biiettivo col canonico (`wiki.read`), `tools/call` accetta entrambi. — **S** — `tests/test_registry.py` (nuovo)
-- [ ] **1.3** Smoke test parametrico: per ogni tool del registry, una chiamata con argomenti minimi validi su un wiki temporaneo → risposta JSON-RPC senza `error` di protocollo (un `error` applicativo controllato è accettato). — **M** — `tests/test_mcp_smoke.py`
+- [x] **1.2** Test di corrispondenza: ogni spec ha handler callable, ogni handler è in una spec, ogni nome appartiene a un solo gruppo, il nome flat (`wiki_read`) è biiettivo col canonico (`wiki.read`), `tools/call` accetta entrambi. — **S** — `tests/test_registry.py` (nuovo)
+- [x] **1.3** Smoke test parametrico: per ogni tool del registry, una chiamata con argomenti minimi validi su un wiki temporaneo → risposta JSON-RPC senza `error` di protocollo (un `error` applicativo controllato è accettato). — **M** — `tests/test_mcp_smoke.py`
   *Accettazione:* 56 (o 57) tool esercitati, non 19.
-- [ ] **1.4** Generatore `scripts/gen_tools_doc.py`: produce la sezione "MCP tools" del README dal registry, con conteggio per gruppo. Marker `<!-- tools:start -->` / `<!-- tools:end -->` nel README. — **M**
+- [x] **1.4** Generatore `scripts/gen_tools_doc.py`: produce la sezione "MCP tools" del README dal registry, con conteggio per gruppo. Marker `<!-- tools:start -->` / `<!-- tools:end -->` nel README. — **M**
   *Accettazione:* `gen_tools_doc.py --check` esce 1 se il README è diverso dal generato (usato in CI, Fase 2).
-- [ ] **1.5** Check release `scripts/release_check.py`: versione uguale in README/manifest/server, conteggio tool e gruppi coerente, conteggio slash command = file in `commands/`, CHANGELOG ha la voce della versione corrente. `bump.sh` lo chiama alla fine. — **S**
+- [x] **1.5** Check release `scripts/release_check.py`: versione uguale in README/manifest/server, conteggio tool e gruppi coerente, conteggio slash command = file in `commands/`, CHANGELOG ha la voce della versione corrente. `bump.sh` lo chiama alla fine. — **S**
 
 ## Fase 2 — Test e CI → dentro v0.25.0
 

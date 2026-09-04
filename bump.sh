@@ -52,6 +52,9 @@ if grep -h '"version"' "${FILES[@]}" | grep -qv "\"$NEW\""; then
   exit 1
 fi
 
+# Coerenza di release (CHANGELOG escluso: la voce si scrive dopo il bump)
+python3 "$ROOT/scripts/release_check.py" --skip-changelog || exit 1
+
 cat <<EOF
 
 Prossimi passi:
