@@ -20,10 +20,10 @@ from typing import Iterable, Optional
 
 PROGRAMMATIC_ENTRYPOINTS = ("sdk-py", "sdk-ts", "sdk-cli", "sdk")
 HARNESS_AGENT = {"claude": "cli-claude", "codex": "cli-codex", "grok": "cli-grok",
-                 "opencode": "cli-opencode"}
+                 "opencode": "cli-opencode", "antigravity": "cli-antigravity"}
 
 # Tool che indicano lavoro "che lascia traccia" (usati da is_worth)
-WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit",
+WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit", "write_to_file", "replace_file_content",
                "wiki.upsert_entity", "wiki.upsert_concept", "wiki.upsert_source",
                "wiki.upsert_analysis", "wiki.update_overview", "wiki.log_append",
                "roadmap.add", "roadmap.update", "roadmap.complete", "skill.save", "skill.patch"}
@@ -35,7 +35,7 @@ SIGNAL_KW = ("decisione", "decision", "split", "design", "breaking", "ship", "re
 
 
 def detect_harness(env: Optional[dict] = None, payload: Optional[dict] = None) -> str:
-    """claude | codex | grok | opencode | unknown. Override esplicito: ANJA_HARNESS."""
+    """claude | codex | grok | opencode | antigravity | unknown. Override esplicito: ANJA_HARNESS."""
     env = os.environ if env is None else env
     forced = (env.get("ANJA_HARNESS") or "").strip().lower()
     if forced:
@@ -48,6 +48,8 @@ def detect_harness(env: Optional[dict] = None, payload: Optional[dict] = None) -
         return "grok"
     if any(k.startswith("OPENCODE") for k in env):
         return "opencode"
+    if env.get("ANTIGRAVITY_CONVERSATION_ID") or any(k.startswith("ANTIGRAVITY") for k in env):
+        return "antigravity"
     p = payload or {}
     blob = " ".join(str(k) for k in p.keys()).lower()
     if "grok" in blob:

@@ -159,3 +159,15 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
   distribuzione è `anjadev` (come il repo). Pubblicazione su PyPI non fatta: `pipx install git+…` basta.
 - Prima CI reale (v0.26.0): matrice di test verde al primo colpo; coverage rotta dal `.pth` di
   coverage ≥ 7 (fix in v0.27.0).
+
+## Addendum 2026-09-04 — compatibilità harness
+
+| Host | Stato | Come |
+|------|-------|------|
+| Claude Code | nativo | plugin marketplace |
+| Codex CLI | pieno | plugin `.codex-plugin` + `codex_adapter.py` + `install_codex_hooks.py` |
+| Grok CLI | pieno | zero-config (Claude-compat), serve il trust del progetto |
+| OpenCode | pieno | `.opencode/plugin/anja.js` |
+| Antigravity CLI (`agy`) | pieno dalla v0.29.0 | `install_antigravity.py` + `antigravity_adapter.py`, validato su agy 1.1.26 |
+
+Packaging pip (Fase 5) rimosso in v0.28.1: la distribuzione resta solo come plugin.

@@ -35,7 +35,8 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-_KNOWN_BINS = ("claude", "grok", "codex")
+_KNOWN_BINS = ("claude", "grok", "codex", "agy")
+_HARNESS_BIN = {"antigravity": "agy"}   # harness del journal → nome del CLI
 _EXTRA_DIRS = (Path.home() / ".local" / "bin", Path("/usr/local/bin"), Path("/opt/homebrew/bin"),
                Path.home() / ".claude" / "local", Path("/usr/bin"))
 
@@ -65,6 +66,7 @@ def _resolve_bin(explicit: str | None, harness: str | None) -> tuple[str | None,
         if "/" in explicit:
             return (explicit if os.access(explicit, os.X_OK) else None), kind
         return _which(explicit), kind
+    harness = _HARNESS_BIN.get(harness or "", harness)
     if harness in _KNOWN_BINS:
         found = _which(harness)
         if found:
@@ -81,6 +83,8 @@ def _command(bin_path: str, kind: str, prompt: str, model: str) -> list[str]:
         return [bin_path, "-p", prompt, "--model", model]
     if kind == "codex":
         return [bin_path, "exec", prompt]
+    if kind == "agy":
+        return [bin_path, "-p", prompt, "--output-format", "text"]   # Antigravity CLI headless
     return [bin_path, "-p", prompt]          # grok (Grok Build ha -p) e altri CC-compat
 
 

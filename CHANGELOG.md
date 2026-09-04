@@ -2,6 +2,35 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.29.0 — 2026-09-04
+
+**Antigravity CLI (`agy`) a esperienza piena — validato sul campo (agy 1.1.26).**
+
+- `hooks/antigravity_adapter.py`: traduce i 5 eventi agy (`.agents/hooks.json`, formato
+  piatto, payload camelCase su stdin, nome evento in argv) nel contratto Claude Code:
+  `PreInvocation` alla prima invocazione → stdout di `session_start.py` iniettato come
+  `{"injectSteps":[{"ephemeralMessage": …}]}` (verificato: il modello riporta "[anja] Sessione
+  aperta …"); `Stop` → `transcript_full.jsonl` (step `USER_INPUT`/`PLANNER_RESPONSE`, wrapper
+  `<USER_REQUEST>` rimosso, `tool_calls` → tool stats) normalizzato in
+  `.anjawiki/transcripts/antigravity/<conversationId>.jsonl`, journal upsert per turno
+  (`agent: cli-antigravity`, `harness: antigravity`), policy sessioni-macchina, auto-summary bg,
+  consistency check embedding; `PostToolUse` `write_to_file`/`replace_file_content`
+  (`TargetFile`, valori JSON-encoded) → `post_tool_use.py`. Gli hook agy girano con cwd
+  `.agents/`: la root arriva da `workspacePaths[0]`. Stdout riservato alla risposta JSON.
+- `scripts/install_antigravity.py --project`: scrive `.agents/mcp_config.json` (server
+  `anja_memory`) e `.agents/hooks.json` (hook nominato `anja`), merge idempotente che
+  conserva hook e server esistenti.
+- `journal_policy`: harness `antigravity` da `ANTIGRAVITY_CONVERSATION_ID` → `cli-antigravity`;
+  `write_to_file`/`replace_file_content` contano come tool di scrittura per `is_worth`.
+- Summary e steward: `agy -p … --output-format text` come CLI per harness `antigravity`
+  (`ANJA_SUMMARY_BIN=agy`).
+- Quirk documentati: headless richiede `--add-dir .` per trovare `.agents/hooks.json`; gli hook
+  `PreToolUse`/`PostToolUse` in 1.1.26 headless non scattano (re-embed coperto a `Stop`);
+  `injectSteps` accetta `ephemeralMessage` | `userMessage` | `toolCall` (dal contratto embedded
+  nel binario, i docs online sono incompleti).
+- Test `tests/test_antigravity_adapter.py` (25 check) con payload e transcript reali.
+- README: sezione Antigravity al posto di quella Gemini CLI, matrice harness aggiornata.
+
 ## v0.28.1 — 2026-09-04
 
 **Packaging pip rimosso** (decisione: anja si distribuisce solo come plugin — Claude Code

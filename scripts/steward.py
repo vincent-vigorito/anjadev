@@ -220,6 +220,8 @@ def _llm_command(bin_path: str, kind: str, prompt: str) -> list[str]:
         return [bin_path, "-p", prompt, "--model", model]
     if kind == "codex":
         return [bin_path, "exec", prompt]
+    if kind == "agy":
+        return [bin_path, "-p", prompt, "--output-format", "text"]
     return [bin_path, "-p", prompt]
 
 

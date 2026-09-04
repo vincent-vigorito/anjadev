@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.28.1 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.29.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -69,7 +69,7 @@ echo "OPENROUTER_API_KEY=sk-or-..." >> .anjawiki/.secrets.env
 
 Il server MCP `anja_memory` **auto-loada** all'avvio — niente shell setup. Restart CC dopo il primo setup.
 
-## Cross-harness setup (Codex · Grok · Gemini · OpenCode)
+## Cross-harness setup (Codex · Grok · Antigravity · OpenCode)
 
 Il core (`mcp_memory_server.py` + `mcp_code_server.py`) è **JSON-RPC 2.0 over stdio**
 standard, stdlib pure, zero dipendenze → gira su **qualunque host MCP**, non solo Claude
@@ -148,35 +148,42 @@ con `mcpServers` stile Claude.)
 }
 ```
 
-**Gemini CLI** — `~/.gemini/settings.json` (o `.gemini/settings.json` project-scoped), chiave `mcpServers`:
+**Antigravity CLI** (`agy`, ex Gemini CLI) — **esperienza piena**, validata sul campo (agy 1.1.26,
+2026-09-04). Un comando scrive `.agents/mcp_config.json` (server `anja_memory`, stesso formato
+del `.mcp.json` di Claude Code) e `.agents/hooks.json` (hook nominato `anja`, formato piatto agy):
 
-```json
-{
-  "mcpServers": {
-    "anja_memory": {
-      "command": "python3",
-      "args": ["<ANJADEV>/scripts/mcp_memory_server.py"],
-      "env": { "ANJA_SCOPE": "project", "ANJA_ROOT": "/abs/project", "ANJA_TOOL_GROUPS": "memory,wiki,roadmap,code" }
-    }
-  }
-}
+```bash
+python3 <ANJADEV>/scripts/install_antigravity.py --project /abs/project
+agy            # dalla root del progetto; in headless: agy -p "..." --add-dir .
 ```
 
-Gemini legge `GEMINI.md` (non `AGENTS.md`): `compose_claude_md.py` lo genera come **symlink → `AGENTS.md`**. Alternativa pulita per distribuzione: una Gemini *extension* (`contextFileName: AGENTS.md` + `mcpServers`), installabile via path/GitHub.
+Gli hook passano da `hooks/antigravity_adapter.py`, che traduce i 5 eventi agy nel contratto
+Claude Code senza toccare gli script condivisi: `PreInvocation` (prima invocazione) → output di
+`session_start.py` iniettato come `ephemeralMessage` (log recenti, focus roadmap, catalogo skill,
+pending steward); `Stop` (ogni turno) → `transcript_full.jsonl` normalizzato e journal upsert per
+`conversationId` (`agent: cli-antigravity`), auto-summary in background via `agy -p`, consistency
+check embedding; `PostToolUse` (`write_to_file`/`replace_file_content`) → re-embed pagina wiki.
+Contesto statico: agy legge `AGENTS.md` e `GEMINI.md` (symlink) nativamente. Quirk noti: gli hook
+girano con cwd `.agents/` (la root arriva da `workspacePaths`); in headless serve `--add-dir .`
+perché agy trovi `.agents/hooks.json`; gli hook `PreToolUse`/`PostToolUse` in 1.1.26 headless non
+scattano (il re-embed è coperto dal check a `Stop`). Config globale alternativa:
+`~/.gemini/config/mcp_config.json` e `~/.gemini/config/hooks.json`.
 
 ### Context file generati (da `AGENTS.src.md`)
 
 Il compose produce, oltre ad `AGENTS.md` (composed, letto nativo da Codex/Grok):
 - `CLAUDE.md` = `@AGENTS.md`  (Claude Code)
-- `GEMINI.md` = symlink → `AGENTS.md`  (Gemini CLI)
+- `GEMINI.md` = symlink → `AGENTS.md`  (Antigravity CLI / Gemini CLI)
 
 Non editare i generati: il context vive in `AGENTS.src.md`.
 
 > **Automatismi (hook).** Claude Code **e Grok CLI** hanno hook compatibili (`SessionStart/End`,
 > `PreToolUse/PostToolUse`, … — JSON su stdin/stdout): gli automatismi anja (context injection,
-> journal, re-embed) reggono su entrambi. **Codex e Gemini** non hanno hook equivalenti → "modo
-> manuale": il context statico è nel file, ma il pull dinamico (roadmap/sessioni) e il journal si
-> fanno via tool MCP o bash-native — vedi la sezione *Bootstrap* nel context composto.
+> journal, re-embed) reggono nativamente. **Codex**, **OpenCode** e **Antigravity** ci arrivano
+> con un adapter (`hooks/codex_adapter.py`, `.opencode/plugin/anja.js`, `hooks/antigravity_adapter.py`)
+> che traduce i loro eventi nel contratto Claude Code. Un harness senza hook resta in "modo
+> manuale": context statico nel file, pull dinamico e journal via tool MCP o bash-native — vedi la
+> sezione *Bootstrap* nel context composto.
 >
 > **OpenCode (full mode)**: oltre alla config MCP `opencode.json` sopra, il plugin
 > `.opencode/plugin/anja.js` aggancia i lifecycle OpenCode agli hook Python anja —
@@ -378,7 +385,9 @@ anja/
 ├── commands/                    # 12 slash command (.md)
 ├── hooks/
 │   ├── session_start.py         # carica focus roadmap + ultime 5 log
-│   └── session_end.py           # write session file + spawn auto-summary bg
+│   ├── session_end.py           # write session file + spawn auto-summary bg
+│   ├── codex_adapter.py + antigravity_adapter.py   # traducono gli eventi Codex/agy nel contratto CC
+│   └── journal_policy.py        # harness detection, sessioni-macchina, worth
 ├── agents/                      # subagent (wiki-maintainer)
 ├── scripts/
 │   ├── mcp_memory_server.py     # entry point MCP server stdio (57 tool, 9 gruppi) → package anja/
@@ -398,7 +407,7 @@ anja/
 │   ├── soul-baselines/          # personality presets per type (dev/research/...)
 │   └── triade-skeleton/         # AGENTS/SOUL/TOOLS scaffolding
 ├── skills/                      # skill descrittive workflow (ingest, query, lint, refresh, init-analyze)
-├── tests/                       # pytest: registry, smoke su tutti i tool, steward, adapter
+├── tests/                       # pytest: registry, smoke su tutti i tool, steward, adapter Codex/OpenCode/Antigravity
 ├── SCHEMA.md                    # wire format pubblico .anjawiki/
 ├── SECURITY.md                  # garanzie, assunzioni, cosa NON è garantito (anja_code)
 ├── pyproject.toml               # config pytest / ruff / coverage (nessuna dipendenza runtime)
@@ -411,7 +420,7 @@ anja/
 | Classe | Cosa | Garanzia |
 |--------|------|----------|
 | **core** | `scripts/anja/` (server MCP), `mcp_memory_server.py`, `hooks/`, `commands/`, `skills/`, `steward.py`, `compact_sessions.py`, `roadmap_io.py`, `wiki_embed.py`, `code_*.py`, `embed_providers.py`, `init_project.py`, `upgrade_triade.py`, `summarize_session_bg.py`, `lint_checks.py`, `context_loader.py`, `secrets_loader.py`, `slugify.py`, `skill_parser.py`, `tools_md.py`, `compose_claude_md.py`, `status.py` | wire e schema stabili entro la MAJOR, coperti dai test, in CI |
-| **adapter** | `.codex-plugin/`, `.mcp.codex.json`, `hooks/codex_adapter.py`, `install_codex_hooks.py`, `.opencode/`, `.agents/` (Grok) | best-effort, validati sul campo e con test di traduzione |
+| **adapter** | `.codex-plugin/`, `.mcp.codex.json`, `hooks/codex_adapter.py`, `install_codex_hooks.py`, `.opencode/`, `.agents/plugins/` (Codex marketplace), `hooks/antigravity_adapter.py`, `install_antigravity.py` | best-effort, validati sul campo e con test di traduzione |
 | **sperimentale** | `mcp_code_server.py` (`anja_code`, opt-in), `graph_html.py` / `graph_report.py`, provider `local` | possono cambiare senza MAJOR; `anja_code` non è un confine di sicurezza (SECURITY.md) |
 | **legacy** | `migrate_cc_memory.py`, `cc_memory_to_soul.py`, `cc_memory_sync.py` (import della memoria nativa di Claude Code) | mantenuti finché servono alle migrazioni, esclusi dalla coverage |
 | **dev** | `gen_tools_doc.py`, `release_check.py`, `bump.sh`, `tests/`, `pyproject.toml`, `.github/` | strumenti del repo, non distribuiti come funzionalità |
