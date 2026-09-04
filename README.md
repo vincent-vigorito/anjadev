@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.25.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.26.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -381,7 +381,11 @@ anja/
 │   └── session_end.py           # write session file + spawn auto-summary bg
 ├── agents/                      # subagent (wiki-maintainer)
 ├── scripts/
-│   ├── mcp_memory_server.py     # MCP server stdio (57 tool, 9 gruppi)
+│   ├── mcp_memory_server.py     # entry point MCP server stdio (57 tool, 9 gruppi) → package anja/
+│   ├── anja/                    # server.py (registry+dispatch), config.py, common.py, un modulo per dominio
+│   │                            #   memory, sessions, soul, user, skills, wiki(+_maint,+_io), roadmap, code, graph
+│   ├── mcp_code_server.py       # anja_code: execute_python (opt-in ANJA_CODE_EXEC=1)
+│   ├── steward.py + compact_sessions.py   # distill notturno dei journal + archivio
 │   ├── code_db.py + code_index.py + code_search.py + embed_providers.py
 │   ├── roadmap_io.py
 │   ├── summarize_session_bg.py  # detached process per auto-summary
@@ -401,6 +405,16 @@ anja/
 ├── .github/workflows/ci.yml     # test matrix + lint + coerenza + coverage
 └── README.md                    # questo file
 ```
+
+### Classificazione componenti
+
+| Classe | Cosa | Garanzia |
+|--------|------|----------|
+| **core** | `scripts/anja/` (server MCP), `mcp_memory_server.py`, `hooks/`, `commands/`, `skills/`, `steward.py`, `compact_sessions.py`, `roadmap_io.py`, `wiki_embed.py`, `code_*.py`, `embed_providers.py`, `init_project.py`, `upgrade_triade.py`, `summarize_session_bg.py`, `lint_checks.py`, `context_loader.py`, `secrets_loader.py`, `slugify.py`, `skill_parser.py`, `tools_md.py`, `compose_claude_md.py`, `status.py` | wire e schema stabili entro la MAJOR, coperti dai test, in CI |
+| **adapter** | `.codex-plugin/`, `.mcp.codex.json`, `hooks/codex_adapter.py`, `install_codex_hooks.py`, `.opencode/`, `.agents/` (Grok) | best-effort, validati sul campo e con test di traduzione |
+| **sperimentale** | `mcp_code_server.py` (`anja_code`, opt-in), `graph_html.py` / `graph_report.py`, provider `local` | possono cambiare senza MAJOR; `anja_code` non è un confine di sicurezza (SECURITY.md) |
+| **legacy** | `migrate_cc_memory.py`, `cc_memory_to_soul.py`, `cc_memory_sync.py` (import della memoria nativa di Claude Code) | mantenuti finché servono alle migrazioni, esclusi dalla coverage |
+| **dev** | `gen_tools_doc.py`, `release_check.py`, `bump.sh`, `tests/`, `pyproject.toml`, `.github/` | strumenti del repo, non distribuiti come funzionalità |
 
 ### Wire format pubblico
 
@@ -427,6 +441,7 @@ Il layout `.anjawiki/` è un **contratto pubblico** descritto in [`SCHEMA.md`](.
 | `ANJA_STEWARD_EVERY_H` | `24` | ore fra due lazy start (`--propose`) |
 | `ANJA_STEWARD_ARCHIVE_AFTER` | `14` | giorni dopo cui distilled/short vengono archiviate dal compact |
 | `ANJA_HUB` | — | Override path hub (per scope=project che vuole user-global) |
+| `ANJA_LOG` | — | `debug`: ogni eccezione gestita best-effort nel server viene tracciata su stderr (stdout resta solo JSON-RPC) |
 
 ## Filosofia
 
@@ -485,7 +500,8 @@ ubuntu/macos, più ruff, i check di coerenza e la coverage (sottoprocessi inclus
 
 - Python 3.9+: typing moderno (`X | None`, `list[T]`) va bene grazie a `from __future__ import annotations` in testa a ogni file
 - Solo stdlib nel core. Eccezioni motivate: `sqlite-vec`, `httpx` (opt-in per code search)
-- File <500 LOC per pezzo, eccetto `mcp_memory_server.py` (dispatcher centrale, motivato)
+- File <1000 LOC: il server è un package (`scripts/anja/`), un modulo per dominio; `TOOLS` di ogni modulo porta gli schemi dei suoi tool e `anja.server` li aggrega in `MODULE_ORDER` (= ordine sul wire)
+- Niente `except Exception: pass` muto: usa `log_exc("modulo.funzione", exc)` da `anja.config` (visibile con `ANJA_LOG=debug`)
 - Tool MCP: handler `def tool_<group>_<name>(args: dict) -> dict`, return JSON-serializable, errors come `{"error": "msg", "hint": "..."}`
 
 ## Changelog

@@ -2,6 +2,33 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.26.0 — 2026-09-04
+
+**Server in package per dominio, logging opt-in, audit dello steward (PIANO.md Fase 4).**
+Wire `tools/list` identico byte per byte alla v0.25.0.
+
+- **`scripts/anja/`**: `mcp_memory_server.py` (era 5.000 righe) diventa un entry point di 70
+  righe; il codice vive in `anja/server.py` (registry + dispatcher), `config.py` (env,
+  versione, secrets, `SCRIPTS_DIR`/`PLUGIN_ROOT`), `common.py` (helper condivisi) e un
+  modulo per dominio: `memory`, `sessions`, `soul`, `user`, `skills`, `wiki` (+`wiki_maint`,
+  `wiki_io`), `roadmap`, `code`, `graph`. Ogni modulo porta i propri schemi in `TOOLS`;
+  `anja.server.MODULE_ORDER` li aggrega nell'ordine del wire. Nessun file sopra le 1.000
+  righe. Divisione eseguita con uno splitter `ast` (assegnazione per uso, nessun ciclo di
+  import), non a mano.
+- **Compatibilità**: l'entry point ri-esporta handler `tool_*`, helper, `TOOLS`,
+  `TOOL_GROUPS`, `TOOL_HANDLERS`, `handle_request`, ... — chi caricava il file come modulo
+  (`steward.py`, AnjaHub, script esterni) continua a funzionare. `SERVER_VERSION` ora sta in
+  `scripts/anja/config.py` (`bump.sh` e `release_check.py` aggiornati).
+- **`ANJA_LOG=debug`**: i 29 `except Exception` che tacevano (pass/continue/return None)
+  ora chiamano `log_exc("modulo.funzione", exc)` → riga su stderr solo in debug; stdout
+  resta puro JSON-RPC. Un tool che solleva un'eccezione è sempre loggato come WARN.
+- **Steward audit**: ogni run `propose`/`apply`/`apply-pending` scrive
+  `.anjawiki/.steward/runs/<ts>-<mode>.json` (cluster, patch proposte/applicate/rifiutate
+  con motivo, errori; ritenzione 200). `steward.py --history [N]` e `/anja-steward --history`
+  riassumono gli ultimi run.
+- README: classificazione componenti (core / adapter / sperimentale / legacy / dev), albero
+  aggiornato, `ANJA_LOG`, convenzioni (file < 1000 righe, niente except muto).
+
 ## v0.25.0 — 2026-09-04
 
 **Registry verificabile, CI, sandbox `anja_code` (PIANO.md Fasi 1–3).** Wire identico

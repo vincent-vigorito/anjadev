@@ -98,15 +98,15 @@ Il tool `execute_python` è l'unico che esegue codice arbitrario. Ha già timeou
 - [x] **3.4** Opt-in esplicito: `anja_code` esce da `.mcp.codex.json` di default e si abilita con `ANJA_CODE_EXEC=1` (il server rifiuta `tools/call` senza l'env, `tools/list` lo annota). Documentare in README il modello di fiducia: "esegue Python locale con i permessi dell'utente, sandbox best-effort, non è un confine di sicurezza". **Decidere** (D3). — **S** — `.mcp.codex.json`, `README.md`
 - [x] **3.5** `SECURITY.md`: garanzie (path-traversal confinato a `.anjawiki/`, secrets mai in output, summarize con prompt-injection guard, delegate least-privilege), assunzioni (host fidato, `.secrets.env` gitignored), cosa NON è garantito (`anja_code`). Una pagina, così ogni nuovo tool si confronta con una lista. — **M**
 
-## Fase 4 — Manutenibilità → release v0.26.0
+## Fase 4 — Manutenibilità → release v0.26.0 ✅ (2026-09-04)
 
 Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già verdi.
 
-- [ ] **4.1** Layout: `scripts/anja/` package con `server.py` (JSON-RPC, dispatch, filtro gruppi, ~300 righe), `registry.py` (ToolSpec + aggregazione), `tools/{memory,sessions,soul,user,skills,wiki,roadmap,code,graph}.py`. `scripts/mcp_memory_server.py` resta come entry point sottile per non rompere i `.mcp.json` esistenti. — **L**
+- [x] **4.1** Layout: `scripts/anja/` package con `server.py` (JSON-RPC, dispatch, filtro gruppi, ~300 righe), `registry.py` (ToolSpec + aggregazione), `tools/{memory,sessions,soul,user,skills,wiki,roadmap,code,graph}.py`. `scripts/mcp_memory_server.py` resta come entry point sottile per non rompere i `.mcp.json` esistenti. — **L**
   *Accettazione:* nessun file > 1000 righe; `tools/list` identico byte per byte; test 1.2 e 1.3 verdi; smoke test cross-harness (`test_core_split`) verde.
-- [ ] **4.2** Logging diagnostico opt-in: `ANJA_LOG=debug` → ogni `except Exception` scrive `[anja_memory] <tool> <ExcType>: <msg>` su stderr (stderr è sicuro nel protocollo stdio). Default: solo errori non recuperabili. Nessun `pass` muto nel server; negli hook ammesso ma con commento che spiega perché. — **M** — tutti i 43 punti di F9
-- [ ] **4.3** Classificazione componenti in README: **core** (server memory, hook, comandi, steward), **adapter** (codex, opencode, grok config), **sperimentale** (`anja_code`, `graph.html`), **legacy** (script migrazione CC memory). Ogni script in `scripts/` appartiene a una classe. — **S**
-- [ ] **4.4** Steward osservabile: ogni run scrive `.anjawiki/.steward/runs/<timestamp>.json` con cluster, patch proposte/accettate/rifiutate e motivo. `/anja-steward --history` le mostra. — **M** — `scripts/steward.py`, `commands/anja-steward.md`
+- [x] **4.2** Logging diagnostico opt-in: `ANJA_LOG=debug` → ogni `except Exception` scrive `[anja_memory] <tool> <ExcType>: <msg>` su stderr (stderr è sicuro nel protocollo stdio). Default: solo errori non recuperabili. Nessun `pass` muto nel server; negli hook ammesso ma con commento che spiega perché. — **M** — tutti i 43 punti di F9
+- [x] **4.3** Classificazione componenti in README: **core** (server memory, hook, comandi, steward), **adapter** (codex, opencode, grok config), **sperimentale** (`anja_code`, `graph.html`), **legacy** (script migrazione CC memory). Ogni script in `scripts/` appartiene a una classe. — **S**
+- [x] **4.4** Steward osservabile: ogni run scrive `.anjawiki/.steward/runs/<timestamp>.json` con cluster, patch proposte/accettate/rifiutate e motivo. `/anja-steward --history` le mostra. — **M** — `scripts/steward.py`, `commands/anja-steward.md`
 
 ## Fase 5 — Distribuzione (opzionale, dopo v0.26)
 
@@ -131,7 +131,7 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
 |---------|------|-------------------------------|
 | v0.24.1 ✅ | 0 | Doc corretta, `find_duplicates` risolto, test tutti raccolti, fix quoting LOC |
 | v0.25.0 ✅ | 1 + 2 + 3 | Registry unico, README tools generato, CI, ruff, smoke su tutti i tool, sandbox `anja_code` chiusa, SECURITY.md, opt-in |
-| v0.26.0 | 4 | Server diviso per dominio, logging diagnostico, steward con audit |
+| v0.26.0 ✅ | 4 | Server diviso per dominio, logging diagnostico, steward con audit |
 | v0.27.0 | 5 | Pacchetto installabile |
 
 ## Cosa NON fare
@@ -150,5 +150,7 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
   dall'index condiviso.
 - I test hard-coded sull'interprete Homebrew (F7) avevano una ragione: il Python di sistema macOS
   non carica estensioni sqlite. Ora è esplicito (`ANJA_TEST_PYTHON`) e il test salta con diagnosi.
-- Fase 4 (divisione del monolite, logging opt-in, classificazione componenti, audit steward) e
-  Fase 5 (pacchetto) restano da fare.
+- Fase 4: il monolite è stato diviso con uno splitter `ast` (assegnazione helper per uso, check
+  dei cicli, ordine del wire conservato) e verificato con `cmp` sul `tools/list`. Il modulo `wiki`
+  ha richiesto tre file (`wiki`, `wiki_maint`, `wiki_io`) per restare sotto le 1.000 righe.
+- Fase 5 (pacchetto installabile) resta da fare.

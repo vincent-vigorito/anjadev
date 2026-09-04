@@ -67,11 +67,12 @@ def main() -> None:
     check("TOOL_HANDLERS keys == TOOLS", set(m.TOOL_HANDLERS) == set(names))
     check("ogni handler è callable", all(callable(h) for h in m.TOOL_HANDLERS.values()))
     check("override solo per tool esistenti", set(m._HANDLER_OVERRIDES) <= set(names))
-    stray = [k for k in vars(m) if k.startswith("tool_") and callable(getattr(m, k))
-             and k not in {"tool_" + m._wire_name(n) for n in names}
-             and getattr(m, k) not in m._HANDLER_OVERRIDES.values()]
+    expected = {"tool_" + m._wire_name(n) for n in names}
+    stray = [f"{mod.__name__}.{k}" for mod in m.MODULE_ORDER for k, v in vars(mod).items()
+             if k.startswith("tool_") and callable(v) and getattr(v, "__module__", "") == mod.__name__
+             and k not in expected and v not in m._HANDLER_OVERRIDES.values()]
     # tool_wiki_search è la keyword-only usata dall'ibrida: interna, non un tool.
-    check("funzioni tool_* senza registrazione (solo interne note)", set(stray) <= {"tool_wiki_search"}, str(stray))
+    check("funzioni tool_* senza registrazione (solo interne note)", set(stray) <= {"anja.wiki.tool_wiki_search"}, str(stray))
 
     print("§3 nomi wire")
     wires = [m._wire_name(n) for n in names]
@@ -110,17 +111,21 @@ def main() -> None:
     check("gruppo hub/sconosciuto ignorato senza crash", len(lst3["result"]["tools"]) == len(m3.TOOL_GROUPS["wiki"]))
 
     print("§6 registry incoerente → import fallisce")
-    bad_src = SERVER.read_text(encoding="utf-8").replace('"group": "roadmap",', '"group": "roadmapp",', 1)
-    bad = tmp / "bad_server.py"
-    bad.write_text(bad_src, encoding="utf-8")
-    spec = importlib.util.spec_from_file_location("anja_srv_bad", bad)
-    mod = importlib.util.module_from_spec(spec)
+    bad_pkg = tmp / "anja_bad"
+    shutil.copytree(PLUGIN / "scripts" / "anja", bad_pkg)
+    rp = bad_pkg / "roadmap.py"
+    rp.write_text(rp.read_text(encoding="utf-8").replace('"group": "roadmap",', '"group": "roadmapp",', 1), encoding="utf-8")
+    sys.path.insert(0, str(tmp))
     raised = ""
     try:
-        spec.loader.exec_module(mod)
+        importlib.import_module("anja_bad.server")
     except RuntimeError as e:
         raised = str(e)
-    check("gruppo inesistente → RuntimeError con diagnosi", "registry incoerente" in raised and "roadmapp" in raised)
+    finally:
+        sys.path.remove(str(tmp))
+        for k in [k for k in sys.modules if k.startswith("anja_bad")]:
+            del sys.modules[k]
+    check("gruppo inesistente → RuntimeError con diagnosi", "registry incoerente" in raised and "roadmapp" in raised, raised[:200])
 
     for k in ("ANJA_TOOL_GROUPS",):
         os.environ.pop(k, None)

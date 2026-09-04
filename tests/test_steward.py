@@ -135,6 +135,13 @@ def main():
           and all(p.exists() for p in (wiki / "sessions" / (date.today() - timedelta(days=1)).isoformat()).glob("*.md")), str(rep["compact"]))
     check(".steward-last scritto", (proj / ".anjawiki" / ".steward-last").is_file())
     rep2, _ = run_steward(proj, ["--apply"], {"ANJA_STEWARD_BIN": str(fake)})
+    runs_dir = proj / ".anjawiki" / ".steward" / "runs"
+    check("audit: un JSON per run in .anjawiki/.steward/runs/ (PIANO 4.4)", runs_dir.is_dir() and len(list(runs_dir.glob("*-apply.json"))) >= 2,
+          str(list(runs_dir.glob("*")) if runs_dir.is_dir() else "manca"))
+    check("audit: rep.run_log punta al file", isinstance(rep2.get("run_log"), str) and Path(rep2["run_log"]).is_file())
+    hist, _ = run_steward(proj, ["--history", "5"], {"ANJA_STEWARD_BIN": str(fake)})
+    check("--history riassume i run (patch applicate, pagine, rifiuti)", hist.get("count", 0) >= 2
+          and hist["runs"][0]["mode"] == "apply" and "patches_applied" in hist["runs"][0], str(hist)[:300])
     check("secondo giro: 0 cluster (già distilled)", rep2["triage"]["clusters"] == 0 and rep2["triage"]["skipped"]["already_distilled"] == 3, str(rep2.get("triage")))
 
     print("pagina nuova con 2 session citate (patch entro max 3)")

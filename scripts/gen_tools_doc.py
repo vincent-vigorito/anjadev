@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """gen_tools_doc.py — sezione "MCP tools" del README generata dal registry (PIANO.md 1.4).
 
-Il registry (`TOOLS` in mcp_memory_server.py) è l'unica fonte: gruppi, conteggi e
+Il registry (`TOOLS` aggregato in scripts/anja/server.py dai moduli per dominio) è l'unica fonte: gruppi, conteggi e
 descrizioni nel README ne discendono, così non vanno in deriva.
 
 Uso:

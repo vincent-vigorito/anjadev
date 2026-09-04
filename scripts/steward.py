@@ -515,9 +515,54 @@ def run(root: Path, mode: str, since: str = "7d", only_clusters: list[str] | Non
                 rep["compact"] = {"archived": len(crep["archived"]), "purged": len(crep["purged"]), "kept": crep["kept"]}
         if mode in ("apply", "propose", "apply-pending"):
             touch_last(root)
+            _write_run_log(root, rep)
     finally:
         lock.release()
     return rep
+
+
+def runs_dir_for(root: Path) -> Path:
+    return state_dir_for(root) / ".steward" / "runs"
+
+
+def _write_run_log(root: Path, rep: dict) -> None:
+    """Audit (PIANO 4.4): ogni run che tocca stato (propose/apply/apply-pending) lascia un JSON
+    con cluster, patch proposte/applicate/rifiutate e motivi, in .anjawiki/.steward/runs/.
+    Serve a capire nel tempo se lo steward distilla bene o degrada il wiki."""
+    try:
+        d = runs_dir_for(root)
+        d.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S-%f")  # microsecondi: due run nello stesso secondo non collidono
+        out = d / f"{ts}-{rep['mode']}.json"
+        out.write_text(json.dumps(rep, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        rep["run_log"] = str(out)
+        # ritenzione: ultimi 200 run
+        runs = sorted(d.glob("*.json"))
+        for old in runs[:-200]:
+            old.unlink(missing_ok=True)
+    except Exception as e:  # l'audit non deve mai bloccare lo steward
+        rep.setdefault("errors", []).append(f"run log: {e}")
+
+
+def history(root: Path, limit: int = 10) -> dict:
+    """Riassunto degli ultimi run (dal più recente)."""
+    d = runs_dir_for(root.resolve())
+    runs = sorted(d.glob("*.json"), reverse=True)[:limit] if d.is_dir() else []
+    items = []
+    for f in runs:
+        try:
+            r = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            items.append({"file": f.name, "error": "json non leggibile"}); continue
+        items.append({
+            "file": f.name, "mode": r.get("mode"), "clusters": len(r.get("clusters", [])),
+            "patches_applied": r.get("patches_applied", 0), "patches_rejected": r.get("patches_rejected", 0),
+            "distilled": r.get("distilled", 0), "errors": r.get("errors", []),
+            "pages": sorted({res.get("slug") for c in r.get("clusters", []) for res in c.get("results", []) if res.get("slug")}),
+            "rejected_reasons": [rej.get("reason") if isinstance(rej, dict) else str(rej)
+                                 for c in r.get("clusters", []) for rej in c.get("rejected", [])][:10],
+        })
+    return {"root": str(root), "runs": items, "count": len(items), "dir": str(d)}
 
 
 def main() -> None:
@@ -528,7 +573,12 @@ def main() -> None:
     g.add_argument("--propose", action="store_true")
     g.add_argument("--apply-pending", nargs="*", metavar="CLUSTER_ID")
     ap.add_argument("--since", default="7d")
+    ap.add_argument("--history", nargs="?", const=10, type=int, metavar="N",
+                    help="mostra gli ultimi N run (audit in .anjawiki/.steward/runs/) ed esce")
     args = ap.parse_args()
+    if args.history is not None:
+        print(json.dumps(history(Path(args.root), args.history), ensure_ascii=False, indent=2))
+        return
     mode = "apply" if args.apply else "propose" if args.propose else "apply-pending" if args.apply_pending is not None else "dry-run"
     rep = run(Path(args.root), mode, args.since, args.apply_pending or None)
     print(json.dumps(rep, ensure_ascii=False, indent=2, default=str))

@@ -45,7 +45,7 @@ def main(argv: list[str]) -> int:
     }
     m = re.search(r"^\*\*Stato\*\*: v(\d+\.\d+\.\d+)", readme, re.M)
     versions["README Stato"] = m.group(1) if m else "<assente>"
-    for srv in ("mcp_memory_server.py", "mcp_code_server.py"):
+    for srv in ("anja/config.py", "mcp_code_server.py"):
         m = re.search(r'^SERVER_VERSION\s*=\s*"([^"]+)"', (PLUGIN / "scripts" / srv).read_text(), re.M)
         versions[srv] = m.group(1) if m else "<assente>"
     ver = plugin["version"]

@@ -1,6 +1,6 @@
 ---
 description: Wiki steward — rivedi/applica le patch distillate dai journal (distill + compact)
-argument-hint: [--apply | --propose | --since 7d]
+argument-hint: [--apply | --propose | --since 7d | --history N]
 allowed-tools: Bash, Read, AskUserQuestion
 ---
 
@@ -40,6 +40,11 @@ Argomenti: `$ARGUMENTS`
    Le session dei cluster diventano `distilled: true`; il compact archivia distilled/short
    vecchie (`sessions/archive/`, stub con Summary + transcript_path).
 5. Riporta: pagine toccate, patch rifiutate e perché, session distillate/archiviate.
+6. **Storico** (`$ARGUMENTS` contiene `--history`, o l'utente chiede "cosa ha fatto lo steward"):
+   `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/steward.py" --root . --history [N]` legge l'audit
+   in `.anjawiki/.steward/runs/` (un JSON per run propose/apply) e riassume: patch applicate/
+   rifiutate, pagine toccate, motivi dei rifiuti, errori. Usalo per capire se lo steward
+   sta distillando bene o degradando il wiki.
 
 Niente LLM per il triage; una call per cluster (max 5) per il distill. Non girare mai a
 SessionEnd: lo steward è periodico (lazy 24h in `--propose`, routine notturna in `--apply`).

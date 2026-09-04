@@ -109,7 +109,7 @@ def main() -> None:
 
     print("§5.3 nessun import/sys.path verso anja-hub/webapp in anjadev")
     hits = []
-    for f in list((PLUGIN_ROOT / "scripts").glob("*.py")) + list((PLUGIN_ROOT / "hooks").rglob("*")) \
+    for f in list((PLUGIN_ROOT / "scripts").rglob("*.py")) + list((PLUGIN_ROOT / "hooks").rglob("*")) \
             + list((PLUGIN_ROOT / "commands").rglob("*.md")):
         if f.is_file():
             try:
@@ -119,11 +119,13 @@ def main() -> None:
             if HUB_IMPORT_RE.search(txt):
                 hits.append(f.name)
     check("grep hub-imports = 0", not hits, str(hits))
-    src = SERVER.read_text(encoding="utf-8")
-    # v0.25: i gruppi sono derivati da TOOLS (campo "group") + GROUP_ORDER, non più un literal.
-    group_order = src.split("GROUP_ORDER = (", 1)[1].split(")", 1)[0]
+    # v0.25: gruppi derivati da TOOLS (campo "group") + GROUP_ORDER; v0.26: package scripts/anja/.
+    pkg = PLUGIN_ROOT / "scripts" / "anja"
+    srv_src = (pkg / "server.py").read_text(encoding="utf-8")
+    group_order = srv_src.split("GROUP_ORDER = (", 1)[1].split(")", 1)[0]
     check("GROUP_ORDER senza gruppi hub", not any(f'"{g}"' in group_order for g in HUB_GROUPS))
-    check("nessun tool con group hub", not any(f'"group": "{g}"' in src for g in HUB_GROUPS))
+    pkg_src = "\n".join(f.read_text(encoding="utf-8") for f in pkg.glob("*.py"))
+    check("nessun tool con group hub", not any(f'"group": "{g}"' in pkg_src for g in HUB_GROUPS))
 
     print("§5.4 smoke core senza AnjaHub: roadmap.add + code.status L0 + wiki upsert")
     out, err = rpc(project, [
