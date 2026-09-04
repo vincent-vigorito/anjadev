@@ -2,6 +2,24 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.28.0 — 2026-09-04
+
+**Pacchetto pip/pipx (PIANO.md Fase 5).** `pipx install git+https://github.com/vincent-vigorito/anjadev`
+installa `anja-memory-server` e `anja-code-server`: gli host MCP non-Claude non hanno più
+bisogno di symlink e `PLUGIN_ROOT`.
+
+- `pyproject.toml`: `[project]` `anjadev`, versione dinamica da `anja.config.SERVER_VERSION`
+  (`bump.sh` resta l'unica fonte), `requires-python >= 3.9`, dipendenze zero, extra `[vector]`
+  (sqlite-vec, httpx) e `[dev]`. Package `anja` ← `scripts/anja`, `anja_scripts` ← `scripts`
+  (nessun file spostato: il layout del plugin Claude Code è invariato; `scripts/__init__.py`
+  vuoto aggiunto).
+- `anja.config.SCRIPTS_DIR`: nel repo è `scripts/`, nel pacchetto è `anja_scripts/` — tutti i
+  caricamenti per path dei moduli CLI (wiki_embed, code_db, summarize, ...) funzionano in
+  entrambi i layout.
+- CI: job `package` che fa `pip install .` e verifica i due entry point sul wire da una cwd
+  esterna (57 tool; `anja_code` vuoto senza opt-in).
+- README: sezione "Install come pacchetto Python" con la tabella plugin vs pip.
+
 ## v0.27.0 — 2026-09-04
 
 **Similarità coseno vera + CI coverage riparata.**

@@ -11,7 +11,7 @@ PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_memory"
 
 
-SERVER_VERSION = "0.27.0"
+SERVER_VERSION = "0.28.0"
 
 
 SCOPE = os.environ.get("ANJA_SCOPE", "project")  # project | hub | agent
@@ -37,7 +37,20 @@ _SECRETS_LOADED = _load_secrets_env()
 
 
 # Cartelle del plugin: `scripts/` (moduli CLI condivisi: code_db, wiki_embed, ...) e la root.
-SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+# Due layout: repo/plugin Claude Code (scripts/anja/config.py → scripts/) oppure pacchetto pip
+# (site-packages/anja/config.py, moduli CLI nel package `anja_scripts` accanto).
+def _resolve_scripts_dir() -> Path:
+    here = Path(__file__).resolve().parents[1]
+    if (here / "code_db.py").is_file():
+        return here
+    try:
+        import anja_scripts  # pacchetto pip: scripts/ installato come anja_scripts/
+        return Path(anja_scripts.__file__).resolve().parent
+    except ImportError:
+        return here
+
+
+SCRIPTS_DIR = _resolve_scripts_dir()
 PLUGIN_ROOT = SCRIPTS_DIR.parent
 
 
