@@ -9,7 +9,8 @@
 - File `.anjawiki/.schema-version` contiene una stringa semver-like (es. `1.0`).
 - **MAJOR** bump = rottura layout/frontmatter required/log format → consumatori devono fare migration.
 - **MINOR** bump = aggiunte non-breaking (nuove sotto-cartelle ignorabili, nuovi frontmatter opzionali).
-- Current: **1.1** (aggiunge la famiglia trust/lifecycle opzionale, v. sotto).
+- Current: **1.2** (1.1: famiglia trust/lifecycle opzionale; 1.2: `config.json["sessions"]`,
+  `meta.yaml` `last_compact`, ritenzione dell'archivio sessioni — tutto opzionale).
 
 ## Layout cartelle
 
@@ -50,6 +51,30 @@ type: dev | personal | research | business | automation
 created: YYYY-MM-DD
 tags: [tag1, tag2]
 ```
+
+`last_compact: "<ISO 8601>"` (opzionale, 1.2): scritto da `compact_sessions.py --apply`
+(chiave top-level, anche nel layout annidato `project:`/`anja:`). `/anja-status` lo espone.
+
+## config.json
+
+JSON, config del plugin. Sezioni note: `memory` (budget del context) e, dalla 1.2,
+`sessions` — ritenzione dei journal (giorni; assenti → default):
+
+```json
+"sessions": {
+  "archive_short_after_days": 14,      // < 3 msg o < 5 min → archive
+  "archive_distilled_after_days": 14,  // distilled dallo steward → archive
+  "archive_worth_after_days": 30,      // worth mai distillata → archive (summary conservato)
+  "purge_archive_after_days": 180,     // stub archiviati SENZA summary → cancellati
+  "archive_max": 500                   // cap soft: oltre, via i più vecchi senza summary
+}
+```
+
+Ciclo di vita di una sessione: `sessions/<data>/<id>.md` (attiva) → `sessions/archive/<data>/<id>.md`
+(stub: frontmatter + `archived: true` + Summary + `transcript_path`) → cancellata solo se senza
+summary e oltre `purge_archive_after_days` o oltre `archive_max`. Uno stub con summary non viene
+mai cancellato dal plugin. Il compact gira a SessionStart ogni 24 h (budget 20 azioni, stato in
+`.anjawiki/.compact-last`) e dentro lo steward.
 
 ## Frontmatter pagine wiki
 

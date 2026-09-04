@@ -2,6 +2,28 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.30.0 — 2026-09-04
+
+**Ritenzione esplicita delle sessioni** (prima: nessun cap, nessuna scadenza, compact solo
+quando girava lo steward, finestra fissa di 7 giorni che lasciava sessioni attive per sempre).
+
+- `compact_sessions.py`: policy in `.anjawiki/config.json` → `sessions` (default: short 14 gg,
+  distilled 14 gg, **worth mai distillata 30 gg → archiviata col summary**, stub archiviati
+  senza summary 180 gg → cancellati, cap soft 500 sull'archivio: via i più vecchi senza summary,
+  uno stub con summary non si cancella mai). `--budget N` limita le azioni per run; a ogni
+  `--apply` scrive `last_compact` in `meta.yaml` e `.anjawiki/.compact-last`. Report con
+  `policy`, `purged_archive`, `archive_over_cap`, `budget_exhausted`.
+- **Compact lazy a SessionStart** ogni 24 h (`ANJA_COMPACT`, `ANJA_COMPACT_EVERY_H`,
+  `ANJA_COMPACT_BUDGET`=20), detached, indipendente dallo steward; mai da sessioni programmatiche.
+- **Steward**: finestra del triage automatica dall'ultimo run riuscito (+1 giorno, fra 7 e 30;
+  30 senza `.steward-last`); `--since` esplicito la forza. `triage.since_days` nel report.
+- `/anja-init` scrive la sezione `sessions` in `config.json` (backfill da `/anja-upgrade`);
+  `.schema-version` 1.1 → **1.2** (upgrade automatico entro la stessa MAJOR).
+- `status.py` (`/anja-status`): `sessions.active / archived / last_compact`.
+- SCHEMA.md 1.2: sezione `config.json`, `meta.yaml.last_compact`, ciclo di vita di una sessione.
+- Test: +14 check compact (worth stale, purge, cap, budget, policy da config, last_compact,
+  lazy decision, status), +5 steward (finestra auto).
+
 ## v0.29.0 — 2026-09-04
 
 **Antigravity CLI (`agy`) a esperienza piena — validato sul campo (agy 1.1.26).**

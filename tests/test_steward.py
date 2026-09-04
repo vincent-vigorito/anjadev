@@ -109,7 +109,7 @@ def main():
     fake = fake_llm(tmp, good)
 
     print("dry-run: LLM mock, nessuna scrittura")
-    rep, rc = run_steward(proj, [], {"ANJA_STEWARD_BIN": str(fake)})
+    rep, rc = run_steward(proj, ["--since", "7d"], {"ANJA_STEWARD_BIN": str(fake)})
     check("rc 0, 1 cluster (3 worth stesso giorno), 4 short recenti skippate, 3 vecchie fuori finestra",
           rc == 0 and rep["triage"]["clusters"] == 1 and rep["triage"]["skipped"]["too_short"] == 4 and rep["triage"]["skipped"]["out_of_window"] == 3, str(rep.get("triage")))
     c = rep["clusters"][0]
@@ -202,6 +202,18 @@ def main():
     check("ANJA_STEWARD=0 → opt-out", any("opt-out" in e for e in rep["errors"]))
     spec = importlib.util.spec_from_file_location("ss", PLUGIN / "hooks" / "session_start.py")
     ss = importlib.util.module_from_spec(spec); spec.loader.exec_module(ss)
+    _sw = importlib.util.spec_from_file_location("sw_mod", PLUGIN / "scripts" / "steward.py")
+    sw_mod = importlib.util.module_from_spec(_sw); _sw.loader.exec_module(sw_mod)
+    check("finestra auto (v0.30): senza .steward-last → 30 giorni", sw_mod._since_days(None, proj6) == 30)
+    (proj6 / ".anjawiki").mkdir(parents=True, exist_ok=True)
+    (proj6 / ".anjawiki" / ".steward-last").write_text(str(time.time() - 10 * 86400))
+    check("finestra auto: ultimo run 10 giorni fa → 11", sw_mod._since_days(None, proj6) == 11, str(sw_mod._since_days(None, proj6)))
+    (proj6 / ".anjawiki" / ".steward-last").write_text(str(time.time() - 3600))
+    check("finestra auto: ultimo run 1h fa → minimo 7", sw_mod._since_days(None, proj6) == 7)
+    (proj6 / ".anjawiki" / ".steward-last").write_text(str(time.time() - 90 * 86400))
+    check("finestra auto: 90 giorni → massimo 30", sw_mod._since_days(None, proj6) == 30)
+    check("--since esplicito vince", sw_mod._since_days("7d", proj6) == 7)
+    (proj6 / ".anjawiki" / ".steward-last").unlink()
     check("lazy: nessun .steward-last → spawn", ss.steward_lazy_decision(proj6, {}) == "spawn")
     (proj6 / ".anjawiki" / ".steward-last").write_text(str(time.time() - 3600))
     check("lazy: last 1h fa → skip:recent", ss.steward_lazy_decision(proj6, {}) == "skip:recent")

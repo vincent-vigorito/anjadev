@@ -85,7 +85,7 @@ def _write_config_json(target: Path) -> None:
             existing = json.loads(cfg_path.read_text(encoding="utf-8"))
         except Exception:
             existing = {}
-        if "memory" in existing:
+        if "memory" in existing and "sessions" in existing:
             return  # già presente, skip
     else:
         existing = {}
@@ -97,19 +97,38 @@ def _write_config_json(target: Path) -> None:
         "wiki_match_max_pages": 3,
         "cc_memory_mirror": True,
     })
+    # Ritenzione dei journal (compact_sessions.py, SCHEMA.md "config.json"): giorni.
+    existing.setdefault("sessions", {
+        "archive_short_after_days": 14,
+        "archive_distilled_after_days": 14,
+        "archive_worth_after_days": 30,
+        "purge_archive_after_days": 180,
+        "archive_max": 500,
+    })
     cfg_path.write_text(json.dumps(existing, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 # Schema version del wiki: bump alla rottura del wire format (path/frontmatter/log format).
 # Consumatori esterni (hub, tool di sync) leggono .anjawiki/.schema-version per gate migration.
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
 
 
 def _write_schema_version(target: Path) -> None:
-    """Scrive <target>/.anjawiki/.schema-version. Non-destructive: skippa se già presente."""
+    """Scrive <target>/.anjawiki/.schema-version. Crea se manca; aggiorna se la versione presente
+    è più vecchia entro la stessa MAJOR (MINOR = aggiunte non-breaking, es. 1.1 → 1.2).
+    Mai downgrade, mai salto di MAJOR (quello è una migrazione esplicita)."""
     sv = target / ".schema-version"
     if not sv.is_file():
         sv.write_text(SCHEMA_VERSION + "\n", encoding="utf-8")
+        return
+    try:
+        cur = tuple(int(x) for x in sv.read_text(encoding="utf-8").strip().split("."))
+        new = tuple(int(x) for x in SCHEMA_VERSION.split("."))
+    except ValueError:
+        return
+    if cur[0] == new[0] and cur < new:
+        sv.write_text(SCHEMA_VERSION + "\n", encoding="utf-8")
+        print(f"[anja] .schema-version {'.'.join(map(str, cur))} → {SCHEMA_VERSION}")
 
 
 # Tool groups attivi nel plugin standalone (Fase P-Plugin, F-AnjadevCoreSplit v0.21).

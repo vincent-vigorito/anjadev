@@ -134,9 +134,23 @@ def touch_last(root: Path) -> None:
 
 # ---------------------------------------------------------------- pass 1: triage
 
-def _since_days(s: str) -> int:
-    m = re.fullmatch(r"(\d+)d?", (s or "7d").strip())
-    return int(m.group(1)) if m else 7
+SINCE_MIN_DAYS, SINCE_MAX_DAYS = 7, 30
+
+
+def _since_days(s: str | None, root: Path | None = None) -> int:
+    """Finestra del triage. Esplicita (`--since 7d`) oppure automatica (v0.30): dall'ultimo
+    run riuscito (`.steward-last`) + 1 giorno, fra 7 e 30; senza `.steward-last` → 30.
+    Prima era fissa a 7 giorni: una sessione worth oltre la finestra restava per sempre."""
+    if s:
+        m = re.fullmatch(r"(\d+)d?", s.strip())
+        if m:
+            return int(m.group(1))
+    if root is None:
+        return SINCE_MIN_DAYS
+    age = last_run_age_sec(root)
+    if age is None:
+        return SINCE_MAX_DAYS
+    return max(SINCE_MIN_DAYS, min(SINCE_MAX_DAYS, int(age // 86400) + 1))
 
 
 def triage(sroot: Path, since_days: int) -> dict:
@@ -430,7 +444,7 @@ def mark_distilled(cluster: dict) -> int:
 
 # ---------------------------------------------------------------- run
 
-def run(root: Path, mode: str, since: str = "7d", only_clusters: list[str] | None = None) -> dict:
+def run(root: Path, mode: str, since: str | None = None, only_clusters: list[str] | None = None) -> dict:
     """mode ∈ dry-run | propose | apply | apply-pending."""
     root = root.resolve()
     wroot, sroot = wiki_root_for(root), sessions_root_for(root)
@@ -475,8 +489,10 @@ def run(root: Path, mode: str, since: str = "7d", only_clusters: list[str] | Non
                 rep["distilled"] += mark_distilled(cl)
             pending_path.unlink(missing_ok=True)
         else:
-            tri = triage(sroot, _since_days(since))
-            rep["triage"] = {"clusters": len(tri["clusters"]), "skipped": tri["skipped"], "deferred": tri["clusters_deferred"]}
+            since_days = _since_days(since, root)
+            tri = triage(sroot, since_days)
+            rep["triage"] = {"clusters": len(tri["clusters"]), "skipped": tri["skipped"], "deferred": tri["clusters_deferred"],
+                             "since_days": since_days}
             harness_hint = None
             proposals = []
             for cl in tri["clusters"]:
@@ -574,7 +590,7 @@ def main() -> None:
     g.add_argument("--apply", action="store_true")
     g.add_argument("--propose", action="store_true")
     g.add_argument("--apply-pending", nargs="*", metavar="CLUSTER_ID")
-    ap.add_argument("--since", default="7d")
+    ap.add_argument("--since", default=None, help="finestra triage, es. 7d (default: automatica dall'ultimo run, 7-30 giorni)")
     ap.add_argument("--history", nargs="?", const=10, type=int, metavar="N",
                     help="mostra gli ultimi N run (audit in .anjawiki/.steward/runs/) ed esce")
     args = ap.parse_args()

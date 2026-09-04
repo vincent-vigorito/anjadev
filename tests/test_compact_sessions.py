@@ -64,7 +64,7 @@ def make_wiki(tmp: Path) -> Path:
     (wiki / "concepts" / "only-one.md").write_text("---\ntitle: Only one\ntype: concept\ncreated: 2026-01-01\nupdated: 2026-01-01\n---\n\n# Only one\n\n## Summary\n\nx\n")
     (wiki / "index.md").write_text("# index\n\n[[only-one]]\n")
     (wiki / "log.md").write_text("# log\n")
-    old = (date.today() - timedelta(days=30)).isoformat()
+    old = (date.today() - timedelta(days=20)).isoformat()   # > 14 (short/distilled) ma < 30 (worth stale)
     recent = (date.today() - timedelta(days=2)).isoformat()
     S = {}
     def put(sid, day, **kw):
@@ -148,6 +148,60 @@ def main():
           any(w.get("code") == "session-volume" for w in r.get("warnings", [])) and r["summary"]["session_volume"]["sessions"] == 11, str(r.get("summary")))
     r = res(out[6])
     check("sessions.read trova ancora lo stub archiviato per id", "error" not in r and "archived" in json.dumps(r), str(r)[:200])
+
+    print("v0.30: ritenzione — worth stale, archivio (purge/cap), budget, policy da config, last_compact")
+    tmp2 = Path(tempfile.mkdtemp()); proj2 = make_wiki(tmp2); sroot2 = proj2 / ".anjawiki" / "wiki" / "sessions"
+    stale = (date.today() - timedelta(days=45)).isoformat()
+    d = sroot2 / stale; d.mkdir()
+    (d / "100010-cli-claude-ws01.md").write_text(session_md("100010-cli-claude-ws01", stale, msgs=10, duration="30m", summary="- decisione presa"))
+    rep = cs.run(proj2, apply=False, purge_machine=True)
+    check("worth mai distillata a 45d → archive (col summary), worth a 20d → keep",
+          any("ws01" in a["file"] and "worth stale" in a["why"] for a in rep["archived"]) and not any("w001" in a["file"] for a in rep["archived"]), str(rep["archived"]))
+    check("policy default nel report", rep["policy"]["archive_worth_after_days"] == 30 and rep["policy"]["archive_max"] == 500)
+    # archivio: stub senza summary vecchio → purge; con summary → resta; cap soft
+    adir = sroot2 / "archive"
+    ancient = (date.today() - timedelta(days=200)).isoformat(); mid = (date.today() - timedelta(days=100)).isoformat()
+    def stub(name, day, summary):
+        (adir / day).mkdir(parents=True, exist_ok=True)
+        body = f"---\ntitle: Session {name}\ntype: session\ncreated: {day}\nupdated: {day}\nid: {name}\ndate: {day}\narchived: true\n---\n\n# Session {name} (archived)\n\n## Summary\n\n{summary}\n"
+        (adir / day / f"{name}.md").write_text(body)
+    stub("a-nosum-old", ancient, "<!-- Vuoto by design. -->")
+    stub("a-sum-old", ancient, "- summary vero")
+    stub("a-nosum-mid", mid, "<!-- Vuoto by design. -->")
+    stub("a-sum-mid", mid, "- altro summary")
+    rep = cs.run(proj2, apply=False, purge_machine=True)
+    pa = [p["file"] for p in rep["purged_archive"]]
+    check("purge: stub senza summary a 200d via; con summary resta; a 100d resta", any("a-nosum-old" in f for f in pa) and not any("a-sum-old" in f or "a-nosum-mid" in f for f in pa), str(pa))
+    rep = cs.run(proj2, apply=False, purge_machine=True, archive_max=1)
+    pa = [p["file"] for p in rep["purged_archive"]]
+    check("cap soft 1: via anche a-nosum-mid, mai gli stub con summary → over_cap segnalato",
+          any("a-nosum-mid" in f for f in pa) and not any("a-sum" in f for f in pa) and rep.get("archive_over_cap", 0) >= 1, str(rep.get("archive_over_cap")) + str(pa))
+    rep = cs.run(proj2, apply=False, purge_machine=True, budget=2)
+    check("budget 2: al massimo 2 azioni e budget_exhausted", rep["actions"] == 2 and rep.get("budget_exhausted") is True, str(rep["actions"]))
+    (proj2 / ".anjawiki" / "config.json").write_text(json.dumps({"sessions": {"archive_worth_after_days": 60, "purge_archive_after_days": 400}}))
+    rep = cs.run(proj2, apply=False, purge_machine=True)
+    check("policy da config.json: worth 60 → ws01 resta, purge 400 → niente purge",
+          not any("ws01" in a["file"] for a in rep["archived"]) and not rep["purged_archive"] and rep["policy"]["archive_worth_after_days"] == 60, str(rep["policy"]))
+    (proj2 / ".anjawiki" / "config.json").unlink()
+    rep = cs.run(proj2, apply=True, purge_machine=True)
+    meta = (proj2 / ".anjawiki" / "meta.yaml").read_text()
+    check("--apply: last_compact in meta.yaml + .compact-last", "last_compact:" in meta and (proj2 / ".anjawiki" / ".compact-last").is_file(), meta)
+    check("--apply: a-nosum-old cancellato, a-sum-old ancora lì, ws01 archiviato col summary",
+          not list(adir.rglob("a-nosum-old.md")) and list(adir.rglob("a-sum-old.md")) and "decisione presa" in next(adir.rglob("100010-cli-claude-ws01.md")).read_text())
+    rep = cs.run(proj2, apply=True, purge_machine=True)
+    check("idempotente", not rep["archived"] and not rep["purged_archive"])
+    # lazy compact a SessionStart
+    spec = importlib.util.spec_from_file_location("ss", PLUGIN / "hooks" / "session_start.py")
+    ss = importlib.util.module_from_spec(spec); spec.loader.exec_module(ss)
+    check("lazy compact: .compact-last appena scritto → skip:recent", ss.compact_lazy_decision(proj2, {}) == "skip:recent")
+    (proj2 / ".anjawiki" / ".compact-last").unlink()
+    check("lazy compact: nessun .compact-last → spawn", ss.compact_lazy_decision(proj2, {}) == "spawn")
+    check("lazy compact: ANJA_COMPACT=0 → skip", ss.compact_lazy_decision(proj2, {"ANJA_COMPACT": "0"}) == "skip:opt-out")
+    check("lazy compact: sdk → skip", ss.compact_lazy_decision(proj2, {"CLAUDE_CODE_ENTRYPOINT": "sdk-py"}) == "skip:programmatic")
+    r = subprocess.run([PYTHON, str(PLUGIN / "scripts" / "status.py"), "--target", str(proj2 / ".anjawiki")], capture_output=True, text=True, timeout=30)
+    st = json.loads(r.stdout).get("sessions", {})
+    check("status.py: sessions.active/archived/last_compact", st.get("archived", 0) >= 3 and st.get("last_compact"), str(st))
+    shutil.rmtree(tmp2, ignore_errors=True)
 
     shutil.rmtree(tmp, ignore_errors=True)
     print("=" * 44)

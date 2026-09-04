@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.29.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.30.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -364,10 +364,21 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi: `memory`, `s
 > di default (`include_sessions=true` per includerli). Il hook SessionEnd **non journala** le
 > sessioni-macchina (Agent SDK / `claude -p` / `ANJA_JOURNAL=0`, entrypoint `sdk-*`, 0 messaggi)
 > e l'auto-summary parte solo se la sessione *vale* (≥3 messaggi, ≥5 min, e volume o tool di
-> scrittura o parole di segnale). I diari vecchi si compattano senza LLM:
-> `python3 scripts/compact_sessions.py --root <proj> [--apply] [--purge-machine]` — le
-> sessioni-macchina vengono cancellate, le short archiviate come stub in `sessions/archive/`
-> (frontmatter + Summary + transcript_path), le *worth* restano per lo steward.
+> scrittura o parole di segnale). I diari si compattano senza LLM
+> (`scripts/compact_sessions.py`, lazy a SessionStart ogni 24 h e dentro lo steward), con una
+> **politica di ritenzione esplicita** (v0.30, `.anjawiki/config.json` → `sessions`):
+>
+> | Sessione | Dopo | Cosa succede |
+> |---|---|---|
+> | short (< 3 msg o < 5 min) | 14 gg | archiviata come stub (`sessions/archive/`, Summary e transcript conservati) |
+> | distilled dallo steward | 14 gg | archiviata |
+> | worth mai distillata | 30 gg | archiviata col summary (prima restava attiva per sempre) |
+> | stub archiviato senza summary | 180 gg | cancellato |
+> | archivio oltre 500 stub | subito | via i più vecchi senza summary (cap soft: uno stub con summary non si cancella mai) |
+>
+> Lo steward guarda una finestra automatica dall'ultimo run (7–30 gg, non più 7 fissi), così
+> nulla resta indietro se il progetto è usato a intermittenza. `last_compact` in `meta.yaml`
+> e `/anja-status` dicono quando è avvenuta l'ultima ottimizzazione.
 
 > Dal **v0.21** questo server espone SOLO i gruppi core del plugin CLI. I tool
 > hub-only (`agents`, `tasks`, `workspace`, `kanban`, `goals`, `pp`) sono stati
@@ -448,7 +459,10 @@ Il layout `.anjawiki/` è un **contratto pubblico** descritto in [`SCHEMA.md`](.
 | `ANJA_STEWARD_BIN` | `ANJA_SUMMARY_BIN` → harness → PATH | CLI per il distill (`claude` \| `grok` \| `codex` \| path \| `none`) |
 | `ANJA_STEWARD_MODEL` | `haiku` | modello per `claude -p` nel distill |
 | `ANJA_STEWARD_EVERY_H` | `24` | ore fra due lazy start (`--propose`) |
-| `ANJA_STEWARD_ARCHIVE_AFTER` | `14` | giorni dopo cui distilled/short vengono archiviate dal compact |
+| `ANJA_STEWARD_ARCHIVE_AFTER` | `14` | legacy: giorni per short/distilled (la policy completa è in `.anjawiki/config.json` → `sessions`) |
+| `ANJA_COMPACT` | `1` | `0` = niente compact lazy a SessionStart |
+| `ANJA_COMPACT_EVERY_H` | `24` | ore fra due compact lazy |
+| `ANJA_COMPACT_BUDGET` | `20` | max azioni (archive/purge) per compact lazy |
 | `ANJA_HUB` | — | Override path hub (per scope=project che vuole user-global) |
 | `ANJA_LOG` | — | `debug`: ogni eccezione gestita best-effort nel server viene tracciata su stderr (stdout resta solo JSON-RPC) |
 

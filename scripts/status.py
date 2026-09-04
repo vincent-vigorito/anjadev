@@ -117,9 +117,18 @@ def main():
         1 for name in ROOT_PAGES if (wiki / f"{name}.md").is_file()
     )
 
+    sessions_dir = wiki / "sessions"
+    active = sum(1 for f in sessions_dir.rglob("*.md") if "archive" not in f.relative_to(sessions_dir).parts) if sessions_dir.is_dir() else 0
+    archived = sum(1 for _ in (sessions_dir / "archive").rglob("*.md")) if (sessions_dir / "archive").is_dir() else 0
+    last_compact = None
+    if (target / "meta.yaml").is_file():
+        for ln in (target / "meta.yaml").read_text(encoding="utf-8").splitlines():
+            if ln.startswith("last_compact:"):
+                last_compact = ln.split(":", 1)[1].strip().strip('"')
     out = {
         "wiki_root": str(wiki),
         "identity": meta,
+        "sessions": {"active": active, "archived": archived, "last_compact": last_compact},
         "counts": counts,
         "total_pages": sum(counts.values()) + root_pages_present,
         "last_log_entries": last_log_entries(wiki / "log.md", args.log_tail),

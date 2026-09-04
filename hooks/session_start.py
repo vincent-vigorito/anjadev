@@ -301,6 +301,43 @@ def _maybe_spawn_steward(root: Path) -> None:
         pass
 
 
+_COMPACT_EVERY_SEC = int(float(os.environ.get("ANJA_COMPACT_EVERY_H", "24")) * 3600)
+_COMPACT_BUDGET = int(os.environ.get("ANJA_COMPACT_BUDGET", "20"))
+
+
+def compact_lazy_decision(root: Path, env: dict) -> str:
+    """spawn | skip:<motivo>. Compact dei journal (archive/purge, niente LLM) ogni 24h,
+    indipendente dallo steward (v0.30): prima archiviava solo quando girava lo steward."""
+    if env.get("ANJA_COMPACT", "1") == "0":
+        return "skip:opt-out"
+    if env.get("ANJA_JOURNAL", "1") == "0" or (env.get("CLAUDE_CODE_ENTRYPOINT") or "cli").startswith("sdk"):
+        return "skip:programmatic"
+    last = _steward_state_dir(root) / ".compact-last"
+    if last.is_file():
+        try:
+            if time.time() - float(last.read_text().strip()) < _COMPACT_EVERY_SEC:
+                return "skip:recent"
+        except Exception:
+            pass
+    return "spawn"
+
+
+def _maybe_spawn_compact(root: Path) -> None:
+    if compact_lazy_decision(root, os.environ) != "spawn":
+        return
+    script = Path(__file__).resolve().parent.parent / "scripts" / "compact_sessions.py"
+    if not script.is_file():
+        return
+    child_env = os.environ.copy()
+    child_env.update({"ANJA_JOURNAL": "0", "ANJA_AUTO_SUMMARY": "0", "ANJA_WIKI_EMBED": "0"})
+    try:
+        subprocess.Popen([sys.executable, str(script), "--root", str(root), "--apply", "--budget", str(_COMPACT_BUDGET)],
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         start_new_session=True, env=child_env)
+    except Exception:
+        pass
+
+
 def _print_steward_pending(root: Path) -> None:
     pf = _steward_state_dir(root) / ".steward-pending.json"
     if not pf.is_file():
@@ -326,6 +363,8 @@ def main() -> None:
     _sweep_pending_summaries(root, kind)
     # Steward lazy (propose-only, ogni 24h) — dopo lo sweep, mai a SessionEnd.
     _maybe_spawn_steward(root)
+    # Compact lazy (archive/purge dei journal, ogni 24h, budget 20 azioni): senza LLM.
+    _maybe_spawn_compact(root)
 
     last_entries = []
     if log_file.is_file():

@@ -27,7 +27,8 @@ Argomenti: `$ARGUMENTS`
    ```bash
    python3 "${CLAUDE_PLUGIN_ROOT}/scripts/steward.py" --root . [--since 7d]
    ```
-   Stdout = JSON: `triage` (cluster/skipped), `clusters[].patches` proposte.
+   Stdout = JSON: `triage` (cluster/skipped, `since_days` = finestra automatica dall'ultimo run,
+   7–30 giorni; `--since 7d` per forzarla), `clusters[].patches` proposte.
    Mostrale come sopra. Se `errors` contiene `no-llm-cli`: spiega `ANJA_STEWARD_BIN`
    (claude|grok|codex|path) e fermati.
 3. **Conferma per cluster** con `AskUserQuestion` (apply / skip). Le patch su pagine
