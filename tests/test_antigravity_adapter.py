@@ -97,7 +97,7 @@ def main() -> None:
     check("tool agy nelle stats", "write_to_file" in text and "view_file" in text)
     check("cc_session_id = conversationId", common["conversationId"] in text)
     check("transcript normalizzato in .anjawiki/transcripts/antigravity/", (project / ".anjawiki" / "transcripts" / "antigravity" / f"{common['conversationId']}.jsonl").is_file())
-    r2 = _run("stop", {**common, "terminationReason": "NO_TOOL_CALL"}, hooks_cwd, env)
+    _run("stop", {**common, "terminationReason": "NO_TOOL_CALL"}, hooks_cwd, env)
     check("secondo Stop (ogni turno) → upsert, non un secondo file", len(list((project / ".anjawiki" / "wiki" / "sessions").rglob("*.md"))) == 1)
 
     print("§2 pre-invocation → contesto iniettato")
