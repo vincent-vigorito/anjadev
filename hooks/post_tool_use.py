@@ -25,7 +25,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 _WIKI_WRITE_TOOLS = {"Write", "Edit", "MultiEdit"}
 
 

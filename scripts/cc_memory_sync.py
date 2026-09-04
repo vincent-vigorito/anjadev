@@ -148,7 +148,7 @@ def sync(project_root: Path, dry_run: bool = False, quiet: bool = False) -> int:
     feedback_target = memory_dir / "anja_feedback.md"
 
     if dry_run:
-        print(f"[dry-run] would write:")
+        print("[dry-run] would write:")
         print(f"  - {user_target} ({len(user_md)} bytes)")
         print(f"  - {feedback_target} ({len(feedback_md)} bytes)")
         return 0

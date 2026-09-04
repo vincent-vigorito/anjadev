@@ -16,13 +16,14 @@ import importlib.util
 import json
 import os
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
 import time
 from datetime import date, timedelta
 from pathlib import Path
+
+from _helpers import cov_env
 
 PLUGIN = Path(__file__).resolve().parents[1]
 PY = os.environ.get("ANJA_TEST_PYTHON") or sys.executable
@@ -49,7 +50,8 @@ def session_md(sid, day, msgs, duration, prompts, summary="", tools="[Read, Edit
 
 def make_wiki(tmp: Path) -> Path:
     proj = tmp / "proj"; wiki = proj / ".anjawiki" / "wiki"
-    for d in ("sessions", "concepts", "entities"): (wiki / d).mkdir(parents=True)
+    for d in ("sessions", "concepts", "entities"):
+        (wiki / d).mkdir(parents=True)
     (proj / ".anjawiki" / "meta.yaml").write_text("name: proj\n")
     (wiki / "concepts" / "core-split.md").write_text("---\ntitle: Core split\ntype: concept\ncreated: 2026-06-01\nupdated: 2026-06-01\n---\n\n# Core split\n\n## Summary\n\nTesto umano originale.\n\n## Dettagli\n\nd\n")
     old = (date.today() - timedelta(days=100)).isoformat()
@@ -80,7 +82,7 @@ def fake_llm(tmp: Path, reply: str, name="claude") -> Path:
 
 
 def run_steward(proj: Path, mode_args: list, env_extra: dict) -> dict:
-    env = {"PATH": "/usr/bin:/bin", "HOME": str(proj.parent), "ANJA_JOURNAL": "0"}
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(proj.parent), "ANJA_JOURNAL": "0", **cov_env()}
     env.update(env_extra)
     r = subprocess.run([PY, str(PLUGIN / "scripts" / "steward.py"), "--root", str(proj)] + mode_args,
                        capture_output=True, text=True, env=env, timeout=60)

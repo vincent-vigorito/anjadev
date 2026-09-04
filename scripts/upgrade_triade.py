@@ -23,9 +23,7 @@ Usage:
 
 import argparse
 import importlib.util
-import json
 import shutil
-import subprocess
 import sys
 from datetime import date
 from pathlib import Path

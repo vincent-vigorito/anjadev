@@ -8,7 +8,6 @@ tools/list sia in tools/call. Import in-process del server (env minimo).
 from __future__ import annotations
 
 import importlib.util
-import json
 import os
 import shutil
 import sys

@@ -27,8 +27,6 @@ import importlib.util
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
-
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 
@@ -210,7 +208,7 @@ def embed_wiki(
             errors.append(f"batch {i}: expected {len(batch)} vectors, got {len(vectors)}")
             continue
         last_mod = datetime.now(timezone.utc).isoformat()
-        for (md, slug, meta, input_text, body_hash, page_type), vec in zip(batch, vectors):
+        for (md, slug, _meta, input_text, body_hash, page_type), vec in zip(batch, vectors):
             try:
                 code_db.upsert_wiki_page(
                     db=db,
@@ -229,7 +227,7 @@ def embed_wiki(
 
     # 4. Orphan cleanup: pagine in DB ma non più nel filesystem
     deleted_orphans = 0
-    for file_path, row in existing_in_db.items():
+    for file_path, _row in existing_in_db.items():
         if file_path not in fs_paths:
             code_db.delete_chunks_for_file(db, file_path, kind="wiki")
             deleted_orphans += 1

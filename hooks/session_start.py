@@ -20,7 +20,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import journal_policy  # noqa: E402
 
-
 LOG_HEADER_RE = re.compile(r"^## \[(\d{4}-\d{2}-\d{2})\] (\w[\w-]*) \| (.+?)$", re.M)
 
 # Auto-summary sweep config
@@ -185,8 +184,8 @@ def _suggest_anja_init(cwd: Path) -> None:
         return
     marker.write_text(str(cwd) + "\n", encoding="utf-8")
     print(f"[anja] Questo progetto ({cwd.name}) non ha ancora un wiki anja.", file=sys.stderr)
-    print(f"[anja] Per inizializzarlo: /anja-init --type dev", file=sys.stderr)
-    print(f"[anja] (suggerimento mostrato 1 volta sola — marker in ~/.anja-nudged/)", file=sys.stderr)
+    print("[anja] Per inizializzarlo: /anja-init --type dev", file=sys.stderr)
+    print("[anja] (suggerimento mostrato 1 volta sola — marker in ~/.anja-nudged/)", file=sys.stderr)
 
 
 def _sessions_root_for(root: Path, kind: str) -> Path:

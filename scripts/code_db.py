@@ -9,11 +9,9 @@ Schema:
 Lazy import sqlite-vec (deps esterna ~5MB). Errore graceful se manca.
 """
 
-import json
 import sqlite3
 from pathlib import Path
 from typing import Optional
-
 
 CODE_DB_FILENAME = "code-index.db"
 
@@ -25,7 +23,7 @@ def _ensure_sqlite_vec(db: sqlite3.Connection) -> None:
     except ImportError:
         raise RuntimeError(
             "sqlite-vec required for code search. Install: pip install sqlite-vec"
-        )
+        ) from None
     db.enable_load_extension(True)
     import sqlite_vec
     sqlite_vec.load(db)
@@ -54,7 +52,7 @@ def open_db(anjawiki_root: Path, dim: int = 1536, create_if_missing: bool = True
 
 def _init_schema(db: sqlite3.Connection, dim: int) -> None:
     """Crea tabelle se mancano. Idempotente."""
-    db.executescript(f"""
+    db.executescript("""
         CREATE TABLE IF NOT EXISTS chunks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_path TEXT NOT NULL,

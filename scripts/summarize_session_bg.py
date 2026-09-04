@@ -35,7 +35,6 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 
-
 _KNOWN_BINS = ("claude", "grok", "codex")
 _EXTRA_DIRS = (Path.home() / ".local" / "bin", Path("/usr/local/bin"), Path("/opt/homebrew/bin"),
                Path.home() / ".claude" / "local", Path("/usr/bin"))

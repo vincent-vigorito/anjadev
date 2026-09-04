@@ -13,11 +13,9 @@ import json
 import os
 import subprocess
 import sys
-from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
-
 
 HOOKS_DIR = Path(__file__).resolve().parent
 SESSION_END_PATH = HOOKS_DIR / "session_end.py"

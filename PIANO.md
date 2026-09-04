@@ -77,26 +77,26 @@ Chiude la causa strutturale della deriva (F2–F5, F18). Prerequisito della Fase
   *Accettazione:* `gen_tools_doc.py --check` esce 1 se il README è diverso dal generato (usato in CI, Fase 2).
 - [x] **1.5** Check release `scripts/release_check.py`: versione uguale in README/manifest/server, conteggio tool e gruppi coerente, conteggio slash command = file in `commands/`, CHANGELOG ha la voce della versione corrente. `bump.sh` lo chiama alla fine. — **S**
 
-## Fase 2 — Test e CI → dentro v0.25.0
+## Fase 2 — Test e CI → dentro v0.25.0 ✅ (2026-09-04)
 
-- [ ] **2.1** `pyproject.toml` minimale: metadata, `[tool.pytest.ini_options] testpaths = ["tests"]`, `[tool.ruff]` con regole `E,F,I,B` e `line-length = 110`. Nessuna dipendenza runtime aggiunta. — **S**
-- [ ] **2.2** Ruff: prima corsa con `--fix` solo per import inutilizzati e ordinamento; le altre violazioni vanno in `extend-ignore` con un TODO datato, così la CI parte verde. — **M**
-- [ ] **2.3** GitHub Actions `.github/workflows/ci.yml`: matrice Python 3.9 / 3.10 / 3.12 × ubuntu / macos. Job: `ruff check`, `pytest -q`, `gen_tools_doc.py --check`, `release_check.py`. — **M**
+- [x] **2.1** `pyproject.toml` minimale: metadata, `[tool.pytest.ini_options] testpaths = ["tests"]`, `[tool.ruff]` con regole `E,F,I,B` e `line-length = 110`. Nessuna dipendenza runtime aggiunta. — **S**
+- [x] **2.2** Ruff: prima corsa con `--fix` solo per import inutilizzati e ordinamento; le altre violazioni vanno in `extend-ignore` con un TODO datato, così la CI parte verde. — **M**
+- [x] **2.3** GitHub Actions `.github/workflows/ci.yml`: matrice Python 3.9 / 3.10 / 3.12 × ubuntu / macos. Job: `ruff check`, `pytest -q`, `gen_tools_doc.py --check`, `release_check.py`. — **M**
   *Accettazione:* badge verde su `main`. Se 3.9 passa in matrice, il README abbassa il requisito a 3.9; altrimenti resta 3.10 e il codice smette di fingere.
-- [ ] **2.4** Coverage con `coverage.py` (stdlib-adiacente, nessuna dipendenza runtime): soglia iniziale = valore misurato meno 2 punti, alzata a ogni release. — **S**
-- [ ] **2.5** Test mancanti, in ordine di rischio: (a) `code_search` livello 1 ripgrep su un repo fixture; (b) `embed_providers` con provider mock che restituisce vettori deterministici → `wiki.embed`, `graph.semantic_neighbors`, `code.search` livello 3; (c) skill write-side (`save/patch/rollback/delete`) con verifica history; (d) `mcp_code_server` timeout, cap output, env scrubbing. — **L** — `tests/test_code_search.py`, `test_embed_mock.py`, `test_skills_write.py`, `test_code_server.py`
+- [x] **2.4** Coverage con `coverage.py` (stdlib-adiacente, nessuna dipendenza runtime): soglia iniziale = valore misurato meno 2 punti, alzata a ogni release. — **S**
+- [x] **2.5** Test mancanti, in ordine di rischio: (a) `code_search` livello 1 ripgrep su un repo fixture; (b) `embed_providers` con provider mock che restituisce vettori deterministici → `wiki.embed`, `graph.semantic_neighbors`, `code.search` livello 3; (c) skill write-side (`save/patch/rollback/delete`) con verifica history; (d) `mcp_code_server` timeout, cap output, env scrubbing. — **L** — `tests/test_code_search.py`, `test_embed_mock.py`, `test_skills_write.py`, `test_code_server.py`
 
-## Fase 3 — Sandbox `anja_code` → release v0.25.x
+## Fase 3 — Sandbox `anja_code` → dentro v0.25.0 ✅ (2026-09-04)
 
 Il tool `execute_python` è l'unico che esegue codice arbitrario. Ha già timeout, cap output, limite memoria e env scrubbing; mancano quattro cose.
 
-- [ ] **3.1** Kill dell'intero process group su timeout: `os.killpg(proc.pid, SIGKILL)` (già `start_new_session=True`), fallback `proc.kill()` su Windows. — **S** — `scripts/mcp_code_server.py:166-169`
+- [x] **3.1** Kill dell'intero process group su timeout: `os.killpg(proc.pid, SIGKILL)` (già `start_new_session=True`), fallback `proc.kill()` su Windows. — **S** — `scripts/mcp_code_server.py:166-169`
   *Accettazione:* script che spawna `sleep 1000` in background → dopo timeout nessun processo orfano.
-- [ ] **3.2** Lettura output a streaming con cap: thread che legge stdout/stderr a chunk e si ferma al limite, poi kill. Rimpiazza `communicate()`. — **M** — `scripts/mcp_code_server.py:165`
+- [x] **3.2** Lettura output a streaming con cap: thread che legge stdout/stderr a chunk e si ferma al limite, poi kill. Rimpiazza `communicate()`. — **M** — `scripts/mcp_code_server.py:165`
   *Accettazione:* script che stampa 1GB non fa crescere la RSS del server oltre il cap + margine.
-- [ ] **3.3** Cleanup workspace: `shutil.rmtree(tmp, ignore_errors=True)` nel `finally` quando il cwd è stato creato da `mkdtemp`. — **S** — `scripts/mcp_code_server.py:73,200`
-- [ ] **3.4** Opt-in esplicito: `anja_code` esce da `.mcp.codex.json` di default e si abilita con `ANJA_CODE_EXEC=1` (il server rifiuta `tools/call` senza l'env, `tools/list` lo annota). Documentare in README il modello di fiducia: "esegue Python locale con i permessi dell'utente, sandbox best-effort, non è un confine di sicurezza". **Decidere** (D3). — **S** — `.mcp.codex.json`, `README.md`
-- [ ] **3.5** `SECURITY.md`: garanzie (path-traversal confinato a `.anjawiki/`, secrets mai in output, summarize con prompt-injection guard, delegate least-privilege), assunzioni (host fidato, `.secrets.env` gitignored), cosa NON è garantito (`anja_code`). Una pagina, così ogni nuovo tool si confronta con una lista. — **M**
+- [x] **3.3** Cleanup workspace: `shutil.rmtree(tmp, ignore_errors=True)` nel `finally` quando il cwd è stato creato da `mkdtemp`. — **S** — `scripts/mcp_code_server.py:73,200`
+- [x] **3.4** Opt-in esplicito: `anja_code` esce da `.mcp.codex.json` di default e si abilita con `ANJA_CODE_EXEC=1` (il server rifiuta `tools/call` senza l'env, `tools/list` lo annota). Documentare in README il modello di fiducia: "esegue Python locale con i permessi dell'utente, sandbox best-effort, non è un confine di sicurezza". **Decidere** (D3). — **S** — `.mcp.codex.json`, `README.md`
+- [x] **3.5** `SECURITY.md`: garanzie (path-traversal confinato a `.anjawiki/`, secrets mai in output, summarize con prompt-injection guard, delegate least-privilege), assunzioni (host fidato, `.secrets.env` gitignored), cosa NON è garantito (`anja_code`). Una pagina, così ogni nuovo tool si confronta con una lista. — **M**
 
 ## Fase 4 — Manutenibilità → release v0.26.0
 
@@ -122,7 +122,7 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
 | D1 | `wiki.find_duplicates`: ripristinare o rimuovere? | ✅ **Ripristinato nel gruppo `graph`.** È un dedup batch di tutto il wiki (coppie sopra soglia), non un doppione di `graph.semantic_neighbors` che è un k-NN per singola query. Non era mai stato in un gruppo dalla v0.15.0 | 0.2 |
 | D2 | `mcp_bybit_lite.py`: repo separato o `experimental/`? | ✅ **Eliminato** (resta nella storia git a `5311913` se servisse) | 0.6 |
 | D3 | `anja_code` opt-in con env, o resta montato per Codex? | ✅ **Opt-in** via env, con SECURITY.md | 3.4 |
-| D4 | Requisito Python: dichiarare 3.9 (verificato) o tenere 3.10? | ✅ **Decide la matrice CI** (2.3). Se 3.9 è verde, dichiararlo | 2.3 |
+| D4 | Requisito Python: dichiarare 3.9 (verificato) o tenere 3.10? | ✅ **3.9+** dichiarato: suite verde su 3.9 locale, matrice CI 3.9/3.10/3.12 la sorveglia | 2.3 |
 | D5 | Layout Fase 4: package `scripts/anja/` o cartella piatta `scripts/tools_*.py`? | ✅ **Package** `scripts/anja/` | 4.1 |
 
 ## Mappa release
@@ -130,8 +130,7 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
 | Release | Fasi | Contenuto visibile all'utente |
 |---------|------|-------------------------------|
 | v0.24.1 ✅ | 0 | Doc corretta, `find_duplicates` risolto, test tutti raccolti, fix quoting LOC |
-| v0.25.0 | 1 + 2 | Registry unico, README tools generato, CI, ruff, smoke su tutti i tool |
-| v0.25.x | 3 | Sandbox `anja_code` chiusa, SECURITY.md, opt-in |
+| v0.25.0 ✅ | 1 + 2 + 3 | Registry unico, README tools generato, CI, ruff, smoke su tutti i tool, sandbox `anja_code` chiusa, SECURITY.md, opt-in |
 | v0.26.0 | 4 | Server diviso per dominio, logging diagnostico, steward con audit |
 | v0.27.0 | 5 | Pacchetto installabile |
 
@@ -141,3 +140,15 @@ Solo dopo Fase 1 e 2: il refactor deve avere test di regressione del wire già v
 - Non aggiungere dipendenze runtime obbligatorie: il core stdlib è il motivo per cui gira su 4 host.
 - Non far scrivere il wiki allo steward in automatico allo SessionStart: la scelta "propose, apply umano" è corretta e va difesa.
 - Non fondere Fase 4 con Fase 1: refactor e cambio di registry insieme rendono impossibile capire chi ha rotto il wire.
+
+## Note di esecuzione (2026-09-04)
+
+- Coverage misurata localmente con sottoprocessi: la soglia in CI è la baseline meno 2 punti.
+  La CI la misura su ubuntu/py3.12 con sqlite-vec installato, quindi include `test_embed_mock`.
+- Scoperti e chiusi durante le fasi 2–3, non previsti dal piano: `anja_code` rifiutava lo scope
+  `project` (F-split v0.21 mai adattato); `code.reindex --force` cancellava le pagine wiki
+  dall'index condiviso.
+- I test hard-coded sull'interprete Homebrew (F7) avevano una ragione: il Python di sistema macOS
+  non carica estensioni sqlite. Ora è esplicito (`ANJA_TEST_PYTHON`) e il test salta con diagnosi.
+- Fase 4 (divisione del monolite, logging opt-in, classificazione componenti, audit steward) e
+  Fase 5 (pacchetto) restano da fare.

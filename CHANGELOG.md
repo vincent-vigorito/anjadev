@@ -2,6 +2,39 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.25.0 — 2026-09-04
+
+**Registry verificabile, CI, sandbox `anja_code` (PIANO.md Fasi 1–3).** Wire identico
+byte per byte alla v0.24.1 per `anja_memory`; `anja_code` diventa opt-in.
+
+- **Registry unico** (`mcp_memory_server.py`): ogni voce di `TOOLS` porta `group`;
+  `TOOL_GROUPS`, `TOOL_HANDLERS` e i nomi wire sono derivati da `_build_registry()`, che
+  rifiuta all'import un registry incoerente (tool senza gruppo, handler mancante, collisione
+  di nomi). Rimosso l'handler orfano `wiki.search_keyword` (senza schema né gruppo).
+- **Test**: `test_registry` (28 check: biiezione TOOLS↔gruppi↔handler↔wire, filtro in list e
+  call, import che fallisce su registry rotto); smoke parametrico con **copertura obbligatoria
+  di tutti i 57 tool** (HOME temporanea: `user.*` non tocca più `~/.anja` reale);
+  `test_embed_mock` (pipeline embedding end-to-end senza rete, skip se sqlite-vec non è
+  caricabile); `test_code_server` (16 check sulla sandbox). Interprete dei sottoprocessi
+  via `ANJA_TEST_PYTHON`.
+- **Docs dal codice**: `scripts/gen_tools_doc.py` genera la sezione "MCP tools" del README
+  fra marker (`--check` in CI); `scripts/release_check.py` verifica versioni, conteggi
+  citati in prosa/manifest e test raccoglibili (agganciato a `bump.sh`).
+- **CI** (`.github/workflows/ci.yml`): pytest su 3.9/3.10/3.12 × ubuntu/macos, ruff,
+  check di coerenza, coverage con sottoprocessi (`tests/_coverage_hook`) e soglia.
+  `pyproject.toml` per pytest/ruff/coverage, nessuna dipendenza runtime. Ruff pulito
+  (69 fix automatici + 10 manuali; `E501`/`E702` ignorati con TODO datato).
+- **Requisito Python 3.9+** (verificato: `from __future__ import annotations` ovunque).
+- **`anja_code` opt-in**: senza `ANJA_CODE_EXEC=1` il server parte ma `tools/list` è vuoto e
+  `tools/call` rifiuta con hint. Sandbox: scope `project` supportato (prima "invalid scope":
+  mai adattato al core split v0.21), `os.killpg` su timeout (i figli dello script non
+  sopravvivono più), output letto a streaming con cap (RAM del server limitata, prima
+  `communicate()` bufferizzava tutto), workspace `strict` rimosso a fine call.
+- **Fix** `code.reindex --force`: cancellava TUTTI i chunk, comprese le pagine wiki
+  (`graph.*` poi "no wiki pages in index"); ora solo `kind='code'`.
+- `ANJA_EMBED_PROVIDER=mock`: provider deterministico bag-of-words, solo per test.
+- `SECURITY.md`: garanzie (con test che le coprono), assunzioni, cosa non è garantito.
+
 ## v0.24.1 — 2026-09-04
 
 **Igiene (Fase 0 di PIANO.md).** Nessun cambio al wire tranne un tool ripristinato.

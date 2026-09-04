@@ -13,7 +13,6 @@ Standalone: python3 tests/test_journal_policy.py
 from __future__ import annotations
 
 import json
-import os
 import shutil
 import stat
 import subprocess
@@ -22,9 +21,11 @@ import tempfile
 import time
 from pathlib import Path
 
+from _helpers import cov_env
+
 PLUGIN = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PLUGIN / "hooks"))
-import journal_policy as jp   # noqa: E402
+import journal_policy as jp  # noqa: E402
 
 HOOK_PY = "/usr/bin/python3" if Path("/usr/bin/python3").is_file() else sys.executable   # come hooks.json (python3 di sistema)
 PASS = FAIL = 0
@@ -64,7 +65,7 @@ def make_transcript(tmp: Path, n_user: int, entrypoint: str = "cli", span_sec: i
 
 
 def run_hook(proj: Path, payload: dict, env_extra: dict) -> tuple[int, str]:
-    env = {"PATH": "/usr/bin:/bin", "HOME": str(proj.parent), "ANJA_AUTO_SUMMARY": "0", "ANJA_WIKI_EMBED": "0"}
+    env = {"PATH": "/usr/bin:/bin", "HOME": str(proj.parent), "ANJA_AUTO_SUMMARY": "0", "ANJA_WIKI_EMBED": "0", **cov_env()}
     env.update(env_extra)
     r = subprocess.run([HOOK_PY, str(PLUGIN / "hooks" / "session_end.py")], input=json.dumps(payload),
                        capture_output=True, text=True, cwd=str(proj), env=env, timeout=30)
@@ -147,23 +148,23 @@ def main():
     print("summarize_session_bg harness-agnostico")
     target = [p for p in sessions(proj) if "cli-claude" in p.name][0]
     r = subprocess.run([sys.executable, str(PLUGIN / "scripts" / "summarize_session_bg.py"), "--session-file", str(target)],
-                       capture_output=True, text=True, env={"PATH": str(tmp / "emptybin"), "HOME": str(tmp), "ANJA_SUMMARY_BIN": "none"}, timeout=30)
+                       capture_output=True, text=True, env={"PATH": str(tmp / "emptybin"), "HOME": str(tmp), "ANJA_SUMMARY_BIN": "none", **cov_env()}, timeout=30)
     check("ANJA_SUMMARY_BIN=none / nessun CLI: rc 0, placeholder intatto", r.returncode == 0 and "<!-- Vuoto by design" in target.read_text(), r.stderr[-200:])
     fakebin = tmp / "bin"; fakebin.mkdir()
     grok = fakebin / "grok"
     grok.write_text("#!/bin/sh\n# finto: stampa il flag e 2 bullet\n[ \"$1\" = \"-p\" ] || { echo 'no -p' >&2; exit 2; }\necho '- bullet uno'\necho '- bullet due'\n")
     grok.chmod(grok.stat().st_mode | stat.S_IEXEC)
     r = subprocess.run([sys.executable, str(PLUGIN / "scripts" / "summarize_session_bg.py"), "--session-file", str(target)],
-                       capture_output=True, text=True, env={"PATH": str(fakebin), "HOME": str(tmp)}, timeout=30)
+                       capture_output=True, text=True, env={"PATH": str(fakebin), "HOME": str(tmp), **cov_env()}, timeout=30)
     t2 = target.read_text()
     check("grok finto in PATH (nessun claude): summary scritto via -p", r.returncode == 0 and "- bullet uno" in t2 and "<!-- Vuoto" not in t2, r.stderr[-200:] + (proj / ".anjawiki/wiki/.bg-summarize.log").read_text()[-300:] if (proj / ".anjawiki/wiki/.bg-summarize.log").is_file() else "")
     r = subprocess.run([sys.executable, str(PLUGIN / "scripts" / "summarize_session_bg.py"), "--session-file", str(target)],
-                       capture_output=True, text=True, env={"PATH": str(fakebin), "HOME": str(tmp)}, timeout=30)
+                       capture_output=True, text=True, env={"PATH": str(fakebin), "HOME": str(tmp), **cov_env()}, timeout=30)
     check("idempotente: già riassunto → skip rc 0", r.returncode == 0)
     claude_fake = fakebin / "claude"; claude_fake.write_text("#!/bin/sh\necho \"- via claude $4\"\n"); claude_fake.chmod(0o755)
     target2 = [p for p in sessions(proj) if "cli-unknown" in p.name][0]
     r = subprocess.run([sys.executable, str(PLUGIN / "scripts" / "summarize_session_bg.py"), "--session-file", str(target2)],
-                       capture_output=True, text=True, env={"PATH": str(fakebin), "HOME": str(tmp), "ANJA_SUMMARY_BIN": str(claude_fake)}, timeout=30)
+                       capture_output=True, text=True, env={"PATH": str(fakebin), "HOME": str(tmp), "ANJA_SUMMARY_BIN": str(claude_fake), **cov_env()}, timeout=30)
     check("ANJA_SUMMARY_BIN path esplicito → claude con --model", "- via claude haiku" in target2.read_text(), target2.read_text()[-200:])
 
     shutil.rmtree(tmp, ignore_errors=True)

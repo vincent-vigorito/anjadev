@@ -14,11 +14,9 @@ ANJA_EMBED_API_KEY. Model override via ANJA_EMBED_MODEL.
 Stdlib + `httpx` per API providers. Sentence-transformers solo se `local`.
 """
 
-import json
 import os
 import sys
 from typing import Optional
-
 
 # ============================================================
 # ABC
@@ -48,7 +46,7 @@ def _http_post_json(url: str, headers: dict, payload: dict, timeout: int = 60) -
     try:
         import httpx  # noqa
     except ImportError:
-        raise RuntimeError("httpx required for API embedding providers. Install: pip install httpx")
+        raise RuntimeError("httpx required for API embedding providers. Install: pip install httpx") from None
     with httpx.Client(timeout=timeout) as client:
         resp = client.post(url, headers=headers, json=payload)
         resp.raise_for_status()
@@ -210,7 +208,7 @@ class LocalProvider(EmbedProvider):
             raise RuntimeError(
                 "Local embedding requires sentence-transformers. "
                 "Install: pip install sentence-transformers"
-            )
+            ) from None
         self.model = model_name or os.environ.get("ANJA_EMBED_MODEL", "BAAI/bge-small-en")
         from sentence_transformers import SentenceTransformer
         self._st = SentenceTransformer(self.model)
@@ -227,6 +225,31 @@ class LocalProvider(EmbedProvider):
 # ============================================================
 # Factory
 # ============================================================
+
+class MockProvider(EmbedProvider):
+    """Provider deterministico SENZA rete, solo per test (ANJA_EMBED_PROVIDER=mock).
+
+    Bag-of-words hashato su `dim` bucket, normalizzato L2: testi che condividono parole
+    hanno similarità coseno alta, testi diversi bassa. Non ha alcun valore semantico."""
+
+    name = "mock"
+    model = "mock-bow"
+    dim = 64
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        import hashlib
+        import math
+        import re as _re
+        out = []
+        for text in texts:
+            vec = [0.0] * self.dim
+            for tok in _re.findall(r"[a-z0-9_]+", (text or "").lower()):
+                h = int(hashlib.md5(tok.encode("utf-8")).hexdigest(), 16)
+                vec[h % self.dim] += 1.0 if (h >> 8) % 2 else -1.0
+            norm = math.sqrt(sum(v * v for v in vec)) or 1.0
+            out.append([v / norm for v in vec])
+        return out
+
 
 def get_provider() -> Optional[EmbedProvider]:
     """Crea provider basato su env ANJA_EMBED_PROVIDER.
@@ -262,7 +285,10 @@ def get_provider() -> Optional[EmbedProvider]:
     if name == "local":
         return LocalProvider()
 
-    raise ValueError(f"unknown ANJA_EMBED_PROVIDER: {name!r}. Valid: openrouter|voyage|openai|local|none")
+    if name == "mock":
+        return MockProvider()
+
+    raise ValueError(f"unknown ANJA_EMBED_PROVIDER: {name!r}. Valid: openrouter|voyage|openai|local|mock|none")
 
 
 # ============================================================

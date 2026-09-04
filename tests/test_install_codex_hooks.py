@@ -5,7 +5,6 @@ import json
 import tempfile
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "scripts" / "install_codex_hooks.py"
 

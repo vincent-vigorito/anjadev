@@ -19,7 +19,6 @@ Usage:
 """
 
 import argparse
-import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -202,7 +201,7 @@ def main():
 
     entries = load_cc_memory(project_root)
     if not entries:
-        print(f"\n(Directory CC memory esiste ma è vuota. Niente da migrare.)")
+        print("\n(Directory CC memory esiste ma è vuota. Niente da migrare.)")
         return
 
     print(f"\nTrovate {len(entries)} entries CC memory:")
@@ -223,7 +222,7 @@ def main():
             return
 
     update_soul_md(soul_path, sections, dry_run=False)
-    print(f"\n✓ SOUL.md aggiornato.")
+    print("\n✓ SOUL.md aggiornato.")
     print(f"  CC memory in {cm_dir} è invariata (sarà sovrascritta dal sync M-Mem 3 quando attivo).")
 
 

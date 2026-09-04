@@ -29,7 +29,6 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-
 DEFAULT_CONFIG = {
     "hot_budget_tokens": 1500,
     "warm_budget_tokens": 3000,

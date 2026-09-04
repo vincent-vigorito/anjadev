@@ -71,7 +71,8 @@ def generate_token() -> str:
 
 
 def _detect_user_name() -> str:
-    import os, getpass
+    import getpass
+    import os
     return os.environ.get("USER") or os.environ.get("USERNAME") or getpass.getuser() or "user"
 
 
@@ -158,7 +159,7 @@ def _register_anja_memory_mcp(project_root: Path, *, force_update_env: bool = Fa
         env = existing.setdefault("env", {})
         if "ANJA_TOOL_GROUPS" not in env:
             env["ANJA_TOOL_GROUPS"] = PLUGIN_DEFAULT_TOOL_GROUPS
-            print(f"[anja] backfilled ANJA_TOOL_GROUPS in existing anja_memory MCP")
+            print("[anja] backfilled ANJA_TOOL_GROUPS in existing anja_memory MCP")
         elif env.get("ANJA_TOOL_GROUPS"):
             # Backfill dei gruppi core aggiunti dopo (wiki, roadmap, code) e rimozione dei
             # gruppi hub spostati in anja_hub_runtime (v0.21): il server li ignorerebbe
@@ -368,7 +369,7 @@ def main() -> None:
     print(f"  Mode:  {args.mode}")
     print(f"  Name:  {name}")
     print(f"  Source scritti in: {project_root}/AGENTS.src.md, SOUL.md, TOOLS.md")
-    print(f"  Composti: AGENTS.md (cross-harness) + CLAUDE.md (@AGENTS.md wrapper)")
+    print("  Composti: AGENTS.md (cross-harness) + CLAUDE.md (@AGENTS.md wrapper)")
 
 
 if __name__ == "__main__":

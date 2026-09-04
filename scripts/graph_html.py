@@ -15,7 +15,6 @@ import json
 from pathlib import Path
 from typing import Optional
 
-
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 
 
@@ -86,7 +85,7 @@ def _build_cytoscape_elements(report: dict) -> dict:
 
     code_nodes: dict[str, dict] = {}
     # Da wiki_code_anchors (alta similarity → ancore visualizzate come anchor edges)
-    for slug, anchors in (report.get("wiki_code_anchors") or {}).items():
+    for _slug, anchors in (report.get("wiki_code_anchors") or {}).items():
         for a in anchors:
             cid = f"code::{a['file_path']}"
             if a.get("line_range") and a["line_range"][0]:

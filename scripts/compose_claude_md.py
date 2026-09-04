@@ -30,7 +30,6 @@ import sys
 from datetime import date
 from pathlib import Path
 
-
 AUTO_GEN_MARKER = "auto_generated_by: anja/compose_claude_md.py"
 
 AGENTS_HEADER_TEMPLATE = """---
@@ -128,7 +127,7 @@ def _migrate_source(target: Path, quiet: bool = False) -> None:
         return
     agents.rename(src)
     if not quiet:
-        print(f"[compose] migrato source: AGENTS.md → AGENTS.src.md")
+        print("[compose] migrato source: AGENTS.md → AGENTS.src.md")
 
 
 def _backup_if_user_file(path: Path, quiet: bool = False) -> None:

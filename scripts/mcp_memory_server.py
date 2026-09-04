@@ -40,14 +40,11 @@ Stdlib pure, no deps esterne.
 import json
 import os
 import re
-import secrets
 import subprocess
 import sys
-import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
-
 
 # ============================================================
 # config
@@ -55,7 +52,7 @@ from typing import Optional
 
 PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_memory"
-SERVER_VERSION = "0.24.1"
+SERVER_VERSION = "0.25.0"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "project")  # project | hub | agent
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
@@ -3387,7 +3384,8 @@ def tool_code_status(args: dict) -> dict:
         here = Path(__file__).resolve().parent
         if str(here) not in _sys.path:
             _sys.path.insert(0, str(here))
-        import code_db, embed_providers
+        import code_db
+        import embed_providers
     except ImportError as e:
         return {"error": f"module missing: {e}"}
 

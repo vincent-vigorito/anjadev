@@ -21,7 +21,6 @@ import json
 import re
 from pathlib import Path
 
-
 _SCALAR_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$")
 _LIST_ITEM_RE = re.compile(r"^\s+-\s+(.*)$")
 

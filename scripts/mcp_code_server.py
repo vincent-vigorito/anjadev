@@ -15,16 +15,18 @@ Sicurezza (no shell injection):
 import json
 import os
 import resource
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from pathlib import Path
 from typing import Optional
 
-
 PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_code"
-SERVER_VERSION = "0.24.1"
+SERVER_VERSION = "0.25.0"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "hub")
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
@@ -71,6 +73,9 @@ def _scrub_env() -> dict:
 def _resolve_cwd_for_scope(scope: str, mode: str) -> tuple:
     if mode == "strict":
         return Path(tempfile.mkdtemp(prefix="anja-code-")), None
+    if scope == "project":
+        # plugin CLI standalone (v0.21+): il workspace è il progetto stesso
+        return ROOT, None
     hub = _hub_root_from_scope()
     if scope == "hub":
         if not hub:
@@ -107,6 +112,44 @@ def _set_limits(memory_mb: int):
         except (ValueError, OSError):
             pass
     return _preexec
+
+
+def _drain(stream, limit: int, sink: dict, key: str) -> None:
+    """Legge uno stream fino a `limit` byte, poi continua a scartare (mai bloccare il figlio)."""
+    buf = bytearray()
+    truncated = False
+    try:
+        while True:
+            chunk = stream.read(65536)
+            if not chunk:
+                break
+            room = limit - len(buf)
+            if room > 0:
+                buf += chunk[:room]
+            if len(chunk) > max(room, 0):
+                truncated = True
+    except Exception:
+        pass
+    finally:
+        sink[key] = (bytes(buf), truncated)
+
+
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Termina l'intero process group (start_new_session=True): anche i figli dello script."""
+    try:
+        if sys.platform != "win32":
+            os.killpg(proc.pid, signal.SIGKILL)
+        else:
+            proc.kill()
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    try:
+        proc.wait(timeout=5)
+    except Exception:
+        pass
 
 
 def tool_execute_python(args: dict) -> dict:
@@ -150,6 +193,7 @@ def tool_execute_python(args: dict) -> dict:
         script_path = tf.name
 
     output_bytes = max_output_kb * 1024
+    strict_ws = cwd if mode == "strict" else None
     try:
         # NB: subprocess.Popen with list args, NO shell. Path is a tempfile we just wrote.
         proc = subprocess.Popen(
@@ -161,24 +205,28 @@ def tool_execute_python(args: dict) -> dict:
             preexec_fn=_set_limits(memory_mb) if sys.platform != "win32" else None,
             start_new_session=True,
         )
+        # Lettura a streaming: oltre il cap si scarta (RAM del server limitata al cap,
+        # qualunque cosa stampi lo script) — communicate() avrebbe bufferizzato tutto.
+        sink: dict = {}
+        readers = [threading.Thread(target=_drain, args=(proc.stdout, output_bytes, sink, "out"), daemon=True),
+                   threading.Thread(target=_drain, args=(proc.stderr, output_bytes, sink, "err"), daemon=True)]
+        for t in readers:
+            t.start()
         try:
-            stdout_b, stderr_b = proc.communicate(timeout=timeout)
+            proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
-            try:
-                proc.kill()
-                proc.wait(timeout=5)
-            except Exception:
-                pass
+            _kill_tree(proc)
+            for t in readers:
+                t.join(timeout=5)
             return {"error": "timeout", "killed": True, "exit_code": -1, "timeout_sec": timeout}
-
-        out_truncated = False
-        err_truncated = False
-        if len(stdout_b) > output_bytes:
-            stdout_b = stdout_b[:output_bytes] + b"\n... [stdout truncated]"
-            out_truncated = True
-        if len(stderr_b) > output_bytes:
-            stderr_b = stderr_b[:output_bytes] + b"\n... [stderr truncated]"
-            err_truncated = True
+        for t in readers:
+            t.join(timeout=5)
+        stdout_b, out_truncated = sink.get("out", (b"", False))
+        stderr_b, err_truncated = sink.get("err", (b"", False))
+        if out_truncated:
+            stdout_b += b"\n... [stdout truncated]"
+        if err_truncated:
+            stderr_b += b"\n... [stderr truncated]"
 
         return {
             "ok": proc.returncode == 0,
@@ -200,6 +248,8 @@ def tool_execute_python(args: dict) -> dict:
             Path(script_path).unlink()
         except Exception:
             pass
+        if strict_ws is not None:
+            shutil.rmtree(strict_ws, ignore_errors=True)
 
 
 TOOLS = [
@@ -230,6 +280,16 @@ TOOLS = [
 TOOL_HANDLERS = {"execute_python": tool_execute_python}
 
 
+def _exec_enabled() -> bool:
+    """Opt-in esplicito (PIANO 3.4): anja_code esegue codice arbitrario con i permessi
+    dell'utente. Senza ANJA_CODE_EXEC=1 il server parte ma non espone né esegue nulla."""
+    return (os.environ.get("ANJA_CODE_EXEC") or "").strip().lower() in ("1", "true", "yes", "on")
+
+
+_DISABLED_MSG = ("anja_code disabilitato: esporta ANJA_CODE_EXEC=1 nell'env del server MCP per "
+                 "abilitare execute_python (esegue Python locale con i permessi dell'utente — vedi SECURITY.md)")
+
+
 def handle_request(req: dict):
     method = req.get("method")
     params = req.get("params") or {}
@@ -244,10 +304,12 @@ def handle_request(req: dict):
     if method == "notifications/initialized":
         return None
     if method == "tools/list":
-        return _ok(req_id, {"tools": TOOLS})
+        return _ok(req_id, {"tools": TOOLS if _exec_enabled() else []})
     if method == "tools/call":
         name = params.get("name")
         args = params.get("arguments") or {}
+        if not _exec_enabled():
+            return _err(req_id, -32601, _DISABLED_MSG)
         handler = TOOL_HANDLERS.get(name)
         if not handler:
             return _err(req_id, -32601, "unknown tool: " + str(name))
@@ -274,7 +336,8 @@ def _err(req_id, code, message, data=None):
 
 
 def main():
-    print("[anja_code] starting (scope=" + SCOPE + " root=" + str(ROOT) + ")", file=sys.stderr, flush=True)
+    state = "enabled" if _exec_enabled() else "DISABLED (ANJA_CODE_EXEC=1 per abilitare)"
+    print("[anja_code] starting (scope=" + SCOPE + " root=" + str(ROOT) + " exec=" + state + ")", file=sys.stderr, flush=True)
     for line in sys.stdin:
         line = line.strip()
         if not line:

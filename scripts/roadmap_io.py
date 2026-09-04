@@ -39,7 +39,6 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
 
-
 STATUS_GLYPH = {
     "open": " ",
     "in_progress": "~",

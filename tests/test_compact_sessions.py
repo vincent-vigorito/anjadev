@@ -22,6 +22,8 @@ import tempfile
 from datetime import date, timedelta
 from pathlib import Path
 
+from _helpers import cov_env
+
 PLUGIN = Path(__file__).resolve().parents[1]
 PYTHON = os.environ.get("ANJA_TEST_PYTHON") or sys.executable
 spec = importlib.util.spec_from_file_location("compact", PLUGIN / "scripts" / "compact_sessions.py")
@@ -82,7 +84,7 @@ def make_wiki(tmp: Path) -> Path:
 
 
 def rpc(proj: Path, msgs):
-    env = {"ANJA_SCOPE": "project", "ANJA_ROOT": str(proj), "PATH": "/usr/bin:/bin", "HOME": str(proj.parent)}
+    env = {"ANJA_SCOPE": "project", "ANJA_ROOT": str(proj), "PATH": "/usr/bin:/bin", "HOME": str(proj.parent), **cov_env()}
     allm = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}] + msgs
     p = subprocess.run([PYTHON, str(PLUGIN / "scripts" / "mcp_memory_server.py")],
                        input="\n".join(json.dumps(m) for m in allm) + "\n", capture_output=True, text=True, env=env, timeout=30)
@@ -90,7 +92,8 @@ def rpc(proj: Path, msgs):
     for line in p.stdout.splitlines():
         if line.startswith("{"):
             d = json.loads(line)
-            if "id" in d: out[d["id"]] = d
+            if "id" in d:
+                out[d["id"]] = d
     return out
 
 

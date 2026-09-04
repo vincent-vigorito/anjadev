@@ -34,8 +34,6 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-
 
 # File CC mirror nostri — MAI assorbire (sono managed da cc_memory_sync.py)
 ANJA_MIRROR_FILES = {"anja_user.md", "anja_feedback.md", "MEMORY.md"}

@@ -19,6 +19,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from _helpers import cov_env
+
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 SERVER = PLUGIN_ROOT / "scripts" / "mcp_memory_server.py"
 INIT = PLUGIN_ROOT / "scripts" / "init_project.py"
@@ -47,7 +49,7 @@ def rpc(project: Path, msgs: list[dict], env_extra: dict | None = None) -> tuple
     """Server via stdio, env MINIMO (niente ANJA_HUB / ANJA_HUB_WEBAPP: macchina senza AnjaHub)."""
     env = {"ANJA_SCOPE": "project", "ANJA_ROOT": str(project),
            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-           "HOME": os.environ.get("HOME", "/tmp")}
+           "HOME": os.environ.get("HOME", "/tmp"), **cov_env()}
     env.update(env_extra or {})
     all_msgs = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}] + msgs
     p = subprocess.run([PYTHON, str(SERVER)], input="\n".join(json.dumps(m) for m in all_msgs) + "\n",

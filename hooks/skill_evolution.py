@@ -32,7 +32,6 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 INBOX_PATH = Path.home() / ".anja" / "skill_evolution_inbox.jsonl"
 DEDUP_WINDOW_SEC = 60
 OUTPUT_PREVIEW_MAX = 800

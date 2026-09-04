@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.24.1 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.25.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -19,7 +19,7 @@
 ### Prerequisiti
 
 - Claude Code CLI
-- Python 3.10+ (3.12 raccomandato — `brew install python@3.12` su macOS)
+- Python 3.9+ (CI su 3.9 / 3.10 / 3.12, macOS e Linux). Per la ricerca vettoriale serve un interprete che carichi estensioni sqlite: il Python di sistema macOS **non** lo fa → `brew install python@3.12`
 - (Opzionale per code search) `pip install sqlite-vec httpx`
 
 ### Install via marketplace
@@ -77,7 +77,7 @@ Code. Stessi 3 env ovunque: `ANJA_SCOPE` (`project`|`hub`|`agent`), `ANJA_ROOT` 
 root), `ANJA_TOOL_GROUPS` (filtro opzionale, default tutti i gruppi).
 
 Verificato con handshake `initialize` + `tools/list` su stdio puro: `anja_memory` espone
-28 tool (con `memory,wiki,roadmap`), `anja_code` 1 tool (`execute_python`). Nessuna
+28 tool (con `memory,wiki,roadmap`), `anja_code` 1 tool (`execute_python`, **opt-in**: `ANJA_CODE_EXEC=1`, vedi [`SECURITY.md`](./SECURITY.md)). Nessuna
 modifica al plugin: cambia solo *dove* dichiari il server. `<ANJADEV>` = path del plugin
 installato (`~/.claude/plugins/marketplaces/anjadev`) o di un clone locale del repo.
 
@@ -396,6 +396,9 @@ anja/
 ├── skills/                      # skill descrittive workflow (ingest, query, lint, refresh, init-analyze)
 ├── tests/                       # pytest: registry, smoke su tutti i tool, steward, adapter
 ├── SCHEMA.md                    # wire format pubblico .anjawiki/
+├── SECURITY.md                  # garanzie, assunzioni, cosa NON è garantito (anja_code)
+├── pyproject.toml               # config pytest / ruff / coverage (nessuna dipendenza runtime)
+├── .github/workflows/ci.yml     # test matrix + lint + coerenza + coverage
 └── README.md                    # questo file
 ```
 
@@ -409,8 +412,9 @@ Il layout `.anjawiki/` è un **contratto pubblico** descritto in [`SCHEMA.md`](.
 |---|---|---|
 | `ANJA_SCOPE` | `project` | `project` \| `hub` \| `agent` — determina path resolution |
 | `ANJA_ROOT` | — | Path del root scope (set da `.mcp.json` per ogni progetto) |
-| `ANJA_TOOL_GROUPS` | tutti | CSV: `memory,sessions,soul,user,skills,wiki,roadmap,code` — filtra tool MCP |
-| `ANJA_EMBED_PROVIDER` | `openrouter` | `openrouter` \| `voyage` \| `openai` \| `local` |
+| `ANJA_TOOL_GROUPS` | tutti | CSV: `memory,sessions,soul,user,skills,wiki,roadmap,code,graph` — filtra tool MCP |
+| `ANJA_EMBED_PROVIDER` | `openrouter` | `openrouter` \| `voyage` \| `openai` \| `local` \| `mock` (solo test, nessuna rete) \| `none` |
+| `ANJA_CODE_EXEC` | — | `1` abilita `execute_python` in `anja_code` (default: server attivo ma senza tool, vedi `SECURITY.md`) |
 | `ANJA_EMBED_MODEL` | provider-default | es. `qwen/qwen3-embedding-8b` per openrouter |
 | `ANJA_AUTO_SUMMARY` | `1` | `0` per disabilitare auto-summary background |
 | `ANJA_SUMMARY_BIN` | harness → PATH | CLI per i summary: `claude` \| `grok` \| `codex` \| path \| `none` |
@@ -447,8 +451,8 @@ cd ~/Documents/my-project
 ```
 
 > **Release**: dopo ogni modifica da distribuire, `./bump.sh <major.minor.patch>` allinea
-> la versione nei 3 manifest (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`,
-> `.codex-plugin/plugin.json`), poi commit + `git tag vX.Y.Z`. Senza bump, CC vede "already at
+> la versione nei 3 manifest, nel README (riga Stato) e in `SERVER_VERSION` dei due server, poi
+> esegue `scripts/release_check.py`; segue la voce in CHANGELOG, commit + `git tag vX.Y.Z`. Senza bump, CC vede "already at
 > latest" e continua a caricare la cache pre-modifica (versiona per numero, non per git SHA).
 
 ### Workflow dev tipico
@@ -460,17 +464,26 @@ cd ~/Documents/my-project
 | Hook (`hooks/*.py`) | Nuova chat (hook caricato a `SessionStart`) |
 | Template (`templates/`) | Nessun reload; effetto su prossimo `/anja-init` |
 
-### Smoke test
+### Test, lint, coverage
 
 ```bash
-python3 -m pytest tests/ -v
-# oppure:
-python3 tests/test_mcp_smoke.py
+python3 -m pytest                      # tutta la suite (ogni file gira anche standalone: python3 tests/test_x.py)
+ANJA_TEST_PYTHON=/opt/homebrew/opt/python@3.12/bin/python3.12 python3 -m pytest   # sottoprocessi con un altro interprete
+python3 -m ruff check .                # lint (config in pyproject.toml)
+python3 scripts/gen_tools_doc.py --check    # sezione MCP tools del README == registry
+python3 scripts/release_check.py            # versioni, conteggi, test raccoglibili
 ```
+
+Suite: `test_registry` (TOOLS ↔ gruppi ↔ handler ↔ nomi wire), `test_mcp_smoke` (ogni tool del
+registry chiamato sul wire, copertura obbligatoria), `test_embed_mock` (pipeline embedding con
+`ANJA_EMBED_PROVIDER=mock`; skip se sqlite-vec non è caricabile), `test_code_server` (sandbox di
+`execute_python`), `test_steward`, `test_journal_policy`, `test_compact_sessions`, `test_core_split`,
+adapter Codex/OpenCode. La CI (`.github/workflows/ci.yml`) esegue tutto su 3.9/3.10/3.12 ×
+ubuntu/macos, più ruff, i check di coerenza e la coverage (sottoprocessi inclusi) con soglia.
 
 ### Convenzioni codice
 
-- Python 3.10+ (typing moderno: `X | None`, `list[T]`, ecc.)
+- Python 3.9+: typing moderno (`X | None`, `list[T]`) va bene grazie a `from __future__ import annotations` in testa a ogni file
 - Solo stdlib nel core. Eccezioni motivate: `sqlite-vec`, `httpx` (opt-in per code search)
 - File <500 LOC per pezzo, eccetto `mcp_memory_server.py` (dispatcher centrale, motivato)
 - Tool MCP: handler `def tool_<group>_<name>(args: dict) -> dict`, return JSON-serializable, errors come `{"error": "msg", "hint": "..."}`

@@ -1,0 +1,37 @@
+# Config strumenti di sviluppo (PIANO.md Fase 2). Nessuna dipendenza runtime: il plugin resta stdlib.
+# Il packaging ([project]) arriva in Fase 5.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py39"
+line-length = 110
+extend-exclude = ["plugins", ".opencode", ".agents"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+# Ignorati per partire con la CI verde su 13k righe esistenti; da sciogliere a ogni release.
+extend-ignore = [
+    "E501",  # line-too-long: 317 casi (description dei tool, regex). TODO 2026-09: sciogliere per modulo
+    "E702",  # multiple-statements-on-one-line: 50 casi nei test in stile script. TODO 2026-09
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mcp_memory_server", "code_db", "code_index", "code_search", "embed_providers",
+                     "roadmap_io", "wiki_embed", "graph_report", "graph_html", "skill_parser",
+                     "context_loader", "lint_checks", "slugify", "secrets_loader", "steward",
+                     "compact_sessions", "journal_policy", "gen_tools_doc"]
+
+[tool.coverage.run]
+# ${ANJA_COV_ROOT} è impostato da tests/_coverage_hook/sitecustomize.py (sottoprocessi con cwd arbitrario)
+source = ["${ANJA_COV_ROOT}/scripts", "${ANJA_COV_ROOT}/hooks"]
+parallel = true
+branch = false
+omit = ["scripts/migrate_cc_memory.py", "scripts/cc_memory_to_soul.py", "scripts/cc_memory_sync.py"]
+
+[tool.coverage.report]
+skip_covered = false
+show_missing = false
+precision = 1

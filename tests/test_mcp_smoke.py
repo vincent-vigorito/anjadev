@@ -25,6 +25,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from _helpers import cov_env
+
 PLUGIN_ROOT = Path(__file__).resolve().parents[1]
 SERVER_PATH = PLUGIN_ROOT / "scripts" / "mcp_memory_server.py"
 INIT_SCRIPT = PLUGIN_ROOT / "scripts" / "init_project.py"
@@ -77,7 +79,7 @@ def _setup_project(tmp: Path) -> tuple[Path, dict]:
     (tmp / "pic.png").write_bytes(_PNG)
     (project / "app.py").write_text("def authenticate(user):\n    return user == 'smoke'\n", encoding="utf-8")
     env = {"ANJA_SCOPE": "project", "ANJA_ROOT": str(project),
-           "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home)}
+           "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home), **cov_env()}
     return project, env
 
 
@@ -98,7 +100,7 @@ def _rpc(env: dict, calls: list[dict], timeout: int = 90) -> tuple[list[dict], l
     except subprocess.TimeoutExpired:
         proc.kill()
         out, err = proc.communicate()
-        raise RuntimeError(f"server timeout. stderr: {err[-800:]}")
+        raise RuntimeError(f"server timeout. stderr: {err[-800:]}") from None
     responses = {}
     for line in out.splitlines():
         line = line.strip()

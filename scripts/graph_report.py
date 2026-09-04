@@ -27,7 +27,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-
 _SCRIPTS_DIR = Path(__file__).resolve().parent
 
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
@@ -533,22 +532,22 @@ def render_markdown(report: dict, project_name: str = "") -> str:
     """Renderizza il report come GRAPH_REPORT.md leggibile dall'agent."""
     stats = report.get("stats", {})
     out = [
-        f"---",
-        f"title: Knowledge Graph Report",
-        f"type: analysis",
-        f"transient: true",
+        "---",
+        "title: Knowledge Graph Report",
+        "type: analysis",
+        "transient: true",
         f"generated_at: {stats.get('generated_at', '')}",
-        f"---",
-        f"",
-        f"# Knowledge Graph Report"
+        "---",
+        "",
+        "# Knowledge Graph Report"
         + (f" — {project_name}" if project_name else ""),
-        f"",
-        f"> Auto-generato da `graph.report`. Layer combinato: wikilinks espliciti + similarity semantica.",
-        f"",
-        f"## Stats",
-        f"",
-        f"| Metric | Value |",
-        f"|---|---|",
+        "",
+        "> Auto-generato da `graph.report`. Layer combinato: wikilinks espliciti + similarity semantica.",
+        "",
+        "## Stats",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
         f"| Wiki pages indexed | {stats.get('wiki_pages', 0)} |",
         f"| Explicit edges (`[[wikilink]]`) | {stats.get('explicit_edges', 0)} |",
         f"| Strong semantic edges (sim ≥ 0.7) | {stats.get('semantic_edges_strong', 0)} |",
@@ -558,7 +557,7 @@ def render_markdown(report: dict, project_name: str = "") -> str:
         f"| Orphans | {stats.get('orphans_count', 0)} |",
         f"| Clusters (≥2 nodes) | {stats.get('clusters_count', 0)} |",
         f"| Embedding provider | {stats.get('embed_provider', '?')} / {stats.get('embed_model', '?')} ({stats.get('embed_dim', '?')}d) |",
-        f"",
+        "",
     ]
 
     # God nodes

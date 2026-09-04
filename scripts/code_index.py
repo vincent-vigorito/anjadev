@@ -25,7 +25,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterable, Optional
 
-
 # ============================================================
 # Filesystem scanning
 # ============================================================
@@ -105,7 +104,7 @@ def _chunk_python(text: str, max_lines: int = 80) -> list[dict]:
     if uncovered and len(uncovered) <= max_lines:
         first_line = uncovered[0][0]
         last_line = uncovered[-1][0]
-        content = "\n".join(l for _, l in uncovered).strip()
+        content = "\n".join(ln for _, ln in uncovered).strip()
         if content:
             chunks.append({
                 "func_name": "<module>",
@@ -281,8 +280,8 @@ def index(
     # Lazy imports
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
-        import embed_providers
         import code_db
+        import embed_providers
     except ImportError as e:
         return {"error": f"missing module: {e}"}
 
@@ -325,8 +324,10 @@ def index(
             print(f"[index] {mode}", file=sys.stderr)
         # Drop chunk tables
         if force:
-            db.execute("DELETE FROM chunk_vec")
-            db.execute("DELETE FROM chunks")
+            # Solo i chunk di codice: il DB è condiviso con le pagine wiki (wiki.embed),
+            # un DELETE totale cancellava anche quelle (graph.* poi: "no wiki pages in index").
+            db.execute("DELETE FROM chunk_vec WHERE rowid IN (SELECT id FROM chunks WHERE kind = 'code')")
+            db.execute("DELETE FROM chunks WHERE kind = 'code'")
             db.commit()
         files_to_index = list(iter_source_files(target))
 
