@@ -52,8 +52,9 @@ if grep -h '"version"' "${FILES[@]}" | grep -qv "\"$NEW\""; then
   exit 1
 fi
 
-# Coerenza di release (CHANGELOG escluso: la voce si scrive dopo il bump)
+# Coerenza di release (CHANGELOG escluso: la voce si scrive dopo il bump) + lint
 python3 "$ROOT/scripts/release_check.py" --skip-changelog || exit 1
+if python3 -m ruff --version >/dev/null 2>&1; then python3 -m ruff check "$ROOT" || exit 1; fi
 
 cat <<EOF
 
