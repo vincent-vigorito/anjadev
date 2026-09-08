@@ -47,6 +47,7 @@ ENV_DEPENDENT = {
     "graph.semantic_neighbors": ("provider", "index", "api key", "sqlite", "not found"),
     "graph.report": ("provider", "index", "api key", "sqlite"),
     "graph.html": ("provider", "index", "api key", "sqlite"),
+    "code.compare_decision": ("cannot establish", "decision missing"),
     "code.search": ("provider", "index", "api key", "sqlite", "ripgrep", "rg"),
     "code.reindex": ("provider", "index", "api key", "sqlite"),
     "sessions.summarize": ("not found",),   # id inesistente: non deve spawnare il CLI
@@ -79,7 +80,8 @@ def _setup_project(tmp: Path) -> tuple[Path, dict]:
     (tmp / "pic.png").write_bytes(_PNG)
     (project / "app.py").write_text("def authenticate(user):\n    return user == 'smoke'\n", encoding="utf-8")
     env = {"ANJA_SCOPE": "project", "ANJA_ROOT": str(project),
-           "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home), **cov_env()}
+           "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(home),
+           "ANJA_CLAUDE_BIN": str(tmp / "unavailable-reranker"), **cov_env()}
     return project, env
 
 
@@ -101,8 +103,9 @@ def _rpc(env: dict, calls: list[dict], timeout: int = 90) -> tuple[list[dict], l
         proc.kill()
         out, err = proc.communicate()
         raise RuntimeError(f"server timeout. stderr: {err[-800:]}") from None
+    assert proc.returncode == 0, f"server exit={proc.returncode}, python={PYTHON}, stderr={err[-2000:]}"
     responses = {}
-    for line in out.splitlines():
+    for line in out.split("\n"):
         line = line.strip()
         if line.startswith("{"):
             try:
@@ -111,6 +114,9 @@ def _rpc(env: dict, calls: list[dict], timeout: int = 90) -> tuple[list[dict], l
                 continue
             if "id" in d:
                 responses[d["id"]] = d
+    missing = [i + 3 for i in range(len(calls)) if i + 3 not in responses]
+    assert not missing, (f"missing response ids={missing}; python={PYTHON}; cwd={Path.cwd()}; "
+                         f"root={env['ANJA_ROOT']}; stderr={err[-2000:]}")
     registry = [t["name"] for t in responses[2]["result"]["tools"]]
     return [responses.get(i + 3) for i in range(len(calls))], registry
 
@@ -164,7 +170,7 @@ def _phase_a(tmp: Path, project: Path) -> list[dict]:
         {"name": "wiki.tree", "args": {}},
         {"name": "wiki.stats", "args": {"top_n": 3}},
         {"name": "wiki.lint", "args": {}},
-        {"name": "wiki.verify", "args": {"slug": "test-entity", "by": "human:smoke"}},
+        {"name": "wiki.verify", "args": {"slug": "test-entity", "by": "process:smoke"}},
         {"name": "wiki.rename", "args": {"old_slug": "test-concept", "new_slug": "test-concept-2"}},
         {"name": "wiki.replace_links", "args": {"old": "test-concept", "new": "test-concept-2", "dry_run": True}},
         {"name": "wiki.attach_image", "args": {"slug": "test-entity", "image_path": str(tmp / "pic.png"),
@@ -201,6 +207,8 @@ def _phase_a(tmp: Path, project: Path) -> list[dict]:
         {"name": "skill.remove_file", "args": {"name": "smoke-skill", "path": "notes.md"}},
         {"name": "skill.delete", "args": {"name": "smoke-skill"}},
         {"name": "code.status", "args": {}},
+        {"name": "code.compare_decision", "args": {"decision_path": "SOUL.md", "base_commit": "0" * 40, "paths": ["app.py"]}},
+        {"name": "code.inspect", "args": {"path": "app.py", "symbol": "authenticate"}},
         {"name": "code.search", "args": {"query": "authenticate", "smart_level": 1, "limit": 3}},
         {"name": "code.reindex", "args": {"limit": 5}},
         {"name": "roadmap.add", "args": {"title": "smoke task", "priority": "P3"}},

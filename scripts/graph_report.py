@@ -295,11 +295,14 @@ def build_report(
     if not (anjawiki / "code-index.db").exists():
         return {"error": "index not built — run wiki.embed (and code.reindex) first"}
 
-    provider = embed_providers.get_provider()
+    try:
+        provider = embed_providers.get_project_provider(root)
+    except ValueError as exc:
+        return {"error": str(exc), "code": "index_policy_error"}
     if provider is None:
         return {"error": "no embed provider configured"}
 
-    db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+    db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False, provider=provider)
 
     try:
         # 1. Carica tutte le wiki pages + body raw da disco

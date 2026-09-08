@@ -1,0 +1,2447 @@
+{
+  "environment": {
+    "python": "3.12.13",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "provider": "mock",
+    "model": "mock-bow",
+    "harness": "public-code-search-evidence-v1"
+  },
+  "implementation_sha256": {
+    "search_evidence.py": "f20270fae5107cdc2f789c2ca6538d171f887cb728a4e126237bc269f71a0b53",
+    "code_search.py": "35b7876c9954036116d7c8e2122e1ecbba584ea4ee5119796e0361a81d364417"
+  },
+  "dataset_sha256": "25b02affda35ba783516242eceec2a6bbde3ca138cf38300bd84720f2f9f99af",
+  "rows": [
+    {
+      "id": "checkout-01",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 3,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.685763+00:00",
+        "literal_matches": 3,
+        "rejected": [],
+        "preview_chars": 183,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-01",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.728538+00:00",
+        "literal_matches": 4,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.3333333333333333,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-02",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 2,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.758073+00:00",
+        "literal_matches": 2,
+        "rejected": [],
+        "preview_chars": 173,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-02",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.799234+00:00",
+        "literal_matches": 3,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-03",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.816705+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 70,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-03",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.855554+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-04",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.875122+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 64,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-04",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.916344+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-05",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.932868+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 16,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-05",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.973134+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-06",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:09.993748+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 20,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-06",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.040908+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-07",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.062307+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 70,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-07",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.108316+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-08",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.129232+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 34,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-08",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.173022+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-09",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.193774+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 26,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-09",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.235355+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-10",
+      "split": "development",
+      "level": 0,
+      "answerable": false,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.242504+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": null,
+        "rr": 0,
+        "no_answer_correct": true,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-10",
+      "split": "development",
+      "level": 2,
+      "answerable": false,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.284860+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": null,
+        "rr": 0,
+        "no_answer_correct": false,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-11",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.291710+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-11",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.334457+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 1.0
+        },
+        "rr": 0.25,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-12",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.341503+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-12",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.384596+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-13",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.391890+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-13",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.433980+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-14",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.440836+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "checkout-14",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.483942+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-01",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 2,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.511413+00:00",
+        "literal_matches": 2,
+        "rejected": [],
+        "preview_chars": 134,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-01",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.551882+00:00",
+        "literal_matches": 3,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.3333333333333333,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-02",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 3,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.592127+00:00",
+        "literal_matches": 3,
+        "rejected": [],
+        "preview_chars": 188,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-02",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.630251+00:00",
+        "literal_matches": 4,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.3333333333333333,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-03",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.646274+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 71,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-03",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.687108+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-04",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.705046+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 52,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-04",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.744713+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-05",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.760891+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 16,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-05",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.804734+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 380,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-06",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.822077+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 20,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-06",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.861838+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-07",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.879870+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 68,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-07",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.917542+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-08",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.934228+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 23,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-08",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.973418+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-09",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:10.991724+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 26,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-09",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.029515+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-10",
+      "split": "development",
+      "level": 0,
+      "answerable": false,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.036330+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": null,
+        "rr": 0,
+        "no_answer_correct": true,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-10",
+      "split": "development",
+      "level": 2,
+      "answerable": false,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.075479+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 398,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": null,
+        "rr": 0,
+        "no_answer_correct": false,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-11",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.082129+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-11",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.120906+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.3333333333333333,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-12",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.127476+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-12",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.165458+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 1.0
+        },
+        "rr": 0.2,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-13",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.172185+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-13",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.210802+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.5,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-14",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.217439+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "worker-14",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.260087+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-01",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 2,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.289607+00:00",
+        "literal_matches": 2,
+        "rejected": [],
+        "preview_chars": 140,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-01",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.329099+00:00",
+        "literal_matches": 3,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.3333333333333333,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-02",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 3,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.366534+00:00",
+        "literal_matches": 3,
+        "rejected": [],
+        "preview_chars": 156,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-02",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.405916+00:00",
+        "literal_matches": 4,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 0.3333333333333333,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-03",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.423796+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 72,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-03",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.462591+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-04",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.478409+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 62,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-04",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.516190+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-05",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.533387+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 17,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-05",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.572186+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 379,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-06",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.588461+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 20,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-06",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.626958+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-07",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.643287+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 68,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-07",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.689030+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-08",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.705968+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 27,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-08",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.744547+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-09",
+      "split": "development",
+      "level": 0,
+      "answerable": true,
+      "count": 1,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.764642+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 28,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-09",
+      "split": "development",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "literal_evidence",
+        "abstain": false,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.804439+00:00",
+        "literal_matches": 1,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-10",
+      "split": "development",
+      "level": 0,
+      "answerable": false,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.812777+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": null,
+        "rr": 0,
+        "no_answer_correct": true,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-10",
+      "split": "development",
+      "level": 2,
+      "answerable": false,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.855516+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 379,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": null,
+        "rr": 0,
+        "no_answer_correct": false,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-11",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.862442+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-11",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.903347+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 1.0
+        },
+        "rr": 0.25,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-12",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.910245+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-12",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.952857+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 1.0
+        },
+        "rr": 0.2,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-13",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:11.958879+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-13",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:12.001992+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-14",
+      "split": "evaluation",
+      "level": 0,
+      "answerable": true,
+      "count": 0,
+      "evidence": {
+        "status": "no_evidence",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:12.008028+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 0,
+        "max_preview_chars": 400,
+        "preview_truncated": false,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 0.0,
+          "3": 0.0,
+          "5": 0.0
+        },
+        "rr": 0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    },
+    {
+      "id": "cache-14",
+      "split": "evaluation",
+      "level": 2,
+      "answerable": true,
+      "count": 5,
+      "evidence": {
+        "status": "candidates_only",
+        "abstain": true,
+        "meaning": "Literal text only; semantic relevance and behavioral claims require review.",
+        "checked_at": "2026-09-08T06:24:12.050661+00:00",
+        "literal_matches": 0,
+        "rejected": [],
+        "preview_chars": 400,
+        "max_preview_chars": 400,
+        "preview_truncated": true,
+        "scope": "Returned source snapshots only; not an atomic repository snapshot."
+      },
+      "retrieval_metrics": {
+        "recall": {
+          "1": 1.0,
+          "3": 1.0,
+          "5": 1.0
+        },
+        "rr": 1.0,
+        "no_answer_correct": null,
+        "invalid_references": 0
+      }
+    }
+  ],
+  "summary": {
+    "0": {
+      "no_answer_abstained": 3,
+      "no_answer_total": 3,
+      "answerable_abstained": 12,
+      "answerable_total": 39
+    },
+    "2": {
+      "no_answer_abstained": 3,
+      "no_answer_total": 3,
+      "answerable_abstained": 12,
+      "answerable_total": 39
+    }
+  },
+  "limitations": [
+    "Abstention means no literal evidence among returned spans, not calibrated semantic no-answer.",
+    "Candidates remain visible; retrieval no-answer metrics still count those hits.",
+    "Paraphrases can trigger abstention even when relevant candidates exist."
+  ]
+}

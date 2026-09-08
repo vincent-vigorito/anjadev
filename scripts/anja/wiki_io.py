@@ -9,15 +9,18 @@ from pathlib import Path
 from .common import (
     _compose_frontmatter,
     _compose_sections,
+    _confined_path,
     _iter_wiki_md,
     _parse_frontmatter,
     _parse_sections,
     _raw_root,
     _slug_of,
     _today_iso,
+    _wiki_page,
     _wiki_root,
 )
 from .config import ROOT, SCOPE, log_exc
+from .persistence import check_revision, persistence_errors, read_text, write_text
 from .wiki_maint import _WIKILINK_RE
 
 _MAX_IMAGE_BYTES = 25 * 1024 * 1024  # cap download wiki.attach_image (anti file enorme da URL ostile)
@@ -26,6 +29,7 @@ _MAX_IMAGE_BYTES = 25 * 1024 * 1024  # cap download wiki.attach_image (anti file
 _LOG_TYPE_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 
 
+@persistence_errors
 def tool_wiki_log_append(args: dict) -> dict:
     """Append entry strict-format `## [YYYY-MM-DD] type | description` a wiki/log.md."""
     log_type = (args.get("type") or "").strip()
@@ -42,24 +46,30 @@ def tool_wiki_log_append(args: dict) -> dict:
     wiki = _wiki_root()
     if not wiki.is_dir():
         return {"error": f"wiki dir not found: {wiki}"}
-    log_file = wiki / "log.md"
+    log_file = _confined_path(wiki, wiki / "log.md")
     today = _today_iso()
     entry = f"## [{today}] {log_type} | {description}"
 
-    if log_file.is_file():
-        existing = log_file.read_text(encoding="utf-8").rstrip() + "\n"
+    text = read_text(log_file)
+    expected = check_revision(log_file, text, args.get("expected_revision"))
+    if text is not None:
+        existing = text.rstrip() + "\n"
         new_content = existing + "\n" + entry + "\n"
     else:
         new_content = f"# Log\n\n{entry}\n"
 
-    log_file.write_text(new_content, encoding="utf-8")
+    new_revision = write_text(log_file, new_content, expected)
+    from .wiki import _trigger_wiki_embed_bg
+    _trigger_wiki_embed_bg(log_file)
     return {
         "entry": entry,
         "path": str(log_file.relative_to(ROOT)),
+        "revision": new_revision,
         "type": log_type,
     }
 
 
+@persistence_errors
 def tool_wiki_attach_image(args: dict) -> dict:
     """Allega un'immagine a una pagina wiki (entity/concept/source/analysis).
 
@@ -87,14 +97,17 @@ def tool_wiki_attach_image(args: dict) -> dict:
         return {"error": f"wiki dir not found: {wiki}"}
 
     # Find target page in entities/concepts/sources/analysis
-    target_file = None
-    for folder in ("entities", "concepts", "sources", "analysis"):
-        candidate = wiki / folder / f"{slug}.md"
-        if candidate.is_file():
-            target_file = candidate
-            break
+    try:
+        target_file = _wiki_page(wiki, slug)
+    except (ValueError, OSError, RuntimeError) as e:
+        return {"error": str(e)}
+    if target_file and target_file.parent.name not in ("entities", "concepts", "sources", "analysis"):
+        target_file = None
     if target_file is None:
         return {"error": f"page not found: {slug} (cerco in entities/concepts/sources/analysis)"}
+
+    text = read_text(target_file)
+    expected = check_revision(target_file, text, args.get("expected_revision"))
 
     # Download or copy image
     # topic finisce in raw/<topic>: sanitizza per impedire '../' traversal, poi confina
@@ -112,7 +125,7 @@ def tool_wiki_attach_image(args: dict) -> dict:
         filename = os.path.basename(image_path_arg.rsplit("/", 1)[-1].split("?")[0].strip())
         if filename in ("", ".", ".."):
             filename = "image.png"
-        dest = raw_topic_dir / filename
+        dest = _confined_path(raw, raw_topic_dir / filename)
         try:
             with urlopen(image_path_arg, timeout=15) as resp:
                 data = resp.read(_MAX_IMAGE_BYTES + 1)
@@ -126,7 +139,7 @@ def tool_wiki_attach_image(args: dict) -> dict:
         if not src.is_file():
             return {"error": f"image file not found: {src}"}
         filename = src.name
-        dest = raw_topic_dir / filename
+        dest = _confined_path(raw, raw_topic_dir / filename)
         try:
             _shutil.copy2(src, dest)
         except Exception as e:
@@ -139,7 +152,6 @@ def tool_wiki_attach_image(args: dict) -> dict:
     section_name = (args.get("section") or "Diagrammi").strip()
 
     # Read page, parse sections, append immagine in section target
-    text = target_file.read_text(encoding="utf-8")
     fm, body = _parse_frontmatter(text)
     sections = _parse_sections(body)
 
@@ -152,11 +164,14 @@ def tool_wiki_attach_image(args: dict) -> dict:
 
     fm["updated"] = _today_iso()
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
-    target_file.write_text(new_text, encoding="utf-8")
+    new_revision = write_text(target_file, new_text, expected)
+    from .wiki import _trigger_wiki_embed_bg
+    _trigger_wiki_embed_bg(target_file)
 
     return {
         "slug": slug,
         "page_path": str(target_file.relative_to(ROOT)),
+        "revision": new_revision,
         "image_path": str(dest.relative_to(ROOT)),
         "section": section_name,
         "alt_text": alt_text,
@@ -185,6 +200,7 @@ def tool_wiki_export(args: dict) -> dict:
     include_sessions = bool(args.get("include_sessions", False))
     today = _today_iso()
     default_dir = ROOT / ".anjawiki" / "exports" if SCOPE == "project" else ROOT / "exports"
+    default_dir = _confined_path(ROOT, default_dir)
     default_dir.mkdir(parents=True, exist_ok=True)
     out_path_arg = args.get("output_path")
     if out_path_arg:
@@ -197,7 +213,7 @@ def tool_wiki_export(args: dict) -> dict:
             return {"error": "output_path must be inside the project root"}
     else:
         ext = {"md": "zip", "json": "json", "html": "zip"}[fmt]
-        out_path = default_dir / f"wiki-export-{today}.{ext}"
+        out_path = _confined_path(ROOT, default_dir / f"wiki-export-{today}.{ext}")
 
     pages = []
     for f in _iter_wiki_md(wiki):
@@ -434,3 +450,9 @@ TOOLS = [
     },
 ]
 
+
+for _spec in TOOLS:
+    if _spec["name"] in {"wiki.log_append", "wiki.attach_image"}:
+        _spec["inputSchema"]["properties"]["expected_revision"] = {
+            "type": "string", "description": "Revisione della pagina da wiki.read; stale restituisce revision_conflict."
+        }

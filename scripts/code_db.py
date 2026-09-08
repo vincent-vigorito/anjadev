@@ -9,6 +9,8 @@ Schema:
 Lazy import sqlite-vec (deps esterna ~5MB). Errore graceful se manca.
 """
 
+import json
+import math
 import sqlite3
 from pathlib import Path
 from typing import Optional
@@ -30,7 +32,7 @@ def _ensure_sqlite_vec(db: sqlite3.Connection) -> None:
     db.enable_load_extension(False)
 
 
-def open_db(anjawiki_root: Path, dim: int = 1536, create_if_missing: bool = True) -> sqlite3.Connection:
+def open_db(anjawiki_root: Path, dim: int = 1536, create_if_missing: bool = True, provider=None, allow_dimension_mismatch: bool = False) -> sqlite3.Connection:
     """Apre/crea la code-index.db sotto `.anjawiki/`.
 
     Args:
@@ -39,18 +41,34 @@ def open_db(anjawiki_root: Path, dim: int = 1536, create_if_missing: bool = True
       create_if_missing: True → crea schema se db non esiste
     """
     db_path = anjawiki_root / CODE_DB_FILENAME
+    if anjawiki_root.is_symlink() or db_path.is_symlink():
+        raise ValueError("index state must not be a symlink")
     if not create_if_missing and not db_path.exists():
         raise FileNotFoundError(f"code-index.db not found at {db_path}")
 
     anjawiki_root.mkdir(parents=True, exist_ok=True)
     db = sqlite3.connect(str(db_path))
     db.row_factory = sqlite3.Row
-    _ensure_sqlite_vec(db)
-    _init_schema(db, dim=dim)
-    return db
+    try:
+        _ensure_sqlite_vec(db)
+        has_meta = db.execute("SELECT 1 FROM sqlite_master WHERE name='meta'").fetchone()
+        stored = get_meta(db, "embed_dim") if has_meta else None
+        if stored and allow_dimension_mismatch:
+            dim = int(stored)
+        if create_if_missing:
+            _init_schema(db, dim=dim, preserve_vectors=allow_dimension_mismatch)
+        elif stored and int(stored) != dim:
+            raise RuntimeError("embedding dimension mismatch; run a full reindex")
+        if provider is not None:
+            db.execute("BEGIN")
+            require_fingerprint(db, provider)
+        return db
+    except Exception:
+        db.close()
+        raise
 
 
-def _init_schema(db: sqlite3.Connection, dim: int) -> None:
+def _init_schema(db: sqlite3.Connection, dim: int, preserve_vectors: bool = False) -> None:
     """Crea tabelle se mancano. Idempotente."""
     db.executescript("""
         CREATE TABLE IF NOT EXISTS chunks (
@@ -72,6 +90,14 @@ def _init_schema(db: sqlite3.Connection, dim: int) -> None:
             key TEXT PRIMARY KEY,
             value TEXT
         );
+        CREATE TABLE IF NOT EXISTS indexed_files (
+            kind TEXT NOT NULL, file_path TEXT NOT NULL, snapshot TEXT NOT NULL,
+            PRIMARY KEY(kind, file_path)
+        );
+        CREATE TABLE IF NOT EXISTS index_runs (
+            id TEXT PRIMARY KEY, kind TEXT NOT NULL, status TEXT NOT NULL,
+            started TEXT NOT NULL, finished TEXT, pid INTEGER, error TEXT, details TEXT
+        );
     """)
     # vec virtual table (dim fissa una volta creata; se cambi provider serve drop+recreate)
     existing_dim = get_meta(db, "embed_dim")
@@ -80,7 +106,8 @@ def _init_schema(db: sqlite3.Connection, dim: int) -> None:
             f"DB dim mismatch: existing={existing_dim} requested={dim}. "
             f"Run reindex --force (drops + rebuilds) per cambiare provider/model."
         )
-    _ensure_vec_table(db, dim)
+    if not preserve_vectors or not db.execute("SELECT 1 FROM sqlite_master WHERE name='chunk_vec'").fetchone():
+        _ensure_vec_table(db, dim)
     set_meta(db, "embed_dim", str(dim))
     _migrate_kind_column(db)
     db.commit()
@@ -132,13 +159,47 @@ def get_meta(db: sqlite3.Connection, key: str) -> Optional[str]:
     return row[0] if row else None
 
 
-def set_meta(db: sqlite3.Connection, key: str, value: str) -> None:
+def set_meta(db: sqlite3.Connection, key: str, value: str, commit: bool = True) -> None:
     db.execute(
         "INSERT INTO meta (key, value) VALUES (?, ?) "
         "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
         (key, value),
     )
-    db.commit()
+    if commit:
+        db.commit()
+
+
+PIPELINE_VERSION = "3"
+
+
+def fingerprint(provider) -> str:
+    return json.dumps({"provider": provider.name, "model": provider.model, "dimension": provider.dim,
+                       "metric": VEC_METRIC, "pipeline": PIPELINE_VERSION}, sort_keys=True)
+
+
+def require_fingerprint(db, provider):
+    if get_meta(db, "index_fingerprint") != fingerprint(provider):
+        raise RuntimeError("embedding fingerprint missing or incompatible; run code.reindex or wiki.embed")
+
+
+def validate_vectors(vectors, count, dim):
+    if len(vectors) != count:
+        raise ValueError(f"expected {count} vectors, received {len(vectors)}")
+    for vector in vectors:
+        if len(vector) != dim or any(isinstance(x, bool) or not isinstance(x, (int, float))
+                                     or not math.isfinite(x) or abs(x) > 3.402823466e38 for x in vector):
+            raise ValueError("invalid embedding dimensions or non-finite/float32-overflow values")
+        if not any(vector):
+            raise ValueError("zero vector is invalid for cosine distance")
+
+
+def reset_vectors(db, dim):
+    db.execute("DROP TABLE chunk_vec")
+    db.execute(f"CREATE VIRTUAL TABLE chunk_vec USING vec0(embedding float[{dim}] distance_metric={VEC_METRIC})")
+    db.execute("DELETE FROM chunks")
+    db.execute("DELETE FROM indexed_files")
+    set_meta(db, "embed_dim", str(dim), commit=False)
+    set_meta(db, "embed_metric", VEC_METRIC, commit=False)
 
 
 def _serialize_vec(vec: list[float]) -> bytes:

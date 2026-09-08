@@ -1,5 +1,7 @@
 # PIANO.md — piano d'azione anjadev
 
+> **Aggiornamento 2026-09-06:** questo documento conserva il ciclo storico e le decisioni già prese. Il nuovo ciclo proposto è in [PIANO-QUALITA.md](PIANO-QUALITA.md), basato sull’[audit riverificato](anjadev-audit.md). Le vecchie caselle completate non attestano l’assenza dei difetti emersi nella riverifica.
+
 > Sintesi di due analisi indipendenti (Claude Fable, Codex) sul repo a v0.24.0, verificate sul codice il 2026-09-04.
 > Ogni voce ha: file toccati, sforzo stimato, criterio di accettazione. Le caselle si spuntano man mano.
 > Sforzo: **S** < 1h · **M** 1–4h · **L** 1–2 giorni.

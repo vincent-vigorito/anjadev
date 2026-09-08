@@ -14,7 +14,7 @@ Match: `tool_name in {Write,Edit,MultiEdit}` AND
        path matches `<root>/.anjawiki/wiki/**.md`.
 
 Skip silenzioso se ANJA_WIKI_EMBED=0 o se non c'è wiki anja.
-Fire-and-forget: avvia `wiki_embed.py --single <path>` detached.
+Fire-and-forget: avvia `wiki_jobs.py --single <path>` detached.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ def _is_wiki_page(file_path: Path, project_root: Path) -> bool:
 
 
 def _trigger_embed_bg(project_root: Path, md_path: Path) -> None:
-    script = Path(__file__).resolve().parent.parent / "scripts" / "wiki_embed.py"
+    script = Path(__file__).resolve().parent.parent / "scripts" / "wiki_jobs.py"
     if not script.is_file():
         return
     try:

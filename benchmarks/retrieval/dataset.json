@@ -1,0 +1,583 @@
+{
+  "version": 1,
+  "thresholds": {
+    "recall_at_5": 0.85,
+    "mrr": 0.7,
+    "valid_references": 1,
+    "freshness": 1,
+    "no_answer": 1,
+    "max_p95_regression": 0.2
+  },
+  "queries": [
+    {
+      "id": "checkout-01",
+      "project": "checkout",
+      "query": "shipping_cost",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "checkout-02",
+      "project": "checkout",
+      "query": "discounted_total",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "checkout-03",
+      "project": "checkout",
+      "query": "free delivery threshold",
+      "category": "behavior",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "checkout-04",
+      "project": "checkout",
+      "query": "Clamp discount",
+      "category": "bug",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "checkout-05",
+      "project": "checkout",
+      "query": "CURRENCY",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 1
+        }
+      ]
+    },
+    {
+      "id": "checkout-06",
+      "project": "checkout",
+      "query": "PAYMENT_TIMEOUT",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "checkout-07",
+      "project": "checkout",
+      "query": "integer cents",
+      "category": "decision",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "checkout-08",
+      "project": "checkout",
+      "query": "test_free_delivery_boundary",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_pricing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "checkout-09",
+      "project": "checkout",
+      "query": "test_discount_clamp",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_pricing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "checkout-10",
+      "project": "checkout",
+      "query": "quantum teleportation gateway",
+      "category": "no_answer",
+      "split": "development",
+      "relevant": []
+    },
+    {
+      "id": "checkout-11",
+      "project": "checkout",
+      "query": "Where is free shipping granted for large orders?",
+      "category": "behavior",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "checkout-12",
+      "project": "checkout",
+      "query": "How do we prevent discounts producing negative totals?",
+      "category": "bug",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "checkout-13",
+      "project": "checkout",
+      "query": "Why use cents instead of floating point prices?",
+      "category": "decision",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "checkout-14",
+      "project": "checkout",
+      "query": "Which test checks excessive percentage discounts?",
+      "category": "tests",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "test_pricing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "worker-01",
+      "project": "worker",
+      "query": "retry_delay",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "worker-02",
+      "project": "worker",
+      "query": "lease_expired",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "worker-03",
+      "project": "worker",
+      "query": "Exponential backoff",
+      "category": "behavior",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "worker-04",
+      "project": "worker",
+      "query": "exactly at its deadline",
+      "category": "bug",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "worker-05",
+      "project": "worker",
+      "query": "MAX_ATTEMPTS",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 1
+        }
+      ]
+    },
+    {
+      "id": "worker-06",
+      "project": "worker",
+      "query": "WORKER_TIMEOUT",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "worker-07",
+      "project": "worker",
+      "query": "process crash",
+      "category": "decision",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "worker-08",
+      "project": "worker",
+      "query": "test_backoff_cap",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_queueing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "worker-09",
+      "project": "worker",
+      "query": "test_lease_boundary",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_queueing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "worker-10",
+      "project": "worker",
+      "query": "quantum teleportation gateway",
+      "category": "no_answer",
+      "split": "development",
+      "relevant": []
+    },
+    {
+      "id": "worker-11",
+      "project": "worker",
+      "query": "Where is the retry wait limited to one minute?",
+      "category": "behavior",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "worker-12",
+      "project": "worker",
+      "query": "Can a lease still be used at its expiry time?",
+      "category": "bug",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "worker-13",
+      "project": "worker",
+      "query": "Why can another process reclaim abandoned work?",
+      "category": "decision",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "worker-14",
+      "project": "worker",
+      "query": "Which test checks equality at the lease deadline?",
+      "category": "tests",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "test_queueing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "cache-01",
+      "project": "cache",
+      "query": "is_fresh",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "cache-02",
+      "project": "cache",
+      "query": "cache_key",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "cache-03",
+      "project": "cache",
+      "query": "time to live",
+      "category": "behavior",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "cache-04",
+      "project": "cache",
+      "query": "isolate customer data",
+      "category": "bug",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "cache-05",
+      "project": "cache",
+      "query": "DEFAULT_TTL",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 1
+        }
+      ]
+    },
+    {
+      "id": "cache-06",
+      "project": "cache",
+      "query": "CACHE_CAPACITY",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "cache-07",
+      "project": "cache",
+      "query": "cache collisions",
+      "category": "decision",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "cache-08",
+      "project": "cache",
+      "query": "test_expiry_boundary",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_storage.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "cache-09",
+      "project": "cache",
+      "query": "test_tenant_isolation",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_storage.py",
+          "start": 7,
+          "end": 8
+        }
+      ]
+    },
+    {
+      "id": "cache-10",
+      "project": "cache",
+      "query": "quantum teleportation gateway",
+      "category": "no_answer",
+      "split": "development",
+      "relevant": []
+    },
+    {
+      "id": "cache-11",
+      "project": "cache",
+      "query": "When does an entry become too old to reuse?",
+      "category": "behavior",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "cache-12",
+      "project": "cache",
+      "query": "How are identical names from different customers separated?",
+      "category": "bug",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "cache-13",
+      "project": "cache",
+      "query": "Why partition cached values by customer?",
+      "category": "decision",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "cache-14",
+      "project": "cache",
+      "query": "Which test prevents two tenants sharing a key?",
+      "category": "tests",
+      "split": "evaluation",
+      "relevant": [
+        {
+          "path": "test_storage.py",
+          "start": 7,
+          "end": 8
+        }
+      ]
+    }
+  ]
+}

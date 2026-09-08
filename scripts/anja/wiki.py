@@ -4,19 +4,22 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
-import sys
 from pathlib import Path
 
+from . import trust
 from .common import (
     _compose_frontmatter,
     _compose_sections,
+    _confined_path,
+    _iter_wiki_md,
     _parse_frontmatter,
     _parse_sections,
     _today_iso,
+    _wiki_page,
     _wiki_root,
 )
 from .config import PLUGIN_ROOT, ROOT, SCRIPTS_DIR, log_exc
+from .persistence import check_revision, persistence_errors, read_text, revision, write_text
 from .wiki_maint import _SLUG_RE, _now_iso_utc
 
 
@@ -61,11 +64,12 @@ def tool_wiki_search(args: dict) -> dict:
 
     matches = []
     for path in scan_paths:
-        files = [path] if path.is_file() else list(path.rglob("*.md"))
+        files = [path] if path.is_file() else list(_iter_wiki_md(path))
         for f in files:
             if not f.is_file() or f.name.startswith("."):
                 continue
             try:
+                _confined_path(wiki, f)
                 text = f.read_text(encoding="utf-8", errors="replace")
             except Exception as _exc:
                 log_exc("wiki.tool_wiki_search", _exc)
@@ -144,29 +148,26 @@ def _wiki_vector_search(query, type_filter, limit, include_sessions):
     except ImportError as e:
         return [], f"module missing: {e}"
 
-    provider = embed_providers.get_provider()
+    try:
+        provider = embed_providers.get_project_provider(ROOT)
+    except ValueError as exc:
+        return [], str(exc)
     if provider is None:
         return [], "no embed provider (set ANJA_EMBED_PROVIDER + API key)"
     anjawiki = ROOT / ".anjawiki"
     if not (anjawiki / "code-index.db").exists():
         return [], "vector index not built (run wiki.embed / code.reindex)"
-    try:
-        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
-    except Exception as e:
-        return [], f"db open failed: {e}"
+    db = None
     try:
         qv = provider.embed([query])
-        if not qv:
-            return [], "empty query embedding"
+        code_db.validate_vectors(qv, 1, provider.dim)
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False, provider=provider)
         hits = code_db.vector_search(db, qv[0], limit=limit, kind_filter="wiki")
     except Exception as e:
         return [], f"vector search failed: {e}"
     finally:
-        try:
+        if db is not None:
             db.close()
-        except Exception as _exc:
-            log_exc("wiki._wiki_vector_search", _exc)
-            pass
 
     out = []
     for h in hits:
@@ -292,14 +293,17 @@ def tool_wiki_find_duplicates(args: dict) -> dict:
     except ImportError as e:
         return {"error": f"module missing: {e}"}
 
-    provider = embed_providers.get_provider()
+    try:
+        provider = embed_providers.get_project_provider(ROOT)
+    except ValueError as exc:
+        return {"error": str(exc), "code": "index_policy_error"}
     if provider is None:
         return {"error": "no embed provider available (set ANJA_EMBED_PROVIDER + API key)"}
     anjawiki = ROOT / ".anjawiki"
     if not (anjawiki / "code-index.db").exists():
         return {"error": "vector index not built — run wiki.embed / code.reindex first"}
     try:
-        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False, provider=provider)
     except Exception as e:
         return {"error": f"db open failed: {e}"}
 
@@ -356,18 +360,22 @@ def tool_wiki_read(args: dict) -> dict:
     if not wiki.is_dir():
         return {"error": f"wiki dir not found: {wiki}"}
 
-    target = None
-    for f in wiki.rglob(f"{slug}.md"):
-        target = f
-        break
+    try:
+        target = _wiki_page(wiki, slug)
+    except (ValueError, OSError, RuntimeError) as e:
+        return {"error": str(e)}
     if not target:
         return {"error": f"page not found: {slug}"}
 
     try:
-        text = target.read_text(encoding="utf-8", errors="replace")
+        text = read_text(target)
+        if text is None:
+            return {"error": "page disappeared; retry the read"}
     except Exception as e:
         return {"error": f"read error: {e}"}
 
+    content_revision = revision(text)
+    verification = trust.status(text)
     # Cap a 10k chars (~2500 token) per evitare context blow-up
     max_chars = int(args.get("max_chars", 10000))
     if len(text) > max_chars:
@@ -377,7 +385,7 @@ def tool_wiki_read(args: dict) -> dict:
         rel = str(target.relative_to(ROOT))
     except ValueError:
         rel = str(target)
-    return {"slug": slug, "path": rel, "content": text, "size": len(text)}
+    return {"slug": slug, "path": rel, "content": text, "size": len(text), "revision": content_revision, **verification}
 
 
 def _plugin_version() -> str:
@@ -434,13 +442,14 @@ def _compute_canonical_warnings(sections_keys: list[str], page_type: str) -> lis
     return [f"missing canonical section '{s}' (recommended for type={page_type})" for s in missing]
 
 
+@persistence_errors
 def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     """Upsert generico entity/concept/source/analysis. Merge sezioni replace-by-name.
     Frontmatter extra opt-in: source_path, subtype, git_sha, analyzed_at,
     question, transient (vengono scritti solo se presenti in args)."""
     from collections import OrderedDict
 
-    slug = (args.get("slug") or "").strip().strip("/")
+    slug = (args.get("slug") or "").strip()
     if slug.endswith(".md"):
         slug = slug[:-3]
     if not slug:
@@ -461,9 +470,12 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     wiki = _wiki_root()
     if not wiki.is_dir():
         return {"error": f"wiki dir not found: {wiki}"}
-    target_dir = wiki / folder
+    try:
+        target_dir = _confined_path(wiki, wiki / folder)
+        target_file = _confined_path(wiki, target_dir / f"{slug}.md")
+    except (ValueError, OSError, RuntimeError) as e:
+        return {"error": str(e)}
     target_dir.mkdir(parents=True, exist_ok=True)
-    target_file = target_dir / f"{slug}.md"
 
     today = _today_iso()
     title_in = (args.get("title") or "").strip()
@@ -471,8 +483,9 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     sources_in = args.get("sources") or []
     tags_in = args.get("tags") or []
 
-    if target_file.is_file():
-        text = target_file.read_text(encoding="utf-8")
+    text = read_text(target_file)
+    expected = check_revision(target_file, text, args.get("expected_revision"))
+    if text is not None:
         fm, body = _parse_frontmatter(text)
         sections = _parse_sections(body)
         for sec_name, sec_content in sections_in.items():
@@ -523,7 +536,7 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
     fm["generated"] = f"{{ by: {_actor()}, at: {_now_iso_utc()} }}"
 
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
-    target_file.write_text(new_text, encoding="utf-8")
+    new_revision = write_text(target_file, new_text, expected)
 
     # Trigger re-embed in background (fire-and-forget) — abilita semantic graph k-NN
     _trigger_wiki_embed_bg(target_file)
@@ -538,6 +551,7 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
         "action": action,
         "type": page_type,
         "sections_modified": list(sections_in.keys()),
+        "revision": new_revision,
     }
     if warnings:
         result["_warnings"] = warnings
@@ -545,28 +559,14 @@ def _wiki_upsert_page(args: dict, page_type: str, folder: str) -> dict:
 
 
 def _trigger_wiki_embed_bg(md_path: Path) -> None:
-    """Fire-and-forget background re-embed di una singola pagina wiki.
-
-    Pattern identico a hooks/session_end.py:spawn_bg_summarize. Detach via
-    start_new_session=True così il subprocess sopravvive al tool dispatch.
-    Skip silenzioso se ANJA_WIKI_EMBED=0 (opt-out).
-    """
-    if os.environ.get("ANJA_WIKI_EMBED", "1") == "0":
-        return
-    script = SCRIPTS_DIR / "wiki_embed.py"
-    if not script.is_file():
+    """Accoda lo snapshot; il worker del progetto serializza i job."""
+    if os.environ.get("ANJA_WIKI_EMBED", "1") == "0" or not (ROOT / ".anjawiki").is_dir():
         return
     try:
-        subprocess.Popen(
-            [sys.executable, str(script), str(ROOT), "--single", str(md_path)],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-    except Exception as _exc:
-        log_exc("wiki._trigger_wiki_embed_bg", _exc)
-        pass
+        import wiki_jobs
+        wiki_jobs.enqueue(ROOT, md_path)
+    except Exception as exc:
+        log_exc("wiki._trigger_wiki_embed_bg", exc)
 
 
 def tool_wiki_upsert_entity(args: dict) -> dict:
@@ -591,6 +591,7 @@ def tool_wiki_upsert_analysis(args: dict) -> dict:
     return _wiki_upsert_page(args, page_type="analysis", folder="analysis")
 
 
+@persistence_errors
 def tool_wiki_update_overview(args: dict) -> dict:
     """Update `wiki/overview.md` con merge sezioni replace-by-name.
 
@@ -610,12 +611,13 @@ def tool_wiki_update_overview(args: dict) -> dict:
     wiki = _wiki_root()
     if not wiki.is_dir():
         return {"error": f"wiki dir not found: {wiki}"}
-    overview_file = wiki / "overview.md"
+    overview_file = _confined_path(wiki, wiki / "overview.md")
     today = _today_iso()
     title_in = (args.get("title") or "Overview").strip()
 
-    if overview_file.is_file():
-        text = overview_file.read_text(encoding="utf-8")
+    text = read_text(overview_file)
+    expected = check_revision(overview_file, text, args.get("expected_revision"))
+    if text is not None:
         fm, body = _parse_frontmatter(text)
         sections = _parse_sections(body)
         for sec_name, sec_content in sections_in.items():
@@ -639,16 +641,18 @@ def tool_wiki_update_overview(args: dict) -> dict:
         action = "created"
 
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
-    overview_file.write_text(new_text, encoding="utf-8")
+    new_revision = write_text(overview_file, new_text, expected)
     _trigger_wiki_embed_bg(overview_file)
 
     return {
         "path": str(overview_file.relative_to(ROOT)),
         "action": action,
         "sections_modified": list(sections_in.keys()),
+        "revision": new_revision,
     }
 
 
+@persistence_errors
 def tool_wiki_index_update(args: dict) -> dict:
     """Update `wiki/index.md`: per una `category` (heading di livello 2) fa
     append o replace della lista entries (markdown bullets).
@@ -677,11 +681,12 @@ def tool_wiki_index_update(args: dict) -> dict:
     wiki = _wiki_root()
     if not wiki.is_dir():
         return {"error": f"wiki dir not found: {wiki}"}
-    index_file = wiki / "index.md"
+    index_file = _confined_path(wiki, wiki / "index.md")
     today = _today_iso()
 
-    if index_file.is_file():
-        text = index_file.read_text(encoding="utf-8")
+    text = read_text(index_file)
+    expected = check_revision(index_file, text, args.get("expected_revision"))
+    if text is not None:
         fm, body = _parse_frontmatter(text)
         sections = _parse_sections(body)
         fm["updated"] = today
@@ -708,10 +713,12 @@ def tool_wiki_index_update(args: dict) -> dict:
         sections[category] = "\n".join(existing_lines).strip()
 
     new_text = _compose_frontmatter(fm) + "\n" + _compose_sections(sections)
-    index_file.write_text(new_text, encoding="utf-8")
+    new_revision = write_text(index_file, new_text, expected)
+    _trigger_wiki_embed_bg(index_file)
 
     return {
         "path": str(index_file.relative_to(ROOT)),
+        "revision": new_revision,
         "category": category,
         "mode": mode,
         "entries_added": added,
@@ -920,3 +927,9 @@ TOOLS = [
     },
 ]
 
+
+for _spec in TOOLS:
+    if _spec["name"] in {"wiki.upsert_entity", "wiki.upsert_concept", "wiki.upsert_source", "wiki.upsert_analysis", "wiki.update_overview", "wiki.index_update"}:
+        _spec["inputSchema"]["properties"]["expected_revision"] = {
+            "type": "string", "description": "Revisione da wiki.read (missing per creare); stale restituisce revision_conflict."
+        }

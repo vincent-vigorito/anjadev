@@ -24,9 +24,11 @@ import threading
 from pathlib import Path
 from typing import Optional
 
+from anja.rpc import validated_request
+
 PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_code"
-SERVER_VERSION = "0.30.0"
+SERVER_VERSION = "0.31.0"
 
 SCOPE = os.environ.get("ANJA_SCOPE", "hub")
 ROOT = Path(os.environ.get("ANJA_ROOT", os.getcwd())).resolve()
@@ -290,6 +292,7 @@ _DISABLED_MSG = ("anja_code disabilitato: esporta ANJA_CODE_EXEC=1 nell'env del 
                  "abilitare execute_python (esegue Python locale con i permessi dell'utente — vedi SECURITY.md)")
 
 
+@validated_request
 def handle_request(req: dict):
     method = req.get("method")
     params = req.get("params") or {}

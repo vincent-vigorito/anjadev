@@ -35,3 +35,9 @@ omit = ["scripts/migrate_cc_memory.py", "scripts/cc_memory_to_soul.py", "scripts
 skip_covered = false
 show_missing = false
 precision = 1
+
+[tool.ruff.lint.per-file-ignores]
+# Frozen retrieval corpus: preserve source lines and hashes used in baseline reports.
+"benchmarks/retrieval/fixtures/**/*.py" = ["I001"]
+"benchmarks/retrieval/v2/fixtures/**/*.py" = ["I001"]
+"benchmarks/retrieval/calibration/fixtures/**/*.py" = ["I001"]

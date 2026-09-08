@@ -15,16 +15,34 @@ def _wiki_root() -> Path:
     `.anjawiki/wiki` come i project; i legacy in `<root>/wiki`. Probe del
     layout reale — il bug era assumere il legacy e fallire sugli hub nuovi."""
     if SCOPE == "project":
-        return ROOT / ".anjawiki" / "wiki"
+        return _confined_path(ROOT, ROOT / ".anjawiki" / "wiki")
     hoisted = ROOT / ".anjawiki" / "wiki"
-    return hoisted if hoisted.is_dir() else ROOT / "wiki"
+    return _confined_path(ROOT, hoisted if hoisted.is_dir() else ROOT / "wiki")
+
+
+def _confined_path(root: Path, path: Path) -> Path:
+    """Canonicalizza prima dell'I/O; i symlink sono ammessi solo dentro lo scope."""
+    resolved = path.resolve()
+    if not resolved.is_relative_to(root.resolve()):
+        raise ValueError("path must stay inside its scope")
+    return resolved
+
+
+def _wiki_page(wiki: Path, slug: str) -> Path | None:
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug):
+        raise ValueError("slug must be kebab-case lowercase")
+    for candidate in wiki.rglob(f"{slug}.md"):
+        _confined_path(wiki, candidate)
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def _raw_root() -> Path:
     if SCOPE == "project":
-        return ROOT / ".anjawiki" / "raw"
+        return _confined_path(ROOT, ROOT / ".anjawiki" / "raw")
     hoisted = ROOT / ".anjawiki" / "raw"
-    return hoisted if hoisted.is_dir() else ROOT / "raw"
+    return _confined_path(ROOT, hoisted if hoisted.is_dir() else ROOT / "raw")
 
 
 def _sessions_root() -> Path:
@@ -148,6 +166,10 @@ def _iter_wiki_md(wiki: Path):
     """Iter su tutti i file .md sotto wiki/ (esclude . files)."""
     for f in wiki.rglob("*.md"):
         if f.is_file() and not f.name.startswith("."):
+            try:
+                _confined_path(wiki, f)
+            except (ValueError, OSError, RuntimeError):
+                continue
             yield f
 
 

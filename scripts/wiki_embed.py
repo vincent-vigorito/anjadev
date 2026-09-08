@@ -24,8 +24,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
-import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent
@@ -61,12 +59,18 @@ def _iter_wiki_files(wiki_root: Path, include_sessions: bool) -> list[Path]:
     if not wiki_root.is_dir():
         return []
     out = []
+    if not wiki_root.resolve().is_relative_to(wiki_root.parent.parent.resolve()):
+        raise ValueError("wiki root escapes the project")
     for md in sorted(wiki_root.rglob("*.md")):
+        relative = md.relative_to(wiki_root)
+        if (not md.is_file() or md.is_symlink() or not md.resolve().is_relative_to(wiki_root.resolve())
+                or any(p.startswith(".") for p in relative.parts)):
+            continue
         if md.name in _ALWAYS_SKIP_FILES:
             continue
-        if any(part in _DEFAULT_SKIP_DIRS for part in md.parts):
+        if any(part in _DEFAULT_SKIP_DIRS for part in relative.parts):
             continue
-        if not include_sessions and "sessions" in md.parts:
+        if not include_sessions and "sessions" in relative.parts:
             continue
         out.append(md)
     return out
@@ -146,108 +150,9 @@ def embed_wiki(
       ms: tempo totale
     }
     """
-    code_db, skill_parser, embed_providers = _get_modules()
-    anjawiki_dir = root / ".anjawiki"
-    wiki_root = anjawiki_dir / "wiki"
-    if not wiki_root.is_dir():
-        return {"error": f"no wiki dir at {wiki_root}", "scanned": 0}
-
-    provider = embed_providers.get_provider()
-    if provider is None:
-        return {"error": "no embedding provider configured (set ANJA_EMBED_PROVIDER + API key)", "scanned": 0}
-
-    start = datetime.now(timezone.utc)
-    db = code_db.open_db(anjawiki_dir, dim=provider.dim)
-    code_db.set_meta(db, "embed_provider", provider.name)
-    code_db.set_meta(db, "embed_model", provider.model)
-
-    # 1. Discovery filesystem
-    md_files = _iter_wiki_files(wiki_root, include_sessions=include_sessions)
-    if verbose:
-        print(f"[wiki_embed] scanned {len(md_files)} .md files under {wiki_root}", file=sys.stderr)
-
-    # 2. Dirty detection
-    existing_in_db = {row["file_path"]: row for row in code_db.list_wiki_pages(db)}
-    fs_paths = {str(md) for md in md_files}
-
-    to_embed: list[tuple[Path, str, dict, str, str, str]] = []  # (path, slug, meta, body_input, hash, page_type)
-    skipped = 0
-    errors: list[str] = []
-
-    for md in md_files:
-        try:
-            text = md.read_text(encoding="utf-8", errors="replace")
-        except OSError as e:
-            errors.append(f"read {md}: {e}")
-            continue
-        meta, body = skill_parser.parse_frontmatter(text)
-        if not isinstance(meta, dict):
-            meta = {}
-        input_text = _compute_input_text(meta, body)
-        body_hash = _compute_hash(input_text)
-        slug = _slug_from_path(md, wiki_root)
-        page_type = (meta.get("type") or "").strip() or "page"
-
-        existing = existing_in_db.get(str(md))
-        if not force and existing and existing["content_sha"] == body_hash:
-            skipped += 1
-            continue
-        to_embed.append((md, slug, meta, input_text, body_hash, page_type))
-
-    # 3. Embed in batch
-    embedded = 0
-    for i in range(0, len(to_embed), batch_size):
-        batch = to_embed[i:i + batch_size]
-        texts = [b[3] for b in batch]
-        try:
-            vectors = provider.embed(texts)
-        except Exception as e:
-            errors.append(f"provider.embed batch {i}: {e}")
-            continue
-        if len(vectors) != len(batch):
-            errors.append(f"batch {i}: expected {len(batch)} vectors, got {len(vectors)}")
-            continue
-        last_mod = datetime.now(timezone.utc).isoformat()
-        for (md, slug, _meta, input_text, body_hash, page_type), vec in zip(batch, vectors):
-            try:
-                code_db.upsert_wiki_page(
-                    db=db,
-                    slug=slug,
-                    file_path=str(md),
-                    content=input_text,
-                    content_sha=body_hash,
-                    last_modified=last_mod,
-                    embedding=vec,
-                    page_type=page_type,
-                )
-                embedded += 1
-            except Exception as e:
-                errors.append(f"upsert {slug}: {e}")
-        db.commit()
-
-    # 4. Orphan cleanup: pagine in DB ma non più nel filesystem
-    deleted_orphans = 0
-    for file_path, _row in existing_in_db.items():
-        if file_path not in fs_paths:
-            code_db.delete_chunks_for_file(db, file_path, kind="wiki")
-            deleted_orphans += 1
-    if deleted_orphans:
-        db.commit()
-
-    db.close()
-
-    elapsed_ms = int((datetime.now(timezone.utc) - start).total_seconds() * 1000)
-    return {
-        "scanned": len(md_files),
-        "embedded": embedded,
-        "skipped_unchanged": skipped,
-        "deleted_orphans": deleted_orphans,
-        "errors": errors,
-        "provider": provider.name,
-        "model": provider.model,
-        "dim": provider.dim,
-        "ms": elapsed_ms,
-    }
+    from index_pipeline import refresh
+    return refresh(root, kind="wiki", force=force, include_sessions=include_sessions,
+                   batch_size=batch_size, verbose=verbose)
 
 
 def embed_single_page(root: Path, md_path: Path) -> dict:
@@ -256,64 +161,14 @@ def embed_single_page(root: Path, md_path: Path) -> dict:
     Più rapido di scan completo: 1 file → 1 embedding call → 1 upsert.
     Restituisce risultato compatto.
     """
-    code_db, skill_parser, embed_providers = _get_modules()
-    anjawiki_dir = root / ".anjawiki"
-    wiki_root = anjawiki_dir / "wiki"
-    if not md_path.is_file():
-        # Se il file è sparito → orphan cleanup
-        provider = embed_providers.get_provider()
-        if provider is None:
-            return {"error": "no provider"}
-        db = code_db.open_db(anjawiki_dir, dim=provider.dim)
-        removed = code_db.delete_chunks_for_file(db, str(md_path), kind="wiki")
-        db.commit()
-        db.close()
-        return {"action": "deleted", "removed": removed, "path": str(md_path)}
-
-    provider = embed_providers.get_provider()
-    if provider is None:
-        return {"error": "no embedding provider configured"}
-
-    text = md_path.read_text(encoding="utf-8", errors="replace")
-    meta, body = skill_parser.parse_frontmatter(text)
-    if not isinstance(meta, dict):
-        meta = {}
-    input_text = _compute_input_text(meta, body)
-    body_hash = _compute_hash(input_text)
-
-    db = code_db.open_db(anjawiki_dir, dim=provider.dim)
-    code_db.set_meta(db, "embed_provider", provider.name)
-    code_db.set_meta(db, "embed_model", provider.model)
-
-    # Dirty check
-    existing = code_db.get_embedding_by_source(db, source=str(md_path), kind="wiki")
-    if existing:
-        row = db.execute("SELECT content_sha FROM chunks WHERE id = ?", (existing["id"],)).fetchone()
-        if row and row["content_sha"] == body_hash:
-            db.close()
-            return {"action": "skipped_unchanged", "path": str(md_path)}
-
-    vectors = provider.embed([input_text])
-    if not vectors:
-        db.close()
-        return {"error": "empty embedding response"}
-
-    slug = _slug_from_path(md_path, wiki_root)
-    page_type = (meta.get("type") or "").strip() or "page"
-    last_mod = datetime.now(timezone.utc).isoformat()
-    code_db.upsert_wiki_page(
-        db=db,
-        slug=slug,
-        file_path=str(md_path),
-        content=input_text,
-        content_sha=body_hash,
-        last_modified=last_mod,
-        embedding=vectors[0],
-        page_type=page_type,
-    )
-    db.commit()
-    db.close()
-    return {"action": "embedded", "slug": slug, "path": str(md_path)}
+    from index_pipeline import refresh
+    root = root.resolve()
+    md_path = md_path.absolute()
+    result = refresh(root, kind="wiki", single=md_path)
+    if "error" not in result:
+        result["path"] = str(md_path)
+        result["action"] = "deleted" if not md_path.is_file() else ("embedded" if result["embedded"] else "skipped_unchanged")
+    return result
 
 
 # ============================================================
@@ -340,7 +195,7 @@ if __name__ == "__main__":
         pass
 
     if args.single:
-        md_path = Path(args.single).expanduser().resolve()
+        md_path = Path(args.single).expanduser().absolute()
         result = embed_single_page(root, md_path)
     else:
         result = embed_wiki(

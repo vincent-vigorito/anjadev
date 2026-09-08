@@ -1,0 +1,896 @@
+{
+  "summary": {
+    "development": {
+      "answerable": 33,
+      "no_answer": 12,
+      "answerable_accepted": 27,
+      "answerable_with_relevant_hit": 26,
+      "false_accepts": 0,
+      "correct_abstentions": 12,
+      "recall_at_5": 0.7727272727272727,
+      "mrr": 0.6792929292929293
+    },
+    "evaluation": {
+      "answerable": 12,
+      "no_answer": 12,
+      "answerable_accepted": 9,
+      "answerable_with_relevant_hit": 9,
+      "false_accepts": 7,
+      "correct_abstentions": 5,
+      "recall_at_5": 0.7083333333333334,
+      "mrr": 0.7083333333333334
+    }
+  },
+  "rows": [
+    {
+      "id": "checkout-01",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 0.3333333333333333,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-02",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 0.3333333333333333,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-03",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-04",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 0.5,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-05",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-06",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-07",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-08",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-09",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-10",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-01",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 0.5,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-02",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 0.5,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-03",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-04",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-05",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-06",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-07",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-08",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-09",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-10",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-01",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-02",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 1.0
+      },
+      "rr": 0.25,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-03",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-04",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-05",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-06",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-07",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-08",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-09",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-10",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-15",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-17",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-19",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-20",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "checkout-21",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-15",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-17",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-19",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-20",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "worker-21",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-15",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-17",
+      "split": "development",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 0.5,
+        "5": 0.5
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-19",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-20",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "cache-21",
+      "split": "development",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-01",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-02",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-03",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-04",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-05",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-06",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-07",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-checkout-08",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-01",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-02",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 1.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-03",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-04",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-05",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-06",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-07",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-worker-08",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-01",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.0,
+        "3": 1.0,
+        "5": 1.0
+      },
+      "rr": 0.5,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-02",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-03",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": {
+        "1": 0.0,
+        "3": 0.0,
+        "5": 0.0
+      },
+      "rr": 0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-04",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": true,
+      "recall": {
+        "1": 0.5,
+        "3": 0.5,
+        "5": 0.5
+      },
+      "rr": 1.0,
+      "no_answer_correct": null,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-05",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-06",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-07",
+      "split": "evaluation",
+      "accepted": false,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": true,
+      "invalid_references": 0
+    },
+    {
+      "id": "fresh-cache-08",
+      "split": "evaluation",
+      "accepted": true,
+      "relevant_found": false,
+      "recall": null,
+      "rr": 0,
+      "no_answer_correct": false,
+      "invalid_references": 0
+    }
+  ]
+}

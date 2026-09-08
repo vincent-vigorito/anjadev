@@ -44,6 +44,8 @@ import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from anja.persistence import persistence_errors, read_text, revision, write_text
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "hooks"))
 import journal_policy as jp  # noqa: E402
@@ -369,26 +371,28 @@ class Writer:
         self.srv = _load_module("anja_mcp_memory_server", HERE / "mcp_memory_server.py")
         self.wroot = wroot
 
-    def _merged_section(self, folder: str, slug: str, section: str, body: str, cluster_id: str) -> str:
+    def _merged_section(self, folder: str, slug: str, section: str, body: str, cluster_id: str) -> tuple[str, str]:
         """Pagina ESISTENTE: il server fa replace-by-name della sezione → qui APPENDIAMO
         (paragrafo datato) per non sovrascrivere mai testo umano. Pagina nuova: body così com'è."""
         page = self.wroot / folder / f"{slug}.md"
         stamp = f"_(steward, {date.today().isoformat()}, {cluster_id})_"
-        if not page.is_file():
-            return body.strip() + "\n\n" + stamp
-        _fm, old_body = self.srv._parse_frontmatter(page.read_text(encoding="utf-8"))
+        text = read_text(page)
+        if text is None:
+            return body.strip() + "\n\n" + stamp, revision(text)
+        _fm, old_body = self.srv._parse_frontmatter(text)
         existing = (self.srv._parse_sections(old_body).get(section) or "").strip()
         block = body.strip() + "\n" + stamp
-        return (existing + "\n\n" + block) if existing else block
+        return (existing if block in existing else ((existing + "\n\n" + block) if existing else block)), revision(text)
 
+    @persistence_errors
     def apply(self, patch: dict, cluster_id: str) -> dict:
         action = patch["action"]
         if action in ("upsert_concept", "upsert_entity"):
             folder = "concepts" if action == "upsert_concept" else "entities"
             section = patch.get("section") or "Summary"
-            merged = self._merged_section(folder, patch["slug"], section, patch["body"], cluster_id)
+            merged, expected = self._merged_section(folder, patch["slug"], section, patch["body"], cluster_id)
             fn = self.srv.tool_wiki_upsert_concept if action == "upsert_concept" else self.srv.tool_wiki_upsert_entity
-            args = {"slug": patch["slug"], "sections": {section: merged}}
+            args = {"slug": patch["slug"], "sections": {section: merged}, "expected_revision": expected}
             if not (self.wroot / folder / f"{patch['slug']}.md").is_file():
                 args["title"] = patch.get("title") or patch["slug"]     # il titolo di una pagina esistente non si tocca
             return fn(args)
@@ -400,13 +404,15 @@ class Writer:
 
     def _append_overview(self, paragraph: str, cluster_id: str) -> dict:
         ov = self.wroot / "overview.md"
-        text = ov.read_text(encoding="utf-8")
+        text = read_text(ov)
         fm, body = self.srv._parse_frontmatter(text)
         sections = self.srv._parse_sections(body)
         recent = (sections.get("Recent") or "").strip()
         entry = f"- **{date.today().isoformat()}** ({cluster_id}): {paragraph.strip()}"
-        sections["Recent"] = (recent + "\n" + entry).strip() if recent else entry
-        res = self.srv.tool_wiki_update_overview({"sections": {"Recent": sections["Recent"]}})
+        sections["Recent"] = recent if entry in recent else ((recent + "\n" + entry).strip() if recent else entry)
+        res = self.srv.tool_wiki_update_overview({"sections": {"Recent": sections["Recent"]}, "expected_revision": revision(text)})
+        if "error" in res:
+            return res
         # overview vecchio: nudge a un umano via stale_after (+90d), senza riscriverlo
         upd = str(fm.get("updated") or "").strip('"')
         try:
@@ -414,13 +420,14 @@ class Writer:
         except Exception:
             age = 0
         if age > OVERVIEW_STALE_DAYS:
-            t2 = ov.read_text(encoding="utf-8")
+            t2 = read_text(ov)
+            expected = revision(t2)
             sa = (date.today() + timedelta(days=90)).isoformat()
             if re.search(r"^stale_after:", t2, re.M):
                 t2 = re.sub(r"^stale_after:.*$", f"stale_after: {sa}", t2, count=1, flags=re.M)
             else:
                 t2 = t2.replace("\n---\n", f"\nstale_after: {sa}\n---\n", 1)
-            ov.write_text(t2, encoding="utf-8")
+            res["revision"] = write_text(ov, t2, expected)
             res["stale_after_set"] = sa
         return res
 
@@ -431,11 +438,12 @@ def mark_distilled(cluster: dict) -> int:
     for s in cluster["sessions"]:
         p: Path = s["path"]
         try:
-            text = p.read_text(encoding="utf-8")
+            text = read_text(p)
+            expected = revision(text)
             if re.search(r"^distilled:", text, re.M):
                 continue
             text = text.replace("\n---\n", f"\ndistilled: true\ndistilled_at: {now}\n---\n", 1)
-            p.write_text(text, encoding="utf-8")
+            write_text(p, text, expected)
             n += 1
         except Exception:
             pass
@@ -471,8 +479,10 @@ def run(root: Path, mode: str, since: str | None = None, only_clusters: list[str
             if not pending_path.is_file():
                 rep["errors"].append("nessun pending"); return rep
             pending = json.loads(pending_path.read_text(encoding="utf-8"))
+            remaining = []
             for c in pending.get("clusters", []):
                 if only_clusters and c["id"] not in only_clusters:
+                    remaining.append(c)
                     continue
                 # ricostruisci le sessioni dal disco (path) per mark_distilled
                 sess = []
@@ -483,11 +493,22 @@ def run(root: Path, mode: str, since: str | None = None, only_clusters: list[str
                 cl = {"id": c["id"], "session_ids": c["session_ids"], "sessions": sess}
                 ok, rej = validate_patches(c.get("patches", []), cl, pages, has_overview, lazy=False)
                 applied = [writer.apply(p, cl["id"]) for p in ok]
-                rep["clusters"].append({"id": cl["id"], "applied": len(applied), "rejected": rej,
+                rep["clusters"].append({"id": cl["id"], "applied": sum("error" not in r for r in applied), "rejected": rej,
                                         "results": [{k: v for k, v in r.items() if k != "content"} for r in applied]})
-                rep["patches_applied"] += len(applied); rep["patches_rejected"] += len(rej)
-                rep["distilled"] += mark_distilled(cl)
-            pending_path.unlink(missing_ok=True)
+                rep["patches_applied"] += sum("error" not in r for r in applied)
+                rep["patches_rejected"] += len(rej)
+                failed = [p for p, r in zip(ok, applied) if "error" in r]
+                if failed:
+                    remaining.append({**c, "patches": failed})
+                    rep["errors"].append(f"{cl['id']}: write failed; cluster not distilled")
+                else:
+                    rep["distilled"] += mark_distilled(cl)
+            if remaining:
+                pending["clusters"] = remaining
+                current = read_text(pending_path)
+                write_text(pending_path, json.dumps(pending, ensure_ascii=False), revision(current))
+            else:
+                pending_path.unlink(missing_ok=True)
         else:
             since_days = _since_days(since, root)
             tri = triage(sroot, since_days)
@@ -510,8 +531,11 @@ def run(root: Path, mode: str, since: str | None = None, only_clusters: list[str
                 if mode == "apply":
                     results = [writer.apply(p, cl["id"]) for p in ok]
                     entry["results"] = [{k: v for k, v in r.items() if k != "content"} for r in results]
-                    rep["patches_applied"] += len(ok)
-                    rep["distilled"] += mark_distilled(cl)
+                    rep["patches_applied"] += sum("error" not in r for r in results)
+                    if all("error" not in r for r in results):
+                        rep["distilled"] += mark_distilled(cl)
+                    else:
+                        rep["errors"].append(f"{cl['id']}: write failed; cluster not distilled")
                 elif mode == "propose":
                     if ok:
                         proposals.append({"id": cl["id"], "session_ids": cl["session_ids"], "patches": ok})

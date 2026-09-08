@@ -9,6 +9,7 @@ from typing import Optional
 
 from . import code, graph, memory, roadmap, sessions, skills, soul, user, wiki, wiki_io, wiki_maint
 from .config import _SECRETS_LOADED, PROTO_VERSION, ROOT, SCOPE, SERVER_NAME, SERVER_VERSION, log
+from .rpc import validated_request
 
 # Ordine dei moduli = ordine dei tool sul wire (tools/list). Un modulo può ospitare tool di
 # gruppi diversi (es. wiki.find_duplicates è nel modulo wiki ma nel gruppo graph).
@@ -128,6 +129,7 @@ def _canonical_name(name: str) -> str:
     return _CANONICAL_BY_WIRE.get(name, name)
 
 
+@validated_request
 def handle_request(req: dict) -> dict:
     method = req.get("method")
     params = req.get("params") or {}
@@ -187,6 +189,12 @@ def _err(req_id, code, message, data=None):
 
 
 def main():
+    if os.environ.get("ANJA_WIKI_EMBED", "1") != "0" and (ROOT / ".anjawiki/wiki-jobs.db").is_file():
+        try:
+            import wiki_jobs
+            wiki_jobs.launch(ROOT)
+        except Exception as exc:
+            print(f"[anja_memory] wiki worker restart failed: {exc}", file=sys.stderr)
     # Stderr per debug; stdout solo JSON-RPC
     groups_env = os.environ.get("ANJA_TOOL_GROUPS", "")
     active_count = len(_allowed_tool_names())

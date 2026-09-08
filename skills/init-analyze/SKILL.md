@@ -1,6 +1,6 @@
 ---
 name: init-analyze
-description: Workflow per popolare il wiki anja di un progetto esistente leggendo il codice e la documentazione. Da usare quando l'utente esegue /anja-init --analyze su type dev/automation, oppure subito dopo /anja-init --cold per "fare l'analisi del progetto" successivamente. Output: overview + entity per i sottosistemi + concept per i pattern + codebase-snapshot.
+description: "Workflow per popolare il wiki anja di un progetto esistente leggendo il codice e la documentazione. Da usare quando l'utente esegue /anja-init --analyze su type dev/automation, oppure subito dopo /anja-init --cold per \"fare l'analisi del progetto\" successivamente. Output: overview + entity per i sottosistemi + concept per i pattern + codebase-snapshot."
 ---
 
 # Skill: init-analyze

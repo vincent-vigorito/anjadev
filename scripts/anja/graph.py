@@ -31,6 +31,11 @@ def tool_wiki_embed(args: dict) -> dict:
     except Exception as e:
         return {"error": f"wiki_embed module unavailable: {e}"}
 
+    if args.get("dry_run"):
+        from index_pipeline import refresh
+        single = args.get("single_page")
+        return refresh(ROOT, kind="wiki", dry_run=True, single=Path(single) if single else None,
+                       include_sessions=bool(args.get("include_sessions", False)))
     single = (args.get("single_page") or "").strip()
     if single:
         return we.embed_single_page(ROOT, Path(single))
@@ -118,7 +123,10 @@ def tool_graph_search_text(args: dict) -> dict:
     except ImportError as e:
         return {"error": f"module missing: {e}"}
 
-    provider = embed_providers.get_provider()
+    try:
+        provider = embed_providers.get_project_provider(ROOT)
+    except ValueError as exc:
+        return {"error": str(exc), "code": "index_policy_error"}
     if provider is None:
         return {"error": "no embed provider configured (set ANJA_EMBED_PROVIDER + API key)"}
 
@@ -129,6 +137,7 @@ def tool_graph_search_text(args: dict) -> dict:
     # Embedda la query (1 call al provider)
     try:
         vecs = provider.embed([query])
+        code_db.validate_vectors(vecs, 1, provider.dim)
     except Exception as e:
         return {"error": f"embedding failed: {e}"}
     if not vecs:
@@ -136,7 +145,7 @@ def tool_graph_search_text(args: dict) -> dict:
     query_vec = vecs[0]
 
     try:
-        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False, provider=provider)
     except Exception as e:
         return {"error": f"db open failed: {e}"}
 
@@ -277,7 +286,10 @@ def tool_graph_semantic_neighbors(args: dict) -> dict:
     except ImportError as e:
         return {"error": f"module missing: {e}"}
 
-    provider = embed_providers.get_provider()
+    try:
+        provider = embed_providers.get_project_provider(ROOT)
+    except ValueError as exc:
+        return {"error": str(exc), "code": "index_policy_error"}
     if provider is None:
         return {"error": "no embed provider available (set ANJA_EMBED_PROVIDER + API key)"}
 
@@ -286,7 +298,7 @@ def tool_graph_semantic_neighbors(args: dict) -> dict:
         return {"error": "index not built yet — run code.reindex and/or wiki.embed first"}
 
     try:
-        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False, provider=provider)
     except Exception as e:
         return {"error": f"db open failed: {e}"}
 
@@ -391,6 +403,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
+                "dry_run": {"type": "boolean", "default": False, "description": "Anteprima locale, nessun invio al provider"},
                 "force": {"type": "boolean", "default": False, "description": "Re-embed all, ignore dirty check"},
                 "include_sessions": {"type": "boolean", "default": False, "description": "Include wiki/sessions/ (default false dal v0.22: i journal non sono conoscenza)"},
                 "single_page": {"type": "string", "description": "Path assoluto a una singola .md (più rapido per refresh post-modifica)"},

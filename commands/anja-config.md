@@ -114,6 +114,12 @@ Se la key esiste già con valore diverso: aggiornala. Se manca: aggiungila.
 
 Aggiungi anche `code` al `ANJA_TOOL_GROUPS` se non già presente.
 
+### Policy di invio
+
+La selezione delle credenziali non autorizza da sola l'invio dei file. Conserva le regole esistenti in `.anjawiki/index-policy.json`. Se l'utente ha esplicitamente autorizzato il provider remoto per i contenuti del progetto, salva `remote: {"provider": "<provider scelto>", "model": "<modello scelto>"}`; altrimenti lascia l'invio disabilitato e indica la scelta ancora necessaria. Non sovrascrivere `include`, `exclude` o l'autorizzazione indipendente `rerank_model`.
+
+Dopo il restart, `/anja-index-code --dry-run` mostra file eleggibili, esclusioni e destinazione senza rete né scritture sull'indice. Un cambio fingerprint può coinvolgere sia codice sia wiki.
+
 ### Step 5 — Conferma
 
 Output user-facing:
@@ -141,7 +147,7 @@ Chiama `mcp__anja_memory__wiki_log_append`:
 ## Note
 
 - `.mcp.json` resta commitable in git: contiene solo references (`${VAR}`), non secrets
-- Cambiare provider con dim diversa richiede full re-index: `/anja-index-code --force`
+- Cambiare fingerprint (anche modello a stessa dimensione) avvia un rebuild completo coordinato; non usare `--limit` durante la migrazione
 - L'auto-detect di `code.search` continua a funzionare: se index esiste e provider matcha → level 2, altrimenti fallback
 
 ## Edge cases

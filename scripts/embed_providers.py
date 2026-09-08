@@ -291,6 +291,16 @@ def get_provider() -> Optional[EmbedProvider]:
     raise ValueError(f"unknown ANJA_EMBED_PROVIDER: {name!r}. Valid: openrouter|voyage|openai|local|mock|none")
 
 
+def get_project_provider(root):
+    """Applica la policy prima di costruttori che possono fare probe remoti."""
+    import index_policy
+    index_policy.authorize(root)
+    provider = get_provider()
+    if provider is not None:
+        index_policy.authorize(root, provider)
+    return provider
+
+
 # ============================================================
 # CLI for quick test
 # ============================================================

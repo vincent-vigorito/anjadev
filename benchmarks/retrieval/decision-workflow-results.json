@@ -1,0 +1,217 @@
+{
+  "workflows": [
+    {
+      "project": "checkout",
+      "success": true,
+      "search_paths": [
+        "decision.md",
+        "pricing.py",
+        "test_pricing.py"
+      ],
+      "new_requirement_failed_before": true,
+      "tests_executed": true,
+      "tests_passed": true,
+      "stale_detected": true,
+      "stale_revision_rejected": true,
+      "refreshed": true,
+      "comparison": {
+        "base_commit": "44dd1c4828410b843949fbfb4ef7e5fa0f17b28d",
+        "baseline_relationship": "caller_selected_not_inferred",
+        "decision": {
+          "path": "decision.md",
+          "status": "unchanged",
+          "baseline_revision": "93b521435ae328b9862dce305cfc06bc2584e31c0859bc5370796bc3f4951b4c",
+          "baseline_blob_oid": "e88cbfbe2d208aa18b012b9d26932a753c6f1aaf",
+          "current_revision": "93b521435ae328b9862dce305cfc06bc2584e31c0859bc5370796bc3f4951b4c",
+          "baseline_lines": 3,
+          "current_lines": 3,
+          "diff": "",
+          "diff_truncated": false,
+          "normalized_text_equal": true
+        },
+        "files": [
+          {
+            "path": "pricing.py",
+            "status": "modified",
+            "baseline_revision": "5ef015941024dd019cd956fdadfb4d47d18dad42e28d7a866cc01cef32c92777",
+            "baseline_blob_oid": "13a5955717554cebab9ac46898d2d3e3d686f72f",
+            "current_revision": "be88bebfa2804abde5f3e9969aa114cffa9dda6e7432489791d76cdb649f4bc5",
+            "baseline_lines": 7,
+            "current_lines": 7,
+            "diff": "--- baseline/pricing.py\n+++ current/pricing.py\n@@ -1,6 +1,6 @@\n def shipping_cost(total):\n     \"\"\"Orders reaching the free delivery threshold pay no shipping.\"\"\"\n-    return 0 if total >= 100 else 8\n+    return 0 if total >= 80 else 8\n \n def discounted_total(total, percent):\n     \"\"\"Clamp discount percentages to avoid negative invoices.\"\"\"\n",
+            "diff_truncated": false,
+            "normalized_text_equal": false
+          },
+          {
+            "path": "test_pricing.py",
+            "status": "modified",
+            "baseline_revision": "3572195290017f7ec6b406702c4dd1991b5e6008aae7fe562a393aa073ce71c8",
+            "baseline_blob_oid": "ebc67a79efdd4dff8ae2c7d9de98527ff42dd26a",
+            "current_revision": "5152b225b4eed0d51c89364a448952dd49ad7720c2b6609644d8f04d8e0cb662",
+            "baseline_lines": 9,
+            "current_lines": 9,
+            "diff": "--- baseline/test_pricing.py\n+++ current/test_pricing.py\n@@ -2,7 +2,7 @@\n \n def test_free_delivery_boundary():\n     assert shipping_cost(100) == 0\n-    assert shipping_cost(99) == 8\n+    assert shipping_cost(99) == 0\n \n def test_discount_clamp():\n     assert discounted_total(100, 150) == 0\n",
+            "diff_truncated": false,
+            "normalized_text_equal": false
+          }
+        ],
+        "diff_chars": 633,
+        "max_chars": 2000,
+        "status": "compared",
+        "revision_algorithm": "sha256",
+        "freshness": "verified_at_read",
+        "decision_fulfillment": "not_assessed",
+        "limits": [
+          "Diffs are textual observations, not proof that a decision was implemented or violated.",
+          "The caller selects the commit; no date or embedding checkpoint is treated as a source snapshot.",
+          "Missing/excluded current files are unavailable; deletion and rename are not inferred.",
+          "Per-file snapshots are not an atomic repository snapshot; UTF-8 decoding replaces invalid bytes.",
+          "Diff hunks refer to their respective baseline/current versions, not interchangeable line numbers."
+        ]
+      }
+    },
+    {
+      "project": "worker",
+      "success": true,
+      "search_paths": [
+        "decision.md",
+        "queueing.py",
+        "test_queueing.py"
+      ],
+      "new_requirement_failed_before": true,
+      "tests_executed": true,
+      "tests_passed": true,
+      "stale_detected": true,
+      "stale_revision_rejected": true,
+      "refreshed": true,
+      "comparison": {
+        "base_commit": "e8fc7611d0486b795bea4a1fc1d85639f2cf6632",
+        "baseline_relationship": "caller_selected_not_inferred",
+        "decision": {
+          "path": "decision.md",
+          "status": "unchanged",
+          "baseline_revision": "4c2465724984cd88f3e82cb9606f29cd3d5f522d907bac22485368ca8ef50354",
+          "baseline_blob_oid": "ecc9751985f6653976194d8dd9628459abdc6217",
+          "current_revision": "4c2465724984cd88f3e82cb9606f29cd3d5f522d907bac22485368ca8ef50354",
+          "baseline_lines": 3,
+          "current_lines": 3,
+          "diff": "",
+          "diff_truncated": false,
+          "normalized_text_equal": true
+        },
+        "files": [
+          {
+            "path": "queueing.py",
+            "status": "modified",
+            "baseline_revision": "b2f9da42ccdf6dd8941472aed253e0b23a5c5c8cd050dedcfe2baf274d97b9ab",
+            "baseline_blob_oid": "8ce4f495c0f1b571faae9a9ccb0fc22127e231f9",
+            "current_revision": "711fc07d510c262a015495e4faed56038f3482bf4d0f95668329b8d9a015d530",
+            "baseline_lines": 7,
+            "current_lines": 7,
+            "diff": "--- baseline/queueing.py\n+++ current/queueing.py\n@@ -4,4 +4,4 @@\n \n def lease_expired(now, deadline):\n     \"\"\"The lease expires exactly at its deadline.\"\"\"\n-    return now >= deadline\n+    return now > deadline\n",
+            "diff_truncated": false,
+            "normalized_text_equal": false
+          },
+          {
+            "path": "test_queueing.py",
+            "status": "modified",
+            "baseline_revision": "fc9ac36107958f2fb5cbea1d18540d30c2f316a73116ec71947f986a7bbcdb04",
+            "baseline_blob_oid": "de41f0e5fc782698a12a3e0d34992ee20e9dfc04",
+            "current_revision": "bce0b2549712a68c3c197fd26c3969f4d69e8dd551dd3af847fbb08d5744ec4b",
+            "baseline_lines": 9,
+            "current_lines": 9,
+            "diff": "--- baseline/test_queueing.py\n+++ current/test_queueing.py\n@@ -5,5 +5,5 @@\n     assert retry_delay(1) == 2\n \n def test_lease_boundary():\n-    assert lease_expired(10, 10)\n+    assert not lease_expired(10, 10)\n     assert not lease_expired(9, 10)\n",
+            "diff_truncated": false,
+            "normalized_text_equal": false
+          }
+        ],
+        "diff_chars": 457,
+        "max_chars": 2000,
+        "status": "compared",
+        "revision_algorithm": "sha256",
+        "freshness": "verified_at_read",
+        "decision_fulfillment": "not_assessed",
+        "limits": [
+          "Diffs are textual observations, not proof that a decision was implemented or violated.",
+          "The caller selects the commit; no date or embedding checkpoint is treated as a source snapshot.",
+          "Missing/excluded current files are unavailable; deletion and rename are not inferred.",
+          "Per-file snapshots are not an atomic repository snapshot; UTF-8 decoding replaces invalid bytes.",
+          "Diff hunks refer to their respective baseline/current versions, not interchangeable line numbers."
+        ]
+      }
+    },
+    {
+      "project": "cache",
+      "success": true,
+      "search_paths": [
+        "decision.md",
+        "storage.py",
+        "test_storage.py"
+      ],
+      "new_requirement_failed_before": true,
+      "tests_executed": true,
+      "tests_passed": true,
+      "stale_detected": true,
+      "stale_revision_rejected": true,
+      "refreshed": true,
+      "comparison": {
+        "base_commit": "175354cac2e20681e1558957fd4ce51910eeca53",
+        "baseline_relationship": "caller_selected_not_inferred",
+        "decision": {
+          "path": "decision.md",
+          "status": "unchanged",
+          "baseline_revision": "c42b23896762dd01377d1c7c18d12d634decb30409784511e9ba727f7c878755",
+          "baseline_blob_oid": "03e4e1f387e5f5808b4954a217441a595164dfec",
+          "current_revision": "c42b23896762dd01377d1c7c18d12d634decb30409784511e9ba727f7c878755",
+          "baseline_lines": 3,
+          "current_lines": 3,
+          "diff": "",
+          "diff_truncated": false,
+          "normalized_text_equal": true
+        },
+        "files": [
+          {
+            "path": "storage.py",
+            "status": "modified",
+            "baseline_revision": "241bd3916b546c830c5a5bcc597093281155db2c808002cf17811a829ff357ad",
+            "baseline_blob_oid": "651f266e29bff56187c2e61db1708634c5f207c7",
+            "current_revision": "4c458d6e389ab9c435a0922543583f893bb36763c72a130115dd94a93870c091",
+            "baseline_lines": 7,
+            "current_lines": 7,
+            "diff": "--- baseline/storage.py\n+++ current/storage.py\n@@ -4,4 +4,4 @@\n \n def cache_key(tenant, name):\n     \"\"\"Include the tenant in keys to isolate customer data.\"\"\"\n-    return tenant + \":\" + name\n+    return tenant + \"/\" + name\n",
+            "diff_truncated": false,
+            "normalized_text_equal": false
+          },
+          {
+            "path": "test_storage.py",
+            "status": "modified",
+            "baseline_revision": "537929bd16a47f5db46c84c16b8a1b438dab7801b29988c1fd4eafdfc56a20fc",
+            "baseline_blob_oid": "8ae303051e1c157779ff734aacd02dd790446ee9",
+            "current_revision": "34bd896128e60662e0dd1e32228ec6d20fd66ef5e3b714153786faf748dc6b95",
+            "baseline_lines": 8,
+            "current_lines": 9,
+            "diff": "--- baseline/test_storage.py\n+++ current/test_storage.py\n@@ -5,4 +5,5 @@\n     assert is_fresh(119, 0, 120)\n \n def test_tenant_isolation():\n+    assert cache_key(\"a\", \"x\") == \"a/x\"\n     assert cache_key(\"a\", \"x\") != cache_key(\"b\", \"x\")\n",
+            "diff_truncated": false,
+            "normalized_text_equal": false
+          }
+        ],
+        "diff_chars": 458,
+        "max_chars": 2000,
+        "status": "compared",
+        "revision_algorithm": "sha256",
+        "freshness": "verified_at_read",
+        "decision_fulfillment": "not_assessed",
+        "limits": [
+          "Diffs are textual observations, not proof that a decision was implemented or violated.",
+          "The caller selects the commit; no date or embedding checkpoint is treated as a source snapshot.",
+          "Missing/excluded current files are unavailable; deletion and rename are not inferred.",
+          "Per-file snapshots are not an atomic repository snapshot; UTF-8 decoding replaces invalid bytes.",
+          "Diff hunks refer to their respective baseline/current versions, not interchangeable line numbers."
+        ]
+      }
+    }
+  ],
+  "passed": 3,
+  "outbound_requests": 0,
+  "limitation": "Prescribed fixture edits and assertions; no autonomous programming or semantic compliance verdict."
+}

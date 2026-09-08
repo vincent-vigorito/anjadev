@@ -1,0 +1,881 @@
+{
+  "version": 3,
+  "protocol": "45 unchanged development queries, then 24 fresh evaluation queries; fit threshold before evaluation requests.",
+  "thresholds": {
+    "recall_at_5": 0.85,
+    "mrr": 0.7,
+    "valid_references": 1,
+    "freshness": 1,
+    "no_answer": 1,
+    "max_p95_regression": 0.2
+  },
+  "queries": [
+    {
+      "id": "checkout-01",
+      "project": "checkout",
+      "query": "shipping_cost",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "checkout-02",
+      "project": "checkout",
+      "query": "discounted_total",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "checkout-03",
+      "project": "checkout",
+      "query": "free delivery threshold",
+      "category": "behavior",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "checkout-04",
+      "project": "checkout",
+      "query": "Clamp discount",
+      "category": "bug",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "checkout-05",
+      "project": "checkout",
+      "query": "CURRENCY",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 1
+        }
+      ]
+    },
+    {
+      "id": "checkout-06",
+      "project": "checkout",
+      "query": "PAYMENT_TIMEOUT",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "checkout-07",
+      "project": "checkout",
+      "query": "integer cents",
+      "category": "decision",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "checkout-08",
+      "project": "checkout",
+      "query": "test_free_delivery_boundary",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_pricing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "checkout-09",
+      "project": "checkout",
+      "query": "test_discount_clamp",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_pricing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "checkout-10",
+      "project": "checkout",
+      "query": "quantum teleportation gateway",
+      "category": "no_answer",
+      "split": "development",
+      "relevant": []
+    },
+    {
+      "id": "worker-01",
+      "project": "worker",
+      "query": "retry_delay",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "worker-02",
+      "project": "worker",
+      "query": "lease_expired",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "worker-03",
+      "project": "worker",
+      "query": "Exponential backoff",
+      "category": "behavior",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "worker-04",
+      "project": "worker",
+      "query": "exactly at its deadline",
+      "category": "bug",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "worker-05",
+      "project": "worker",
+      "query": "MAX_ATTEMPTS",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 1
+        }
+      ]
+    },
+    {
+      "id": "worker-06",
+      "project": "worker",
+      "query": "WORKER_TIMEOUT",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "worker-07",
+      "project": "worker",
+      "query": "process crash",
+      "category": "decision",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "worker-08",
+      "project": "worker",
+      "query": "test_backoff_cap",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_queueing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "worker-09",
+      "project": "worker",
+      "query": "test_lease_boundary",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_queueing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "worker-10",
+      "project": "worker",
+      "query": "quantum teleportation gateway",
+      "category": "no_answer",
+      "split": "development",
+      "relevant": []
+    },
+    {
+      "id": "cache-01",
+      "project": "cache",
+      "query": "is_fresh",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "cache-02",
+      "project": "cache",
+      "query": "cache_key",
+      "category": "symbol",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "cache-03",
+      "project": "cache",
+      "query": "time to live",
+      "category": "behavior",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "cache-04",
+      "project": "cache",
+      "query": "isolate customer data",
+      "category": "bug",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 5,
+          "end": 7
+        }
+      ]
+    },
+    {
+      "id": "cache-05",
+      "project": "cache",
+      "query": "DEFAULT_TTL",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 1
+        }
+      ]
+    },
+    {
+      "id": "cache-06",
+      "project": "cache",
+      "query": "CACHE_CAPACITY",
+      "category": "config",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "cache-07",
+      "project": "cache",
+      "query": "cache collisions",
+      "category": "decision",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "decision.md",
+          "start": 2,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "cache-08",
+      "project": "cache",
+      "query": "test_expiry_boundary",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_storage.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "cache-09",
+      "project": "cache",
+      "query": "test_tenant_isolation",
+      "category": "tests",
+      "split": "development",
+      "relevant": [
+        {
+          "path": "test_storage.py",
+          "start": 7,
+          "end": 8
+        }
+      ]
+    },
+    {
+      "id": "cache-10",
+      "project": "cache",
+      "query": "quantum teleportation gateway",
+      "category": "no_answer",
+      "split": "development",
+      "relevant": []
+    },
+    {
+      "id": "checkout-15",
+      "project": "checkout",
+      "query": "Quanto si paga di spedizione quando si supera la soglia?",
+      "split": "development",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "checkout-17",
+      "project": "checkout",
+      "query": "Where are free delivery rules implemented and their boundary tested?",
+      "split": "development",
+      "category": "tests",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        },
+        {
+          "path": "test_pricing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "checkout-19",
+      "project": "checkout",
+      "query": "Verify Stripe webhook signatures",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "checkout-20",
+      "project": "checkout",
+      "query": "Send the refund to the customer card",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "checkout-21",
+      "project": "checkout",
+      "query": "Calculate Bitcoin margin requirements",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "worker-15",
+      "project": "worker",
+      "query": "Dove viene limitato il tempo di attesa dei tentativi?",
+      "split": "development",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "worker-17",
+      "project": "worker",
+      "query": "Where is the maximum retry delay implemented and tested?",
+      "split": "development",
+      "category": "tests",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        },
+        {
+          "path": "test_queueing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "worker-19",
+      "project": "worker",
+      "query": "Authenticate workers with mutual TLS certificates",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "worker-20",
+      "project": "worker",
+      "query": "Replay the dead letter queue automatically",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "worker-21",
+      "project": "worker",
+      "query": "Elect a leader using the Raft protocol",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "cache-15",
+      "project": "cache",
+      "query": "Quando scade un valore memorizzato?",
+      "split": "development",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "cache-17",
+      "project": "cache",
+      "query": "Where are expiration boundary rules implemented and tested?",
+      "split": "development",
+      "category": "tests",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        },
+        {
+          "path": "test_storage.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "cache-19",
+      "project": "cache",
+      "query": "Encrypt cached entries with AES before saving",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "cache-20",
+      "project": "cache",
+      "query": "Replicate values across Redis cluster nodes",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "cache-21",
+      "project": "cache",
+      "query": "Use a Bloom filter to detect missing keys",
+      "split": "development",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-checkout-01",
+      "project": "checkout",
+      "query": "An order is worth exactly one hundred: locate the function deciding its delivery fee.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "fresh-checkout-02",
+      "project": "checkout",
+      "query": "Dove sono impostati valuta e tempo massimo del pagamento?",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "fresh-checkout-03",
+      "project": "checkout",
+      "query": "Locate percentage discount clamping and the assertions for values outside zero to one hundred.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 5,
+          "end": 7
+        },
+        {
+          "path": "test_pricing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "fresh-checkout-04",
+      "project": "checkout",
+      "query": "Find both the implementation and assertions for paid versus free delivery.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "pricing.py",
+          "start": 1,
+          "end": 3
+        },
+        {
+          "path": "test_pricing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "fresh-checkout-05",
+      "project": "checkout",
+      "query": "Which implementation sends the payment request after PAYMENT_TIMEOUT expires?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-checkout-06",
+      "project": "checkout",
+      "query": "Dove viene applicato al carrello il codice promozionale firmato?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-checkout-07",
+      "project": "checkout",
+      "query": "Which function prevents concurrent orders from overselling the last item?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-checkout-08",
+      "project": "checkout",
+      "query": "How is tax_amount connected to a jurisdiction-specific VAT rate lookup service?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-worker-01",
+      "project": "worker",
+      "query": "Locate the function that doubles waiting time for each failed attempt, with a maximum wait.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "fresh-worker-02",
+      "project": "worker",
+      "query": "Dove sono configurati il numero massimo di tentativi e il timeout del worker?",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "fresh-worker-03",
+      "project": "worker",
+      "query": "Find the lease deadline comparison and its checks for the instant before expiry.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 5,
+          "end": 7
+        },
+        {
+          "path": "test_queueing.py",
+          "start": 7,
+          "end": 9
+        }
+      ]
+    },
+    {
+      "id": "fresh-worker-04",
+      "project": "worker",
+      "query": "Locate both the exponential waiting-time function and its test for a very large attempt count.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "queueing.py",
+          "start": 1,
+          "end": 3
+        },
+        {
+          "path": "test_queueing.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "fresh-worker-05",
+      "project": "worker",
+      "query": "Where does MAX_ATTEMPTS stop and persist a failed task transactionally?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-worker-06",
+      "project": "worker",
+      "query": "Dove si verifica che due worker non acquisiscano lo stesso lease?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-worker-07",
+      "project": "worker",
+      "query": "Which function cancels a running subprocess when WORKER_TIMEOUT elapses?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-worker-08",
+      "project": "worker",
+      "query": "How does heartbeat_due send a heartbeat over the network?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-cache-01",
+      "project": "cache",
+      "query": "Locate the strict age comparison that makes an entry unusable exactly at its TTL.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        }
+      ]
+    },
+    {
+      "id": "fresh-cache-02",
+      "project": "cache",
+      "query": "Dove sono configurati durata predefinita e numero massimo di elementi della cache?",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "config.py",
+          "start": 1,
+          "end": 2
+        }
+      ]
+    },
+    {
+      "id": "fresh-cache-03",
+      "project": "cache",
+      "query": "Find the tenant-qualified key builder and its assertion comparing two customers.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 5,
+          "end": 7
+        },
+        {
+          "path": "test_storage.py",
+          "start": 7,
+          "end": 8
+        }
+      ]
+    },
+    {
+      "id": "fresh-cache-04",
+      "project": "cache",
+      "query": "Locate the freshness predicate and the tests at ages 119 and 120.",
+      "split": "evaluation",
+      "category": "behavior",
+      "relevant": [
+        {
+          "path": "storage.py",
+          "start": 1,
+          "end": 3
+        },
+        {
+          "path": "test_storage.py",
+          "start": 3,
+          "end": 5
+        }
+      ]
+    },
+    {
+      "id": "fresh-cache-05",
+      "project": "cache",
+      "query": "Where does CACHE_CAPACITY trigger automatic deletion of the least recently used key?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-cache-06",
+      "project": "cache",
+      "query": "Dove è implementato il lock distribuito per impedire cache stampede?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-cache-07",
+      "project": "cache",
+      "query": "Which function saves hit_ratio metrics to a remote monitoring endpoint?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    },
+    {
+      "id": "fresh-cache-08",
+      "project": "cache",
+      "query": "How is cache_key hashed cryptographically to hide tenant identifiers?",
+      "split": "evaluation",
+      "category": "no_answer",
+      "relevant": []
+    }
+  ]
+}

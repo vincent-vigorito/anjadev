@@ -36,6 +36,8 @@ def main(argv: list[str]) -> int:
     plugin = json.loads((PLUGIN / ".claude-plugin" / "plugin.json").read_text())
     market = json.loads((PLUGIN / ".claude-plugin" / "marketplace.json").read_text())
     codex = json.loads((PLUGIN / ".codex-plugin" / "plugin.json").read_text())
+    check(codex.get("mcpServers") == json.loads((PLUGIN / ".mcp.codex.json").read_text()),
+          "Codex inline MCP config differs from .mcp.codex.json")
     readme = (PLUGIN / "README.md").read_text(encoding="utf-8")
     versions = {
         "plugin.json": plugin["version"],

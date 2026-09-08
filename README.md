@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.30.0 — usable in production. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.31.0 — release in verifica; CI remota e compatibilità host da completare. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -234,7 +234,7 @@ CC → su Codex può servire un adattamento del parser (gli altri hook funzionan
 | `/anja-evolve-skills` | Review auto-improvement delle skill (pattern Hermes): legge inbox PostToolUse, propone patch SKILL.md, applica dopo conferma |
 
 <!-- anja:tools:start -->
-## MCP tools (57 totali via `mcp_memory_server`)
+## MCP tools (59 totali via `mcp_memory_server`)
 
 Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi: `memory`, `sessions`, `soul`, `user`, `skills`, `wiki`, `roadmap`, `code`, `graph`). Sezione generata da `scripts/gen_tools_doc.py` dal registry del server: non editare a mano.
 
@@ -298,7 +298,7 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi: `memory`, `s
 | `wiki.index_update` | 📝 WIKI write: manutenzione di `wiki/index.md`. |
 | `wiki.backlinks` | 🔍 WIKI nav: trova tutte le pagine che linkano allo slug via [[link]]. |
 | `wiki.lint` | 🔍 WIKI health check: orfani (pagine non linkate da nessuno), broken_links ([[X]] dove X non esiste), stale (updated \> N giorni ma ancora at… |
-| `wiki.verify` | ✅ WIKI trust (schema 1.1): registra un evento di verifica su una pagina (frontmatter `verified`, append). |
+| `wiki.verify` | Registra una verifica automatica sulla revisione corrente; conserva lo storico. |
 | `wiki.rename` | ✏️ WIKI maintenance: rinomina una pagina preservando TUTTI i [[link]] cross-wiki (replace `[[old]]`, `[[old\|label]]`, `[[old#section]]` → `… |
 | `wiki.replace_links` | ✏️ WIKI maintenance: replace `[[old]]` → `[[new]]` cross-wiki SENZA rinominare file. |
 | `wiki.delete` | 🗑️ WIKI maintenance: cancella una pagina. |
@@ -319,10 +319,12 @@ Esposti via stdio, filtrabili via env `ANJA_TOOL_GROUPS` (9 gruppi: `memory`, `s
 | `roadmap.block` | 📋 ROADMAP: shortcut blocking. |
 | `roadmap.archive` | 📋 ROADMAP: archivia task done più vecchi di N giorni (default 30) in `wiki/archive/roadmap-YYYY-QN.md`. |
 
-### Gruppo `code` (3 tool)
+### Gruppo `code` (5 tool)
 
 | Tool | Descrizione |
 |------|-------------|
+| `code.compare_decision` | Compare a Markdown decision and selected current source files against an explicit full Git commit ID. |
+| `code.inspect` | Inspect current Python source or explicit Markdown implementation declarations after code.search. |
 | `code.search` | 🔎 CODE.SEARCH: ricerca nel codebase del progetto ospitante. |
 | `code.reindex` | 🔎 CODE: build/refresh vector index per il codebase del progetto in `.anjawiki/code-index.db`. |
 | `code.status` | 🔎 CODE: stato del vector index del codebase. |
@@ -401,7 +403,7 @@ anja/
 │   └── journal_policy.py        # harness detection, sessioni-macchina, worth
 ├── agents/                      # subagent (wiki-maintainer)
 ├── scripts/
-│   ├── mcp_memory_server.py     # entry point MCP server stdio (57 tool, 9 gruppi) → package anja/
+│   ├── mcp_memory_server.py     # entry point MCP server stdio (59 tool, 9 gruppi) → package anja/
 │   ├── anja/                    # server.py (registry+dispatch), config.py, common.py, un modulo per dominio
 │   │                            #   memory, sessions, soul, user, skills, wiki(+_maint,+_io), roadmap, code, graph
 │   ├── mcp_code_server.py       # anja_code: execute_python (opt-in ANJA_CODE_EXEC=1)

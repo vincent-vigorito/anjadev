@@ -1,0 +1,2674 @@
+{
+  "files": 36,
+  "focused_cases": 7,
+  "invalid_references": 0,
+  "imports": 6,
+  "declarations": 3,
+  "outbound_requests": 0,
+  "rows": [
+    {
+      "project": "cache",
+      "path": "batch.py",
+      "source_revision": "02311f6fd2817056c7e962d04a8fa7509bc3aa6d2716c074e4d1da52ac6fb3b0",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def batch_full(items, maximum):\n    return len(items) >= maximum",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "batch_full",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "batch_full",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Compare",
+          "owner": "batch_full",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "batch_full",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "config.py",
+      "source_revision": "d9907d341c4c4cd84e678870acb0683697ac18d9c397256af0c35de7cd8c239b",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "DEFAULT_TTL = 120\nCACHE_CAPACITY = 512",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "DEFAULT_TTL",
+          "kind": "Assign",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "name": "CACHE_CAPACITY",
+          "kind": "Assign",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "decision.md",
+      "source_revision": "c42b23896762dd01377d1c7c18d12d634decb30409784511e9ba727f7c878755",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "declarations_only",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "# ADR 3: tenant isolation\nPartition keys by tenant to prevent cross customer cache collisions.\nImplemented by: storage.py:cache_key",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [],
+      "operations": [],
+      "relations": [
+        {
+          "type": "implemented_by",
+          "provenance": "explicit_markdown_declaration",
+          "line_start": 3,
+          "line_end": 3,
+          "target_path": "storage.py",
+          "target_symbol": "cache_key",
+          "resolution": "symbol_exists",
+          "behavior_verified": false,
+          "target_revision": "241bd3916b546c830c5a5bcc597093281155db2c808002cf17811a829ff357ad",
+          "target_span": {
+            "line_start": 5,
+            "line_end": 7
+          }
+        }
+      ],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "eviction.py",
+      "source_revision": "d006d64e9e5dfa4b5da4a9dced636d5558c6a942ddd4ff571322b24953128eb3",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def eviction_needed(size, capacity):\n    return size > capacity",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "eviction_needed",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "eviction_needed",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Compare",
+          "owner": "eviction_needed",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "metrics.py",
+      "source_revision": "a62608a775511fced1d5f18a6638b26ce65ad2889cdff35da83dbc2a73a983d7",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def hit_ratio(hits, misses):\n    return hits / (hits + misses) if hits + misses else 0",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "hit_ratio",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "hit_ratio",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "hit_ratio",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "hit_ratio",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "hit_ratio",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "prefix.py",
+      "source_revision": "a901b0721f7fa2139262fb6711587d43064629ce0b946c52d6390afbce77bafd",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def namespace_prefix(namespace):\n    \"\"\"Format a namespace, independently of tenant isolation keys.\"\"\"\n    return namespace.strip() + \"/\"",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "namespace_prefix",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "namespace_prefix",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "BinOp",
+          "owner": "namespace_prefix",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Call",
+          "owner": "namespace_prefix",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "refresh.py",
+      "source_revision": "10410bd13c95f5416115ecf1efcd6c110dd5a608d03ab6b8aee2f64ac333fcd9",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def refresh_due(age, interval):\n    \"\"\"Background refresh schedule, not the entry expiration policy.\"\"\"\n    return age >= interval",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "refresh_due",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "refresh_due",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Compare",
+          "owner": "refresh_due",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "size.py",
+      "source_revision": "1c47d495a31b3f5245e8d18cd5773c135a32df09e4f59297d9e2b48a2da7effd",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def value_size(value):\n    return len(value.encode(\"utf-8\"))",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "value_size",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "value_size",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "value_size",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "value_size",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "statistics.py",
+      "source_revision": "0ff13886fc7d99cf282c0931e24363142e251c5a25396c2a5ff7262c3e00dd06",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def average_bytes(total_bytes, count):\n    return total_bytes / count if count else 0",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "average_bytes",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "average_bytes",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "average_bytes",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "storage.py",
+      "source_revision": "241bd3916b546c830c5a5bcc597093281155db2c808002cf17811a829ff357ad",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 7
+      },
+      "source": "def is_fresh(now, saved_at, ttl):\n    \"\"\"Cached entries expire when their age reaches the time to live.\"\"\"\n    return now - saved_at < ttl\n\ndef cache_key(tenant, name):\n    \"\"\"Include the tenant in keys to isolate customer data.\"\"\"\n    return tenant + \":\" + name",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "is_fresh",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        },
+        {
+          "name": "cache_key",
+          "kind": "FunctionDef",
+          "line_start": 5,
+          "line_end": 7
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "is_fresh",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Compare",
+          "owner": "is_fresh",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "BinOp",
+          "owner": "is_fresh",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Return",
+          "owner": "cache_key",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "cache_key",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "cache_key",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "test_storage.py",
+      "source_revision": "537929bd16a47f5db46c84c16b8a1b438dab7801b29988c1fd4eafdfc56a20fc",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 8
+      },
+      "source": "from storage import is_fresh, cache_key\n\ndef test_expiry_boundary():\n    assert not is_fresh(120, 0, 120)\n    assert is_fresh(119, 0, 120)\n\ndef test_tenant_isolation():\n    assert cache_key(\"a\", \"x\") != cache_key(\"b\", \"x\")",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "test_expiry_boundary",
+          "kind": "FunctionDef",
+          "line_start": 3,
+          "line_end": 5
+        },
+        {
+          "name": "test_tenant_isolation",
+          "kind": "FunctionDef",
+          "line_start": 7,
+          "line_end": 8
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assert",
+          "owner": "test_expiry_boundary",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Call",
+          "owner": "test_expiry_boundary",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_expiry_boundary",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Call",
+          "owner": "test_expiry_boundary",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_tenant_isolation",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_tenant_isolation",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Call",
+          "owner": "test_tenant_isolation",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Call",
+          "owner": "test_tenant_isolation",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        }
+      ],
+      "relations": [
+        {
+          "type": "imports",
+          "owner": "<module>",
+          "module": "storage",
+          "level": 0,
+          "name": "is_fresh",
+          "alias": null,
+          "provenance": "python_ast",
+          "resolution": "not_resolved",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "type": "imports",
+          "owner": "<module>",
+          "module": "storage",
+          "level": 0,
+          "name": "cache_key",
+          "alias": null,
+          "provenance": "python_ast",
+          "resolution": "not_resolved",
+          "line_start": 1,
+          "line_end": 1
+        }
+      ],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "validation.py",
+      "source_revision": "6e91815a7840adbf1b360551e57a4f1ae8ad9d280da1831979c5c6a817c32ca1",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def valid_cache_name(name):\n    return bool(name.strip())",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "valid_cache_name",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "valid_cache_name",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "valid_cache_name",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "valid_cache_name",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "address.py",
+      "source_revision": "b52a447f33f5f2456e23823051d5e0cb0dc39572671dedec3c5390db07a83f15",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def normalize_postcode(postcode):\n    return postcode.strip().upper()",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "normalize_postcode",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "normalize_postcode",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "normalize_postcode",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "normalize_postcode",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "catalog.py",
+      "source_revision": "deb87371aa9eb1145132d2f309272193bcdd6e933d324a8db35c5e9401e9ad0a",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def product_label(sku, title):\n    return sku + \" \" + title",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "product_label",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "product_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "product_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "product_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "config.py",
+      "source_revision": "ed18b2d680c1b088008915a7565d139e07d298d267f1a6117393bf2a967d54ab",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "CURRENCY = \"EUR\"\nPAYMENT_TIMEOUT = 30",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "CURRENCY",
+          "kind": "Assign",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "name": "PAYMENT_TIMEOUT",
+          "kind": "Assign",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "decision.md",
+      "source_revision": "93b521435ae328b9862dce305cfc06bc2584e31c0859bc5370796bc3f4951b4c",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "declarations_only",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "# ADR 1: integer prices\nStore monetary amounts in integer cents to avoid floating point drift.\nImplemented by: pricing.py:shipping_cost",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [],
+      "operations": [],
+      "relations": [
+        {
+          "type": "implemented_by",
+          "provenance": "explicit_markdown_declaration",
+          "line_start": 3,
+          "line_end": 3,
+          "target_path": "pricing.py",
+          "target_symbol": "shipping_cost",
+          "resolution": "symbol_exists",
+          "behavior_verified": false,
+          "target_revision": "5ef015941024dd019cd956fdadfb4d47d18dad42e28d7a866cc01cef32c92777",
+          "target_span": {
+            "line_start": 1,
+            "line_end": 3
+          }
+        }
+      ],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "loyalty.py",
+      "source_revision": "92888d8e49adb8b1d987cb11dc5732df88e3b0adef861be04348275bb0a7ad21",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def loyalty_points(total):\n    \"\"\"Award points independently of shipping thresholds.\"\"\"\n    return total // 10",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "loyalty_points",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "loyalty_points",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "BinOp",
+          "owner": "loyalty_points",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "pricing.py",
+      "source_revision": "5ef015941024dd019cd956fdadfb4d47d18dad42e28d7a866cc01cef32c92777",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 7
+      },
+      "source": "def shipping_cost(total):\n    \"\"\"Orders reaching the free delivery threshold pay no shipping.\"\"\"\n    return 0 if total >= 100 else 8\n\ndef discounted_total(total, percent):\n    \"\"\"Clamp discount percentages to avoid negative invoices.\"\"\"\n    return total * (1 - min(100, max(0, percent)) / 100)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "shipping_cost",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        },
+        {
+          "name": "discounted_total",
+          "kind": "FunctionDef",
+          "line_start": 5,
+          "line_end": 7
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "shipping_cost",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Compare",
+          "owner": "shipping_cost",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Return",
+          "owner": "discounted_total",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "discounted_total",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "discounted_total",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "discounted_total",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "Call",
+          "owner": "discounted_total",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "Call",
+          "owner": "discounted_total",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "receipt.py",
+      "source_revision": "daea411f4477e9c66563146960ac703b3ae7cde2337fab2445e052fed83c87dc",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def receipt_number(order_id):\n    return \"INV-\" + str(order_id)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "receipt_number",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "receipt_number",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "receipt_number",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "receipt_number",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "refund_quote.py",
+      "source_revision": "d757e3b7819a6801ffdb806e184de8f0d3048922e851fc388068d28617a74512",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def refundable_amount(paid, refunded):\n    \"\"\"Quote the remaining refundable amount without issuing payments.\"\"\"\n    return max(0, paid - refunded)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "refundable_amount",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "refundable_amount",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Call",
+          "owner": "refundable_amount",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "BinOp",
+          "owner": "refundable_amount",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "stock.py",
+      "source_revision": "6c7f2199dac87348771bd2a232a20c76a326a86cfb2de261128ca4bfc2e80c39",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def stock_available(on_hand, reserved):\n    return max(0, on_hand - reserved)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "stock_available",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "stock_available",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "stock_available",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "stock_available",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "tax.py",
+      "source_revision": "f45fee549b2f9ccef6a2e26b5214caf649ab18ae62f28bcfb2c4c2876c68b834",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def tax_amount(net, rate):\n    \"\"\"Compute invoice tax, not delivery charges.\"\"\"\n    return round(net * rate)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "tax_amount",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "tax_amount",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Call",
+          "owner": "tax_amount",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "BinOp",
+          "owner": "tax_amount",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "test_pricing.py",
+      "source_revision": "3572195290017f7ec6b406702c4dd1991b5e6008aae7fe562a393aa073ce71c8",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 9
+      },
+      "source": "from pricing import shipping_cost, discounted_total\n\ndef test_free_delivery_boundary():\n    assert shipping_cost(100) == 0\n    assert shipping_cost(99) == 8\n\ndef test_discount_clamp():\n    assert discounted_total(100, 150) == 0\n    assert discounted_total(100, -5) == 100",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "test_free_delivery_boundary",
+          "kind": "FunctionDef",
+          "line_start": 3,
+          "line_end": 5
+        },
+        {
+          "name": "test_discount_clamp",
+          "kind": "FunctionDef",
+          "line_start": 7,
+          "line_end": 9
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assert",
+          "owner": "test_free_delivery_boundary",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_free_delivery_boundary",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Call",
+          "owner": "test_free_delivery_boundary",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_free_delivery_boundary",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_free_delivery_boundary",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Call",
+          "owner": "test_free_delivery_boundary",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_discount_clamp",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_discount_clamp",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Call",
+          "owner": "test_discount_clamp",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_discount_clamp",
+          "provenance": "python_ast",
+          "line_start": 9,
+          "line_end": 9
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_discount_clamp",
+          "provenance": "python_ast",
+          "line_start": 9,
+          "line_end": 9
+        },
+        {
+          "kind": "Call",
+          "owner": "test_discount_clamp",
+          "provenance": "python_ast",
+          "line_start": 9,
+          "line_end": 9
+        }
+      ],
+      "relations": [
+        {
+          "type": "imports",
+          "owner": "<module>",
+          "module": "pricing",
+          "level": 0,
+          "name": "shipping_cost",
+          "alias": null,
+          "provenance": "python_ast",
+          "resolution": "not_resolved",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "type": "imports",
+          "owner": "<module>",
+          "module": "pricing",
+          "level": 0,
+          "name": "discounted_total",
+          "alias": null,
+          "provenance": "python_ast",
+          "resolution": "not_resolved",
+          "line_start": 1,
+          "line_end": 1
+        }
+      ],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "checkout",
+      "path": "validation.py",
+      "source_revision": "f36f819662e962d7236b3720c65bab4982277844a8b3fb57c1c10faaf5825756",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def valid_quantity(quantity):\n    return isinstance(quantity, int) and quantity > 0",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "valid_quantity",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "valid_quantity",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "valid_quantity",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Compare",
+          "owner": "valid_quantity",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "config.py",
+      "source_revision": "f064f6eabb8da4e96ac455abd4aa8b751d3dd15d0a8137b964e272933d5e0a57",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "MAX_ATTEMPTS = 3\nWORKER_TIMEOUT = 300",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "MAX_ATTEMPTS",
+          "kind": "Assign",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "name": "WORKER_TIMEOUT",
+          "kind": "Assign",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "dead_letter.py",
+      "source_revision": "9bcf9193d01dd49b2d574416983d9eaf23e5c294953add0a811a507858e8ac75",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def exhausted(attempts, maximum):\n    \"\"\"Select failed jobs for inspection; never re-enqueue them.\"\"\"\n    return attempts >= maximum",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "exhausted",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "exhausted",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Compare",
+          "owner": "exhausted",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "decision.md",
+      "source_revision": "4c2465724984cd88f3e82cb9606f29cd3d5f522d907bac22485368ca8ef50354",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "declarations_only",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "# ADR 2: leased jobs\nUse leases so another worker can recover work after a process crash.\nImplemented by: queueing.py:lease_expired",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [],
+      "operations": [],
+      "relations": [
+        {
+          "type": "implemented_by",
+          "provenance": "explicit_markdown_declaration",
+          "line_start": 3,
+          "line_end": 3,
+          "target_path": "queueing.py",
+          "target_symbol": "lease_expired",
+          "resolution": "symbol_exists",
+          "behavior_verified": false,
+          "target_revision": "b2f9da42ccdf6dd8941472aed253e0b23a5c5c8cd050dedcfe2baf274d97b9ab",
+          "target_span": {
+            "line_start": 5,
+            "line_end": 7
+          }
+        }
+      ],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "health.py",
+      "source_revision": "7bbcca90af00a3c665fc1e2e3edce077fa381b3fa8f1958e84d0bc53e33cd366",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def worker_healthy(connected, stopping):\n    return connected and not stopping",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "worker_healthy",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "worker_healthy",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "heartbeat.py",
+      "source_revision": "e39b1d24120e26f3744daad5e657b1724c553c61bfd208282fe2ec880d1220e5",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def heartbeat_due(now, previous, interval):\n    return now - previous >= interval",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "heartbeat_due",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "heartbeat_due",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Compare",
+          "owner": "heartbeat_due",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "heartbeat_due",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "labels.py",
+      "source_revision": "46a0bcefe7453fb4ae2a654f8a4f911253bde77d098f31e3ad90edd504648548",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def job_label(queue, ident):\n    return queue + \":\" + str(ident)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "job_label",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "job_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "job_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "job_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Call",
+          "owner": "job_label",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "priority.py",
+      "source_revision": "5c4bd3fb8c0cdaeee405004b29aadef8cb7e3d368ef2dd89453b6d8dbf9d418a",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def urgent(priority):\n    return priority >= 10",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "urgent",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "urgent",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Compare",
+          "owner": "urgent",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "progress.py",
+      "source_revision": "ee97cb614c51638922c8f9a34e83ac6efc8c4410d511266cbfff572dedfa79f9",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def completion_percent(done, total):\n    return 100 * done / total if total else 0",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "completion_percent",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "completion_percent",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "completion_percent",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "completion_percent",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "queueing.py",
+      "source_revision": "b2f9da42ccdf6dd8941472aed253e0b23a5c5c8cd050dedcfe2baf274d97b9ab",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 7
+      },
+      "source": "def retry_delay(attempt):\n    \"\"\"Exponential backoff capped to protect the downstream service.\"\"\"\n    return min(60, 2 ** attempt)\n\ndef lease_expired(now, deadline):\n    \"\"\"The lease expires exactly at its deadline.\"\"\"\n    return now >= deadline",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "retry_delay",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        },
+        {
+          "name": "lease_expired",
+          "kind": "FunctionDef",
+          "line_start": 5,
+          "line_end": 7
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "retry_delay",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Call",
+          "owner": "retry_delay",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "BinOp",
+          "owner": "retry_delay",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Return",
+          "owner": "lease_expired",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "Compare",
+          "owner": "lease_expired",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "rate_limit.py",
+      "source_revision": "524afb62ec65e0c9c49cc1c47998ee791fb67f6e5d3e9685d311d8824972cf97",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 3
+      },
+      "source": "def rate_allowed(used, quota):\n    \"\"\"Account for request quota, not exponential retry backoff.\"\"\"\n    return used < quota",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "rate_allowed",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 3
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "rate_allowed",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        },
+        {
+          "kind": "Compare",
+          "owner": "rate_allowed",
+          "provenance": "python_ast",
+          "line_start": 3,
+          "line_end": 3
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "schedule.py",
+      "source_revision": "a5b415a7c16a1509b67773318e8fe54cfb4147bf6654d22a07990832be0b08f3",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def next_run(now, period):\n    return now + period",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "next_run",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "next_run",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "next_run",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "test_queueing.py",
+      "source_revision": "fc9ac36107958f2fb5cbea1d18540d30c2f316a73116ec71947f986a7bbcdb04",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 9
+      },
+      "source": "from queueing import retry_delay, lease_expired\n\ndef test_backoff_cap():\n    assert retry_delay(10) == 60\n    assert retry_delay(1) == 2\n\ndef test_lease_boundary():\n    assert lease_expired(10, 10)\n    assert not lease_expired(9, 10)",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "test_backoff_cap",
+          "kind": "FunctionDef",
+          "line_start": 3,
+          "line_end": 5
+        },
+        {
+          "name": "test_lease_boundary",
+          "kind": "FunctionDef",
+          "line_start": 7,
+          "line_end": 9
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assert",
+          "owner": "test_backoff_cap",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_backoff_cap",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Call",
+          "owner": "test_backoff_cap",
+          "provenance": "python_ast",
+          "line_start": 4,
+          "line_end": 4
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_backoff_cap",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Compare",
+          "owner": "test_backoff_cap",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Call",
+          "owner": "test_backoff_cap",
+          "provenance": "python_ast",
+          "line_start": 5,
+          "line_end": 5
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_lease_boundary",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Call",
+          "owner": "test_lease_boundary",
+          "provenance": "python_ast",
+          "line_start": 8,
+          "line_end": 8
+        },
+        {
+          "kind": "Assert",
+          "owner": "test_lease_boundary",
+          "provenance": "python_ast",
+          "line_start": 9,
+          "line_end": 9
+        },
+        {
+          "kind": "Call",
+          "owner": "test_lease_boundary",
+          "provenance": "python_ast",
+          "line_start": 9,
+          "line_end": 9
+        }
+      ],
+      "relations": [
+        {
+          "type": "imports",
+          "owner": "<module>",
+          "module": "queueing",
+          "level": 0,
+          "name": "retry_delay",
+          "alias": null,
+          "provenance": "python_ast",
+          "resolution": "not_resolved",
+          "line_start": 1,
+          "line_end": 1
+        },
+        {
+          "type": "imports",
+          "owner": "<module>",
+          "module": "queueing",
+          "level": 0,
+          "name": "lease_expired",
+          "alias": null,
+          "provenance": "python_ast",
+          "resolution": "not_resolved",
+          "line_start": 1,
+          "line_end": 1
+        }
+      ],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    }
+  ],
+  "focused": [
+    {
+      "project": "checkout",
+      "path": "config.py",
+      "source_revision": "ed18b2d680c1b088008915a7565d139e07d298d267f1a6117393bf2a967d54ab",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 2,
+        "line_end": 2
+      },
+      "source": "PAYMENT_TIMEOUT = 30",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "PAYMENT_TIMEOUT",
+          "kind": "Assign",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "config.py",
+      "source_revision": "f064f6eabb8da4e96ac455abd4aa8b751d3dd15d0a8137b964e272933d5e0a57",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 1
+      },
+      "source": "MAX_ATTEMPTS = 3",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "MAX_ATTEMPTS",
+          "kind": "Assign",
+          "line_start": 1,
+          "line_end": 1
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 1,
+          "line_end": 1
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "queueing.py",
+      "source_revision": "b2f9da42ccdf6dd8941472aed253e0b23a5c5c8cd050dedcfe2baf274d97b9ab",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 5,
+        "line_end": 7
+      },
+      "source": "def lease_expired(now, deadline):\n    \"\"\"The lease expires exactly at its deadline.\"\"\"\n    return now >= deadline",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "lease_expired",
+          "kind": "FunctionDef",
+          "line_start": 5,
+          "line_end": 7
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "lease_expired",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "Compare",
+          "owner": "lease_expired",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "config.py",
+      "source_revision": "f064f6eabb8da4e96ac455abd4aa8b751d3dd15d0a8137b964e272933d5e0a57",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 2,
+        "line_end": 2
+      },
+      "source": "WORKER_TIMEOUT = 300",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "WORKER_TIMEOUT",
+          "kind": "Assign",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "worker",
+      "path": "heartbeat.py",
+      "source_revision": "e39b1d24120e26f3744daad5e657b1724c553c61bfd208282fe2ec880d1220e5",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 1,
+        "line_end": 2
+      },
+      "source": "def heartbeat_due(now, previous, interval):\n    return now - previous >= interval",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "heartbeat_due",
+          "kind": "FunctionDef",
+          "line_start": 1,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "heartbeat_due",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "Compare",
+          "owner": "heartbeat_due",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        },
+        {
+          "kind": "BinOp",
+          "owner": "heartbeat_due",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "config.py",
+      "source_revision": "d9907d341c4c4cd84e678870acb0683697ac18d9c397256af0c35de7cd8c239b",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 2,
+        "line_end": 2
+      },
+      "source": "CACHE_CAPACITY = 512",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "CACHE_CAPACITY",
+          "kind": "Assign",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Assign",
+          "owner": "<module>",
+          "provenance": "python_ast",
+          "line_start": 2,
+          "line_end": 2
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    },
+    {
+      "project": "cache",
+      "path": "storage.py",
+      "source_revision": "241bd3916b546c830c5a5bcc597093281155db2c808002cf17811a829ff357ad",
+      "revision_algorithm": "sha256",
+      "freshness": "verified_at_read",
+      "parser": "parsed",
+      "scope_span": {
+        "line_start": 5,
+        "line_end": 7
+      },
+      "source": "def cache_key(tenant, name):\n    \"\"\"Include the tenant in keys to isolate customer data.\"\"\"\n    return tenant + \":\" + name",
+      "source_truncated": false,
+      "max_chars": 6000,
+      "max_items": 100,
+      "facts_truncated": false,
+      "symbols": [
+        {
+          "name": "cache_key",
+          "kind": "FunctionDef",
+          "line_start": 5,
+          "line_end": 7
+        }
+      ],
+      "operations": [
+        {
+          "kind": "Return",
+          "owner": "cache_key",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "cache_key",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        },
+        {
+          "kind": "BinOp",
+          "owner": "cache_key",
+          "provenance": "python_ast",
+          "line_start": 7,
+          "line_end": 7
+        }
+      ],
+      "relations": [],
+      "behavioral_claims": "not_assessed",
+      "tests_executed": false,
+      "limits": [
+        "AST facts describe syntax, including unreachable code and unexecuted assertions.",
+        "Imports are declarations; module resolution, dispatch and call targets are not proven.",
+        "No returned operation proves or disproves a natural-language behavioral claim.",
+        "A declared implemented_by edge verifies at most symbol existence, not implementation correctness.",
+        "Snapshots are per file, not an atomic repository snapshot. Other languages are not analyzed."
+      ]
+    }
+  ],
+  "limitation": "Expected AST categories check extraction only. This is not an entailment or no-answer classifier."
+}

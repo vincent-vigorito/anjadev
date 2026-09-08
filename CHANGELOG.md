@@ -2,6 +2,32 @@
 
 All notable changes to the `anja` plugin.
 
+## v0.31.0 — 2026-09-08
+
+Preparazione locale della release: CI remota e prove negli host ancora da completare.
+
+- Integrità: root/path confinati, envelope MCP validato, persistenza atomica con
+  controllo revisione, ID task persistenti e migrazione con backup.
+- Memoria: verifiche legate alla revisione, stato legacy esplicito, coda embedding
+  persistente con retry e recupero dopo interruzioni.
+- Indice: snapshot del working tree, pubblicazione transazionale codice/wiki,
+  fingerprint provider/modello/dimensione/metrica/pipeline e rebuild coordinato.
+  La pipeline 3 richiede un refresh completo degli indici precedenti.
+- Privacy e recupero: policy esplicita per embedding remoto, esclusioni condivise,
+  diagnostica, backup verificati, restore su nuova destinazione e ritenzione.
+- Programmazione: `code.inspect` per fatti AST con fonti/revisioni;
+  `code.compare_decision` per confrontare una decisione e i sorgenti con un commit
+  scelto dal chiamante. `code.search` verifica riferimenti e freschezza.
+- Qualità: benchmark retrieval e workflow su fixture; regressioni migrazione
+  v0.30.0 con morte del processo, riesecuzione e restore. CI con sqlite-vec
+  effettivamente caricato e `--fail-on-skip`; soglia coverage mantenuta al 56%.
+- Limiti: il gate di astensione semantica non è raggiunto. Similarità e fatti AST
+  non provano il comportamento del codice o il rispetto di una decisione.
+  Non alternare vecchi e nuovi writer sul progetto migrato; per il downgrade
+  usare una copia pre-migrazione e ricostruire l'indice. Dettagli in SCHEMA.md,
+  SECURITY.md e PIANO-QUALITA.md. Esecuzione Python opt-in ad alta fiducia,
+  non una sandbox di sicurezza.
+
 ## v0.30.0 — 2026-09-04
 
 **Ritenzione esplicita delle sessioni** (prima: nessun cap, nessuna scadenza, compact solo

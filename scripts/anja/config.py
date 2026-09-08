@@ -11,7 +11,7 @@ PROTO_VERSION = "2024-11-05"
 SERVER_NAME = "anja_memory"
 
 
-SERVER_VERSION = "0.30.0"
+SERVER_VERSION = "0.31.0"
 
 
 SCOPE = os.environ.get("ANJA_SCOPE", "project")  # project | hub | agent

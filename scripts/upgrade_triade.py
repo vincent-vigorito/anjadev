@@ -80,6 +80,8 @@ def upgrade_project(target: Path, project_type: str, dry_run: bool = False) -> i
         print("[dry-run] would write triade + symlink + MCP register + config + TOOLS.md + schema-version")
         return 0
 
+    from project_recovery import snapshot_project
+    snapshot_project(target, reason="schema_upgrade")
     ip.write_triade(target, triade_replacements)
     ip.make_claude_md_symlink(target)
     # config.json va in <target>/.anjawiki/ per progetti

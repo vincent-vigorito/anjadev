@@ -25,7 +25,7 @@ Convenzioni:
 - Status checkbox: `[ ]` open · `[~]` in_progress · `[x]` done · `[⏸]` blocked · `[-]` cancelled
 - Priority: `P0|P1|P2|P3` (opt). Notation: `(P0)` subito dopo lo status, prima del title.
 - Metadata inline dopo `|`: `est:`, `owner:`, `added:`, `started:`, `done:`, `took:`, `blocker:`
-- ID auto-generato come slug del title (kebab-case, dedupe con `-2/-3/...` se collide)
+- ID opaco persistito come `id: task-<uuid>`; migrazione legacy al primo write con backup.
 
 Sezioni canoniche (ordine): Open, Done, Blocked. Cancelled vanno in Done sezione (con [-]) o saltati.
 
@@ -34,10 +34,22 @@ Stdlib pure, no deps esterne.
 
 from __future__ import annotations
 
+import json
 import re
+import uuid
 from collections import OrderedDict
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from anja.persistence import (
+    MISSING,
+    PersistenceError,
+    check_revision,
+    create_text,
+    read_text,
+    revision,
+    write_many,
+)
 
 STATUS_GLYPH = {
     "open": " ",
@@ -58,7 +70,7 @@ SECTION_FOR_STATUS = {
 }
 DEFAULT_SECTIONS = ("Open", "Done", "Blocked")
 
-KNOWN_META_KEYS = ("est", "owner", "added", "started", "done", "took", "blocker")
+KNOWN_META_KEYS = ("id", "est", "owner", "added", "started", "done", "took", "blocker")
 
 # Splitter title/metadata: cerca il primo `|` seguito da una known key + colon.
 # Così `|` dentro al title (es. `wiki.export(format=md|json|html)`) NON è split.
@@ -111,13 +123,18 @@ def parse_line(line: str) -> dict | None:
 
 def task_to_line(task: dict) -> str:
     """Serializza task dict a riga markdown."""
+    for key, value in task.items():
+        if isinstance(value, str) and ("\n" in value or "\r" in value or (key != "title" and "|" in value)):
+            raise PersistenceError("invalid_task_value", "task fields must fit a single metadata line", field=key)
+    if _META_SPLIT_RE.search(task.get("title", "")):
+        raise PersistenceError("invalid_task_title", "task title contains a metadata delimiter")
     status = task.get("status", "open")
     glyph = STATUS_GLYPH.get(status, " ")
     priority = task.get("priority")
     title = task.get("title", "").strip()
     prefix_priority = f"({priority}) " if priority else ""
 
-    meta_keys_order = ("est", "owner", "added", "started", "done", "took", "blocker")
+    meta_keys_order = ("id", "est", "owner", "added", "started", "done", "took", "blocker")
     meta_parts = []
     for k in meta_keys_order:
         if k in task and task[k]:
@@ -133,7 +150,7 @@ def task_to_line(task: dict) -> str:
     return f"- [{glyph}] {prefix_priority}{title}{meta_str}"
 
 
-def _assign_id(task: dict, existing_ids: set) -> str:
+def _legacy_id(task: dict, existing_ids: set) -> str:
     base = _slugify(task["title"])
     if base not in existing_ids:
         return base
@@ -143,6 +160,10 @@ def _assign_id(task: dict, existing_ids: set) -> str:
     return f"{base}-{n}"
 
 
+def _assign_id(task: dict, existing_ids: set) -> str:
+    return "task-" + uuid.uuid4().hex
+
+
 def parse_roadmap(path: Path) -> dict:
     """Parse l'intero file roadmap.md. Restituisce:
     {
@@ -150,16 +171,20 @@ def parse_roadmap(path: Path) -> dict:
       "preamble": "# Roadmap\\n...",
       "sections": OrderedDict({"Open": [task,...], "Done": [task,...], "Blocked": [...]})
     }
-    Ogni task ha campo `id` auto-assegnato (slug del title, dedupe globale).
+    Ogni task ha ID persistito o provvisorio deterministico sullo snapshot legacy.
+    Il parser non scrive; il writer persiste gli ID e salva un backup prima della migrazione.
     """
     if not path.is_file():
         return {
             "frontmatter": {},
+            "_revision": MISSING,
+            "_original": None,
+            "_migration": False,
             "preamble": "",
             "sections": OrderedDict((s, []) for s in DEFAULT_SECTIONS),
         }
 
-    text = path.read_text(encoding="utf-8")
+    text = read_text(path)
     # Frontmatter parse minimale
     frontmatter = {}
     body = text
@@ -173,7 +198,10 @@ def parse_roadmap(path: Path) -> dict:
                     k, _, v = line.partition(":")
                     frontmatter[k.strip()] = v.strip()
 
+    if int(frontmatter.get("roadmap_schema", "1")) > 2:
+        raise PersistenceError("unsupported_schema", "roadmap schema is newer than this writer")
     sections: "OrderedDict[str, list]" = OrderedDict()
+    section_notes = {}
     current_section: str | None = None
     preamble_lines: list[str] = []
     existing_ids: set = set()
@@ -182,7 +210,10 @@ def parse_roadmap(path: Path) -> dict:
         stripped = line.strip()
         if stripped.startswith("## "):
             current_section = stripped[3:].strip()
+            if current_section in sections:
+                raise PersistenceError("duplicate_section", "duplicate roadmap section", section=current_section)
             sections[current_section] = []
+            section_notes[current_section] = []
             continue
         if current_section is None:
             preamble_lines.append(line)
@@ -190,10 +221,31 @@ def parse_roadmap(path: Path) -> dict:
         # Riga task
         task = parse_line(line)
         if task:
-            task["id"] = _assign_id(task, existing_ids)
-            existing_ids.add(task["id"])
+            if "id" not in task:
+                legacy = _legacy_id(task, existing_ids)
+                existing_ids.add(legacy)
+                task["id"] = "task-" + uuid.uuid5(uuid.NAMESPACE_URL, revision(text) + ":" + legacy).hex
+            elif not re.fullmatch(r"task-[0-9a-f]{32}", task["id"]):
+                raise PersistenceError("invalid_task_id", "invalid persistent task id", id=task["id"])
             sections[current_section].append(task)
-        # Altre righe (vuote, commenti) ignorate dentro le sezioni
+        elif stripped and stripped not in ("_(nessun task open)_", "_(nessun done negli ultimi 30 giorni)_", "_(nessun blocker attivo)_"):
+            section_notes[current_section].append(line)
+
+    tasks = [t for group in sections.values() for t in group]
+    ids = [t["id"] for t in tasks]
+    if len(ids) != len(set(ids)):
+        raise PersistenceError("duplicate_task_id", "duplicate persistent task IDs; repair before writing")
+    migration = frontmatter.get("roadmap_schema") != "2"
+    if migration:
+        aliases = {}
+        used = set()
+        for task in tasks:
+            alias = _legacy_id(task, used)
+            used.add(alias)
+            family = re.sub(r"-\d+$", "", _slugify(task["title"]))
+            aliases[alias] = [t["id"] for t in tasks
+                              if re.sub(r"-\d+$", "", _slugify(t["title"])) == family]
+        frontmatter["legacy_task_ids"] = json.dumps(aliases, separators=(",", ":"))
 
     # Ensure default sections esistano
     for s in DEFAULT_SECTIONS:
@@ -202,18 +254,23 @@ def parse_roadmap(path: Path) -> dict:
 
     return {
         "frontmatter": frontmatter,
+        "_revision": revision(text),
+        "_original": text,
+        "_migration": migration,
+        "_section_notes": section_notes,
         "preamble": "\n".join(preamble_lines).strip("\n"),
         "sections": sections,
     }
 
 
-def write_roadmap(path: Path, data: dict) -> None:
+def write_roadmap(path: Path, data: dict, extra_changes=None) -> None:
     """Scrive roadmap.md preservando frontmatter + preamble + sezioni ordinate."""
     fm = dict(data.get("frontmatter") or {})
     fm.setdefault("title", "Roadmap")
     fm.setdefault("type", "roadmap")
     fm.setdefault("created", _today_iso())
     fm["updated"] = _today_iso()
+    fm["roadmap_schema"] = "2"
 
     preamble = data.get("preamble") or "# Roadmap"
     sections: "OrderedDict[str, list]" = data.get("sections") or OrderedDict()
@@ -249,9 +306,26 @@ def write_roadmap(path: Path, data: dict) -> None:
         else:
             for t in tasks:
                 out.append(task_to_line(t))
+        out.extend(data.get("_section_notes", {}).get(sec_name, []))
 
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(out) + "\n", encoding="utf-8")
+    expected = data.get("_revision", MISSING)
+    check_revision(path, read_text(path), expected)
+    if data.get("_migration") and data.get("_original") is not None:
+        if path.parent.name == "wiki" and path.parent.parent.name == ".anjawiki":
+            from project_recovery import snapshot_project
+            snapshot_project(path.parent.parent.parent, reason="roadmap_migration")
+        backup = path.with_name("." + path.name + ".pre-v2-" + expected.split(":")[-1] + ".bak")
+        try:
+            create_text(backup, data["_original"])
+        except FileExistsError:
+            if read_text(backup) != data["_original"]:
+                raise PersistenceError("backup_conflict", "migration backup does not match source") from None
+    new_text = "\n".join(out) + "\n"
+    write_many({**(extra_changes or {}), path: (new_text, expected)})
+    data["_revision"] = revision(new_text)
+    data["_original"] = new_text
+    data["_migration"] = False
+    data["frontmatter"] = fm
 
 
 def find_task(sections, task_id: str) -> tuple[str | None, int | None]:
@@ -261,6 +335,19 @@ def find_task(sections, task_id: str) -> tuple[str | None, int | None]:
             if t.get("id") == task_id:
                 return sec_name, i
     return None, None
+
+
+def resolve_task(data: dict, task_id: str):
+    sections = data["sections"]
+    direct = find_task(sections, task_id)
+    if direct[0] is not None:
+        return direct
+    aliases = json.loads(data["frontmatter"].get("legacy_task_ids", "{}"))
+    candidates = aliases.get(task_id, [])
+    if len(candidates) > 1:
+        raise PersistenceError("ambiguous_task_id", "legacy task ID is ambiguous; use a persistent ID",
+                               candidates=candidates)
+    return find_task(sections, candidates[0]) if candidates else (None, None)
 
 
 def move_task_to_section(sections, from_section: str, idx: int, to_section: str):

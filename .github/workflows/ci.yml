@@ -21,7 +21,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --quiet pytest sqlite-vec httpx
-      - run: python -m pytest
+      - name: Verify sqlite-vec loads in the test interpreter
+        run: python -c "import sqlite3, sqlite_vec; c = sqlite3.connect(':memory:'); c.enable_load_extension(True); sqlite_vec.load(c); print(c.execute('select vec_version()').fetchone()[0])"
+      - run: python -m pytest --fail-on-skip
 
   lint-and-consistency:
     name: ruff + registry/README/release check
@@ -53,9 +55,8 @@ jobs:
           COVERAGE_FILE: ${{ github.workspace }}/.coverage
           COVERAGE_PROCESS_START: ${{ github.workspace }}/pyproject.toml
           PYTHONPATH: ${{ github.workspace }}/tests/_coverage_hook
-        run: python -m coverage run -m pytest
+        run: python -m coverage run -m pytest --fail-on-skip
       - run: python -m coverage combine
       - run: python -m coverage report --fail-under=${COV_MIN}
         env:
           COV_MIN: "56"   # baseline 58.7% su py3.12+sqlite-vec (2026-09-04) meno 2 punti; alzare a ogni release
-

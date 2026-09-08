@@ -359,7 +359,7 @@ def write_session_file(sessions_root: Path, kind: str, session_meta: dict, trans
             lines.append(f"- {snippet}")
         lines.append("")
     if transcript_path:
-        lines.append("## Transcript (drill-down lossless)")
+        lines.append("## Transcript (disponibilità da verificare)")
         lines.append("")
         lines.append("> Recovery deterministico ai turni originali (assistant + tool, oltre i prompt qui sopra):")
         lines.append(f"> `{transcript_path}`")
@@ -436,7 +436,7 @@ def spawn_bg_summarize(session_file: Path, transcript_info: dict = None, duratio
 
 
 def spawn_bg_wiki_embed_check(project_root: Path) -> None:
-    """Spawn DETACHED background `wiki_embed.py` per consistency check.
+    """Spawn DETACHED background `wiki_jobs.py` per consistency check.
 
     Cattura modifiche fatte fuori dai trigger inline / PostToolUse (es. edit
     manuale del file dall'utente). Dirty detection idempotente: re-run è no-op
@@ -447,7 +447,7 @@ def spawn_bg_wiki_embed_check(project_root: Path) -> None:
     """
     if os.environ.get("ANJA_WIKI_EMBED", "1") == "0":
         return
-    script = Path(__file__).resolve().parent.parent / "scripts" / "wiki_embed.py"
+    script = Path(__file__).resolve().parent.parent / "scripts" / "wiki_jobs.py"
     if not script.is_file():
         return
     try:
@@ -528,6 +528,11 @@ def main() -> None:
 
     try:
         session_file = write_session_file(sessions_dir, kind, session_meta, transcript_info)
+        if kind == "project" and os.environ.get("ANJA_ARCHIVE_TRANSCRIPTS", "0") == "1":
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+            from session_archive import archive
+            archival = archive(root, session_file)
+            print(f"[anja] transcript archive: {archival['status']}", file=sys.stderr)
         rel = session_file.relative_to(root)
         print(f"[anja] Session file ({kind}) → {rel}", file=sys.stderr)
         # Spawn auto-summary in background (detached, non blocca /exit) — solo se worth

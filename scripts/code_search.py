@@ -29,22 +29,15 @@ from typing import Optional
 # ============================================================
 
 def _project_root(start: Path = None) -> Optional[Path]:
-    """Risali dalla cwd cercando `.anjawiki/`.
-
-    Fallback su env ANJA_ROOT (settato dal server MCP) se cwd non valida.
-    """
-    candidates = []
-    if start:
-        candidates.append(start.resolve())
-    candidates.append(Path.cwd().resolve())
-    env_root = os.environ.get("ANJA_ROOT")
-    if env_root:
-        candidates.append(Path(env_root).resolve())
-
-    for cur in candidates:
-        for parent in [cur] + list(cur.parents):
-            if (parent / ".anjawiki" / "meta.yaml").is_file():
-                return parent
+    """Target esplicito, ANJA_ROOT, poi discovery dalla cwd."""
+    explicit = start if start is not None else os.environ.get("ANJA_ROOT")
+    if explicit is not None:
+        root = Path(explicit).expanduser().resolve()
+        return root if (root / ".anjawiki" / "meta.yaml").is_file() else None
+    cur = Path.cwd().resolve()
+    for parent in [cur] + list(cur.parents):
+        if (parent / ".anjawiki" / "meta.yaml").is_file():
+            return parent
     return None
 
 
@@ -210,6 +203,18 @@ def search_level_0(query: str, root: Path, limit: int = 20, lang: Optional[str] 
 def search_level_1(query: str, root: Path, limit: int = 10, lang: Optional[str] = None) -> dict:
     """Level 0 top 50 → spawn claude haiku per rerank semantico."""
     level0 = search_level_0(query, root, limit=50, lang=lang)
+    import index_policy
+    model = os.environ.get("ANJA_SEARCH_RERANK_MODEL", "haiku")
+    try:
+        if index_policy.config(root).get("rerank_model") != model:
+            level0["_fallback_reason"] = "rerank model not authorized in index-policy.json"
+            level0["results"] = level0["results"][:limit]
+            level0["count"] = len(level0["results"])
+            return level0
+        allowed = {str(path.relative_to(root)) for path in index_policy.discover(root)[0]}
+        level0["results"] = [r for r in level0["results"] if r["path"] in allowed]
+    except Exception:
+        return {"error": "cannot evaluate outbound data policy", "code": "index_policy_error"}
     if not level0["results"]:
         return {"level": 1, "method": "ripgrep_llm_rerank", "results": [], "count": 0, "note": "no ripgrep matches"}
 
@@ -237,7 +242,7 @@ def search_level_1(query: str, root: Path, limit: int = 10, lang: Optional[str] 
     try:
         result = subprocess.run(
             [claude_bin, "-p", prompt, "--model", model],
-            capture_output=True, timeout=90, text=True, env=child_env,
+            capture_output=True, timeout=90, text=True, env=child_env, stdin=subprocess.DEVNULL,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired) as e:
         # Fallback level 0 se claude non disponibile
@@ -305,35 +310,48 @@ def search_level_2(query: str, project_root: Path, limit: int = 10, lang: Option
     anjawiki = project_root / ".anjawiki"
     db_path = anjawiki / "code-index.db"
     if not db_path.exists():
-        # Graceful fallback level 1
-        l1 = search_level_1(query, project_root, limit=limit, lang=lang)
+        # Fallback lessicale senza chiamate remote.
+        l1 = search_level_0(query, project_root, limit=limit, lang=lang)
         l1["_fallback_reason"] = "vector index not built. Run `code.reindex` or `/anja-index-code`."
         return l1
 
-    provider = embed_providers.get_provider()
+    try:
+        provider = embed_providers.get_project_provider(project_root)
+    except ValueError as exc:
+        result = search_level_0(query, project_root, limit=limit, lang=lang)
+        result["_fallback_reason"] = str(exc)
+        result["code"] = "index_policy_error"
+        return result
     if provider is None:
-        l1 = search_level_1(query, project_root, limit=limit, lang=lang)
+        l1 = search_level_0(query, project_root, limit=limit, lang=lang)
         l1["_fallback_reason"] = "no embed provider available"
         return l1
 
-    try:
-        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False)
-    except Exception as e:
-        l1 = search_level_1(query, project_root, limit=limit, lang=lang)
-        l1["_fallback_reason"] = f"db open failed: {e}"
-        return l1
-
+    from index_pipeline import index_status
+    status = index_status(project_root, provider)
+    if status["status"] != "ready":
+        result = search_level_0(query, project_root, limit=limit, lang=lang)
+        result["_fallback_reason"] = "vector index " + status["status"]
+        result["index_status"] = status["status"]
+        return result
+    db = None
     try:
         query_vecs = provider.embed([query])
-        if not query_vecs:
-            return {"level": 2, "results": [], "_fallback_reason": "empty query embedding"}
-        query_vec = query_vecs[0]
+        code_db.validate_vectors(query_vecs, 1, provider.dim)
+        db = code_db.open_db(anjawiki, dim=provider.dim, create_if_missing=False, provider=provider)
+        hits = code_db.vector_search(db, query_vecs[0], limit=limit, lang_filter=lang, kind_filter="code")
+        # Read manifests in the same transaction as the returned vectors.
+        for hit in hits:
+            row = db.execute("SELECT snapshot FROM indexed_files WHERE kind='code' AND file_path=?",
+                             (hit['file_path'],)).fetchone()
+            hit['_indexed_revision'] = json.loads(row[0]).get('hash') if row else None
     except Exception as e:
-        l1 = search_level_1(query, project_root, limit=limit, lang=lang)
-        l1["_fallback_reason"] = f"query embed failed: {e}"
-        return l1
-
-    hits = code_db.vector_search(db, query_vec, limit=limit, lang_filter=lang)
+        result = search_level_0(query, project_root, limit=limit, lang=lang)
+        result["_fallback_reason"] = f"vector search failed: {e}"
+        return result
+    finally:
+        if db is not None:
+            db.close()
 
     results = []
     for h in hits:
@@ -345,6 +363,8 @@ def search_level_2(query: str, project_root: Path, limit: int = 10, lang: Option
             "lang": h["lang"],
             "distance": round(h["distance"], 4),
             "preview": h["content"][:300],
+            "_indexed_revision": h["_indexed_revision"],
+            "_indexed_content": h["content"],
         })
 
     return {
@@ -361,12 +381,16 @@ def search_level_2(query: str, project_root: Path, limit: int = 10, lang: Option
 # Entry point
 # ============================================================
 
-def code_search(query: str, smart_level: Optional[int] = None, limit: int = 10, lang: Optional[str] = None) -> dict:
+def code_search(query: str, smart_level: Optional[int] = None, limit: int = 10, lang: Optional[str] = None, root: Optional[Path] = None, max_preview_chars: int = 12000) -> dict:
     """Entry point: auto-detect default level + dispatch."""
     if not query.strip():
         return {"error": "query required"}
 
-    root = _project_root()
+    if type(limit) is not int or not 1 <= limit <= 50:
+        return {"error": "limit must be an integer between 1 and 50", "code": "invalid_search_options"}
+    if type(max_preview_chars) is not int or not 0 <= max_preview_chars <= 100000:
+        return {"error": "max_preview_chars must be an integer between 0 and 100000", "code": "invalid_search_options"}
+    root = _project_root(root)
     if root is None:
         return {"error": "not in an anja project (no `.anjawiki/meta.yaml` found in parent dirs)"}
 
@@ -375,7 +399,10 @@ def code_search(query: str, smart_level: Optional[int] = None, limit: int = 10, 
     smart_level = max(0, min(2, int(smart_level)))
 
     if smart_level == 0:
-        return search_level_0(query, root, limit=limit, lang=lang)
-    if smart_level == 1:
-        return search_level_1(query, root, limit=limit, lang=lang)
-    return search_level_2(query, root, limit=limit, lang=lang)
+        result = search_level_0(query, root, limit=limit, lang=lang)
+    elif smart_level == 1:
+        result = search_level_1(query, root, limit=limit, lang=lang)
+    else:
+        result = search_level_2(query, root, limit=limit, lang=lang)
+    from search_evidence import finalize
+    return finalize(result, root, query, max_preview_chars)

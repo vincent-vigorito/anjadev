@@ -64,6 +64,8 @@ def _parse_session_file(f: Path, date_hint: str) -> dict:
         log_exc("sessions._parse_session_file", _exc)
         return info
 
+    from session_archive import availability
+    info["transcript"] = availability(ROOT, text)
     # frontmatter parse
     if text.startswith("---"):
         end = text.find("\n---", 3)
@@ -122,7 +124,10 @@ def tool_sessions_read(args: dict) -> dict:
     if not target_file:
         return {"error": f"session not found: id='{sid}' path='{path_arg}'"}
 
+    from session_archive import availability
+    text = target_file.read_text(encoding="utf-8", errors="replace")
     return {
+        "transcript": availability(ROOT, text),
         "id": target_file.stem,
         "path": str(target_file.relative_to(ROOT)),
         "content": target_file.read_text(encoding="utf-8", errors="replace"),

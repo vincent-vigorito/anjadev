@@ -48,3 +48,9 @@ tmp.txt
 *.paste
 NOTES.local.md
 TODO.local.md
+
+# Local provider credentials (root and project state)
+.secrets.env
+
+# Local integration reports contain private project filenames/hashes
+/benchmarks/integration/crypto-*.json

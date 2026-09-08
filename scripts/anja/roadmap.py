@@ -4,8 +4,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from .common import _wiki_root
+from .common import _confined_path, _wiki_root
 from .config import ROOT, SCRIPTS_DIR, log_exc
+from .persistence import check_revision, persistence_errors, read_text, revision
 
 
 def _roadmap_module():
@@ -23,9 +24,10 @@ def _roadmap_module():
 
 
 def _roadmap_path() -> Path:
-    return _wiki_root() / "roadmap.md"
+    return _confined_path(_wiki_root(), _wiki_root() / "roadmap.md")
 
 
+@persistence_errors
 def tool_roadmap_list(args: dict) -> dict:
     """Lista task filtrati. Filters: status, priority, owner."""
     rio = _roadmap_module()
@@ -33,6 +35,7 @@ def tool_roadmap_list(args: dict) -> dict:
         return {"error": "roadmap_io not available"}
     path = _roadmap_path()
     data = rio.parse_roadmap(path)
+    check_revision(path, data["_original"], args.get("expected_revision"))
     status = args.get("status")
     priority = args.get("priority")
     owner = args.get("owner")
@@ -46,9 +49,11 @@ def tool_roadmap_list(args: dict) -> dict:
         "tasks": tasks,
         "count": len(tasks),
         "summary": counts,
+        "revision": data["_revision"],
     }
 
 
+@persistence_errors
 def tool_roadmap_add(args: dict) -> dict:
     """Aggiungi task nuovo in stato open.
 
@@ -66,6 +71,7 @@ def tool_roadmap_add(args: dict) -> dict:
 
     path = _roadmap_path()
     data = rio.parse_roadmap(path)
+    check_revision(path, data["_original"], args.get("expected_revision"))
     task = {
         "title": title,
         "status": "open",
@@ -89,9 +95,11 @@ def tool_roadmap_add(args: dict) -> dict:
         "task": task,
         "path": str(path.relative_to(ROOT)),
         "action": "added",
+        "revision": data["_revision"],
     }
 
 
+@persistence_errors
 def tool_roadmap_update(args: dict) -> dict:
     """Modifica metadata di un task per id. Supporta:
     title, priority, status, est, owner, added, started, done, took, blocker.
@@ -107,7 +115,8 @@ def tool_roadmap_update(args: dict) -> dict:
 
     path = _roadmap_path()
     data = rio.parse_roadmap(path)
-    sec_name, idx = rio.find_task(data["sections"], task_id)
+    check_revision(path, data["_original"], args.get("expected_revision"))
+    sec_name, idx = rio.resolve_task(data, task_id)
     if sec_name is None:
         return {"error": f"task not found: {task_id}"}
 
@@ -132,9 +141,10 @@ def tool_roadmap_update(args: dict) -> dict:
         return {"error": "no changes provided"}
 
     rio.write_roadmap(path, data)
-    return {"id": task_id, "changes": changes, "path": str(path.relative_to(ROOT))}
+    return {"revision": data["_revision"], "id": task["id"], "changes": changes, "path": str(path.relative_to(ROOT))}
 
 
+@persistence_errors
 def tool_roadmap_complete(args: dict) -> dict:
     """Shortcut: marca done un task. Setta status=done, done=today, took (opt)."""
     rio = _roadmap_module()
@@ -146,7 +156,8 @@ def tool_roadmap_complete(args: dict) -> dict:
 
     path = _roadmap_path()
     data = rio.parse_roadmap(path)
-    sec_name, idx = rio.find_task(data["sections"], task_id)
+    check_revision(path, data["_original"], args.get("expected_revision"))
+    sec_name, idx = rio.resolve_task(data, task_id)
     if sec_name is None:
         return {"error": f"task not found: {task_id}"}
 
@@ -158,9 +169,10 @@ def tool_roadmap_complete(args: dict) -> dict:
 
     rio.move_task_to_section(data["sections"], sec_name, idx, "Done")
     rio.write_roadmap(path, data)
-    return {"id": task_id, "action": "completed", "took": task.get("took"), "path": str(path.relative_to(ROOT))}
+    return {"revision": data["_revision"], "id": task["id"], "action": "completed", "took": task.get("took"), "path": str(path.relative_to(ROOT))}
 
 
+@persistence_errors
 def tool_roadmap_block(args: dict) -> dict:
     """Shortcut: marca blocked un task. Setta status=blocked, blocker=<reason>."""
     rio = _roadmap_module()
@@ -173,7 +185,8 @@ def tool_roadmap_block(args: dict) -> dict:
 
     path = _roadmap_path()
     data = rio.parse_roadmap(path)
-    sec_name, idx = rio.find_task(data["sections"], task_id)
+    check_revision(path, data["_original"], args.get("expected_revision"))
+    sec_name, idx = rio.resolve_task(data, task_id)
     if sec_name is None:
         return {"error": f"task not found: {task_id}"}
 
@@ -183,9 +196,10 @@ def tool_roadmap_block(args: dict) -> dict:
 
     rio.move_task_to_section(data["sections"], sec_name, idx, "Blocked")
     rio.write_roadmap(path, data)
-    return {"id": task_id, "action": "blocked", "blocker": blocker, "path": str(path.relative_to(ROOT))}
+    return {"revision": data["_revision"], "id": task["id"], "action": "blocked", "blocker": blocker, "path": str(path.relative_to(ROOT))}
 
 
+@persistence_errors
 def tool_roadmap_archive(args: dict) -> dict:
     """Archivia task done più vecchi di N giorni in `wiki/archive/roadmap-YYYY-Q.md`.
 
@@ -201,6 +215,7 @@ def tool_roadmap_archive(args: dict) -> dict:
     if not path.is_file():
         return {"archived": 0, "note": "no roadmap.md"}
     data = rio.parse_roadmap(path)
+    check_revision(path, data["_original"], args.get("expected_revision"))
 
     # Estrai i task che verranno archiviati prima di rimuoverli
     cutoff = datetime.now().astimezone().date() - timedelta(days=days)
@@ -222,28 +237,32 @@ def tool_roadmap_archive(args: dict) -> dict:
     # Scrivi archive file per quarter (YYYY-Q1, Q2, Q3, Q4)
     now = datetime.now().astimezone().date()
     quarter = (now.month - 1) // 3 + 1
-    archive_dir = _wiki_root() / "archive"
+    archive_dir = _confined_path(_wiki_root(), _wiki_root() / "archive")
     archive_dir.mkdir(parents=True, exist_ok=True)
-    archive_file = archive_dir / f"roadmap-{now.year}-Q{quarter}.md"
+    archive_file = _confined_path(_wiki_root(), archive_dir / f"roadmap-{now.year}-Q{quarter}.md")
+    archive_original = read_text(archive_file)
 
     if archive_file.is_file():
-        existing = archive_file.read_text(encoding="utf-8")
+        existing = archive_original
         if not existing.endswith("\n"):
             existing += "\n"
     else:
         existing = f"# Roadmap archive {now.year} Q{quarter}\n\n"
 
     new_lines = [existing.rstrip(), "", f"## Archived {rio._today_iso()}", ""]
+    archived_ids = {t.get("id") for line in existing.splitlines() if (t := rio.parse_line(line))}
     for t in to_archive:
-        new_lines.append(rio.task_to_line(t))
-    archive_file.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+        if t["id"] not in archived_ids:
+            new_lines.append(rio.task_to_line(t))
+    archive_change = {archive_file: ("\n".join(new_lines) + "\n", revision(archive_original))}
 
     # Rimuovi dalla Done section
     rio.archive_done(data, older_than_days=days)
-    rio.write_roadmap(path, data)
+    rio.write_roadmap(path, data, extra_changes=archive_change)
 
     return {
         "archived": len(to_archive),
+        "revision": data["_revision"],
         "archive_file": str(archive_file.relative_to(ROOT)),
         "older_than_days": days,
     }
@@ -272,8 +291,8 @@ TOOLS = [
         "name": "roadmap.add",
         "group": "roadmap",
         "description": (
-            "📋 ROADMAP: aggiungi nuovo task in stato open. ID auto-generato come "
-            "slug del title. USE quando l'utente dice 'aggiungi task X', 'metti in "
+            "📋 ROADMAP: aggiungi nuovo task in stato open. ID "
+            "opaco persistente. USE quando l'utente dice 'aggiungi task X', 'metti in "
             "roadmap Y', 'da fare Z'."
         ),
         "inputSchema": {
@@ -298,7 +317,7 @@ TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "id": {"type": "string", "description": "Task id (slug)"},
+                "id": {"type": "string", "description": "ID persistente (legacy solo se non ambiguo)"},
                 "title": {"type": "string"},
                 "status": {"type": "string", "enum": ["open", "in_progress", "done", "blocked", "cancelled"]},
                 "priority": {"type": "string", "enum": ["P0", "P1", "P2", "P3"]},
@@ -362,3 +381,9 @@ TOOLS = [
     },
 ]
 
+
+for _spec in TOOLS:
+    if _spec["name"] != "roadmap.list":
+        _spec["inputSchema"]["properties"]["expected_revision"] = {
+            "type": "string", "description": "Revisione da roadmap.list; stale restituisce revision_conflict."
+        }

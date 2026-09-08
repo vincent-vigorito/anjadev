@@ -18,7 +18,9 @@
 
 | Garanzia | Dove | Test |
 |----------|------|------|
-| Scritture e letture del wiki confinate a `.anjawiki/` (path traversal in `sessions.read`, `wiki.export`, `wiki.attach_image`, `memory.write`, skill files) | `mcp_memory_server.py` (`relative_to` dopo `resolve()`) | `test_mcp_smoke` (path con spazio), fix v0.18.1–0.18.2 |
+| Lettura/verifica e writer wiki controllano i path risolti; symlink esterni esclusi dalle scansioni. Allegati locali possono essere importati da fuori, ma la destinazione resta nel raw; export confinato al root del progetto | `scripts/anja/common.py`, `wiki.py`, `wiki_maint.py`, `wiki_io.py` | `tests/test_hardening.py` |
+| La ricerca MCP usa il root configurato; il reranker non eredita stdin del server | `scripts/anja/code.py`, `scripts/code_search.py` | `tests/test_hardening.py` |
+| Envelope MCP errato non termina i server; notifiche valide senza risposta; `anja_code` resta opt-in | `scripts/anja/rpc.py`, entrambi i server | `tests/test_hardening.py`, `tests/test_code_server.py` |
 | Un tool nascosto da `ANJA_TOOL_GROUPS` non è chiamabile, né col nome canonico né flat | `_allowed_tool_names` applicato a `tools/list` **e** `tools/call` | `test_registry` §5 |
 | Registry coerente o il server non parte (nessun tool "fantasma" senza handler) | `_build_registry()` | `test_registry` §6 |
 | `.anjawiki/.secrets.env` viene caricato nell'env del server e mai scritto in output | `secrets_loader.py` | — (revisione manuale) |
@@ -26,6 +28,8 @@
 | Steward fail-closed: pagine esistenti solo in append, mai delete/rename/SOUL, max 3 patch, lock 30 min | `steward.py` | `test_steward` |
 | `execute_python` (`anja_code`) è **opt-in**: senza `ANJA_CODE_EXEC=1` il server non espone né esegue nulla | `mcp_code_server.py` `_exec_enabled` | `test_code_server` §0 |
 | `execute_python`: env ripulito da API key/token/secret, timeout con kill dell'intero process group, output limitato in streaming (RAM del server bounded), rlimit memoria, recursion guard, workspace `strict` temporaneo rimosso | `mcp_code_server.py` | `test_code_server` §2–§6 |
+
+Le scritture Markdown di wiki, roadmap e steward usano controllo revisione e pubblicazione atomica per file (`scripts/anja/persistence.py`, regressioni `tests/test_persistence.py`). Per proteggere una modifica basata su una precedente lettura del client serve `expected_revision`; senza il parametro viene protetto soltanto il ciclo interno del tool. Lock e fsync sono verificati sul filesystem locale macOS; la matrice prevista è Linux/macOS. Operazioni su più file non hanno rollback globale in caso di crash.
 
 ## Assunzioni
 
@@ -53,3 +57,12 @@
 - v0.20.3 — la sessione delegata non eredita gli MCP user-level dell'host (ora in AnjaHub).
 - v0.25.0 — `anja_code` opt-in, killpg su timeout, cap output in streaming, cleanup workspace;
   `code.reindex --force` non cancella più le pagine wiki dall'index; `_quick_loc_count` senza shell.
+
+I controlli di canonicalizzazione assumono un filesystem locale fidato: non impediscono race su symlink modificate da un altro processo ostile fra controllo e I/O. Non costituiscono una sandbox del sistema operativo.
+
+
+Le verifiche wiki sono legate all'hash del contenuto attuale. Il tool MCP non può attribuire conferme `human:*`; l'operatore dispone della CLI locale `verify_page.py` con revisione attesa. Si tratta di attestazioni locali, non di firme o di un confine di sicurezza contro chi può scrivere i file del progetto. I job embedding verificano hash e fingerprint prima di pubblicare, con worker serializzato, timeout e retry finiti.
+
+La policy Q5 (`.anjawiki/index-policy.json`) applica default, `.gitignore` nativo, `.anjaignore` e restrizioni esplicite agli invii del codice/wiki. Provider e modello remoto devono essere autorizzati; il reranker ha un'abilitazione separata. Preview e diagnostica non inizializzano provider, anche quando un modello sconosciuto richiederebbe un probe HTTP. I filtri sui nomi non riconoscono tutti i possibili segreti nel contenuto: la policy del progetto deve escludere i dati riservati pertinenti.
+
+I backup verificano l'integrità dei file e il restore richiede una destinazione nuova; non sono firme né un backup completo di codice, raw e fonti esterne. L'archivio integrale dei transcript è opt-in e separato dal wiki. La retention è esplicita e non cancella i journal o le fonti dell'harness. In assenza del transcript, la diagnostica non dichiara recuperabile una conversazione integrale dal solo journal.

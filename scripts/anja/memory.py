@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import re
+import uuid
 from datetime import datetime, timedelta
 
 from .common import _parse_frontmatter, _raw_root, _sessions_root, _wiki_root
 from .config import ROOT, log_exc
+from .persistence import create_text
 
 
 def _slugify(s: str, max_len: int = 60) -> str:
@@ -89,9 +91,6 @@ def tool_memory_write(args: dict) -> dict:
     slug = _slugify(title) if title else _slugify(content[:60])
     fname = f"{date}-{slug}.md"
     out = notes_dir / fname
-    if out.exists():
-        # avoid overwrite: append timestamp
-        out = notes_dir / f"{date}-{datetime.now().strftime('%H%M%S')}-{slug}.md"
 
     header = (
         "---\n"
@@ -102,7 +101,12 @@ def tool_memory_write(args: dict) -> dict:
     )
     if title:
         header += f"# {title}\n\n"
-    out.write_text(header + content + "\n", encoding="utf-8")
+    while True:
+        try:
+            create_text(out, header + content + "\n")
+            break
+        except FileExistsError:
+            out = notes_dir / f"{date}-{slug}-{uuid.uuid4().hex}.md"
     return {"path": str(out.relative_to(ROOT)), "status": "written"}
 
 

@@ -23,7 +23,7 @@ soft: uno stub con summary non si cancella mai). Policy in `.anjawiki/config.jso
 e `.anjawiki/.compact-last` (il lazy start di session_start lo usa per girare ogni 24h).
 
 Archiviare = spostare in `sessions/archive/<date>/<id>.md` tenendo frontmatter
-(+ `archived: true`), `## Summary` se c'era e il puntatore al transcript (lossless);
+(+ `archived: true`), `## Summary` se c'era e il puntatore al transcript (disponibilità da verificare);
 Stats / User prompts / Notes tagliati. `sessions.read` per id li trova ancora,
 `sessions.list` / `wiki.search` / embed / `wiki.stats` non li contano.
 
@@ -159,7 +159,7 @@ def stub_for(text: str) -> str:
         out += ["## Summary", "", body, ""]
     tm = re.search(r"^transcript_path:\s*(.+)$", fm_block, re.M)
     if tm:
-        out += ["## Transcript (drill-down lossless)", "", f"> `{tm.group(1).strip()}`", ""]
+        out += ["## Transcript (disponibilità da verificare)", "", f"> `{tm.group(1).strip()}`", ""]
     return "\n".join(out)
 
 

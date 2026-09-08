@@ -21,6 +21,8 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
+from anja.trust import status as trust_status
+
 WIKI_DIRS = ("entities", "concepts", "sources", "analysis", "sessions")
 ROOT_PAGES = ("index", "log", "overview")
 SKIP_ORPHAN = {"index", "log", "overview"}
@@ -155,13 +157,8 @@ def check_trust(pages: dict) -> tuple:
         present, block = parse_frontmatter(text)
         if not present:
             continue
-        m = re.search(r"^verified:\s*(.+)$", block, re.M)
-        if not m:
-            tiers["unverified"] += 1
-        elif "human:" in m.group(1):
-            tiers["human_reviewed"] += 1
-        else:
-            tiers["machine_confirmed"] += 1
+        tier = trust_status(text)["trust_tier"].replace("-", "_")
+        tiers[tier] = tiers.get(tier, 0) + 1
         m = re.search(r"^stale_after:\s*['\"]?(\d{4}-\d{2}-\d{2})", block, re.M)
         if m:
             try:
