@@ -2,7 +2,7 @@
 
 > Trasforma qualunque progetto software in una **knowledge base self-maintained + memoria identitaria + ricerca semantica del codice**, gestita end-to-end dall'agent dentro Claude Code.
 
-**Stato**: v0.31.0 — release in verifica; CI remota e compatibilità host da completare. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
+**Stato**: v0.31.0 — disponibile su GitHub; CI verde, prove di upgrade negli host ancora da completare. Plugin CLI standalone (nessuna dipendenza da AnjaHub). License MIT. Storia completa in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Cosa fa, in 7 punti
 
@@ -20,6 +20,7 @@
 
 - Claude Code CLI
 - Python 3.9+ (CI su 3.9 / 3.10 / 3.12, macOS e Linux). Per la ricerca vettoriale serve un interprete che carichi estensioni sqlite: il Python di sistema macOS **non** lo fa → `brew install python@3.12`
+- `ripgrep` (`rg`) per ricerca lessicale e fallback: `brew install ripgrep` su macOS, `sudo apt-get install ripgrep` su Debian/Ubuntu.
 - (Opzionale per code search) `pip install sqlite-vec httpx`
 
 ### Install via marketplace

@@ -4,7 +4,7 @@ All notable changes to the `anja` plugin.
 
 ## v0.31.0 — 2026-09-08
 
-Preparazione locale della release: CI remota e prove negli host ancora da completare.
+Disponibile su GitHub. CI Linux/macOS verde; prove di installazione/upgrade nei singoli host ancora da completare.
 
 - Integrità: root/path confinati, envelope MCP validato, persistenza atomica con
   controllo revisione, ID task persistenti e migrazione con backup.

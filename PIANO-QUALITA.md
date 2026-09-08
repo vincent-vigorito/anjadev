@@ -149,11 +149,11 @@ Accettazione: report riproducibile e soglie raggiunte oppure gap dichiarati che 
 
 ## Q7 — Release e compatibilità
 
-- [ ] **Q7.1** Matrice CI già prevista Linux/macOS × Python 3.9/3.10/3.12 verde; embedding realmente eseguito nel job con sqlite-vec, senza skip inattesi. Mantenere soglia coverage esistente; aumentarla solo da misure reali.
-  Controllo caricamento sqlite-vec e `--fail-on-skip` implementati. Verifica locale: 184 test, zero skip, coverage 68,4%; matrice GitHub ancora da eseguire, quindi voce non chiusa.
+- [x] **Q7.1** Matrice CI già prevista Linux/macOS × Python 3.9/3.10/3.12 verde; embedding realmente eseguito nel job con sqlite-vec, senza skip inattesi. Mantenere soglia coverage esistente; aumentarla solo da misure reali.
+  Matrice GitHub verde sul commit ecb2049 (run 34242506313), 192 test, zero skip; coverage 69,3%. Su macOS il driver resta 3.9/3.10/3.12, i sottoprocessi embedding usano Homebrew 3.12 con sqlite-vec.
 - [ ] **Q7.2** Smoke degli adapter e del protocollo con nomi canonici/flat e gruppi filtrati. Prova manuale di installazione, restart e upgrade per ciascun host dichiarato supportato; annotare versione dell’host e distinguere test adapter da validazione reale.
 - [x] **Q7.3** Migrare una copia di progetto v0.30.0 con task duplicati, wiki verificato e indice esistente. Provare interruzione, riesecuzione e restore. Definire esplicitamente la compatibilità con versioni vecchie dopo la migrazione. Verificato su fixture ricostruita dal contratto v0.30.0, senza migrare il progetto reale; dettagli nell'esecuzione Q7 migrazione.
-- [ ] **Q7.4** Aggiornare schema, SECURITY, README generato e changelog per il comportamento finale. Verificare che il pacchetto contenga tutti i file necessari, senza dipendere dai path personali dell’autore.
+- [x] **Q7.4** Aggiornare schema, SECURITY, README generato e changelog per il comportamento finale. Verificare che il pacchetto contenga tutti i file necessari, senza dipendere dai path personali dell’autore.
 
 Gate finale: suite e controlli di coerenza verdi, zero regressioni di integrità note, migrazione e restore provati, benchmark pubblicabile e limiti dichiarati. Commit, tag e pubblicazione richiedono la successiva istruzione dell’utente; questo piano non li esegue.
 
@@ -453,3 +453,21 @@ riutilizzabile incluso. Restano prove host reali e gate astensione semantica.
 
 Commit/push GitHub autorizzati dalla richiesta di aggiornare da GitHub. Matrice
 remota da verificare sul commit pubblicato; nessun archivio richiesto all'utente.
+
+
+## Pubblicazione GitHub v0.31.0 — 8 settembre 2026
+
+Commit funzionale `62c971f`, correzione setup CI `ecb2049`: pubblicati su origin/main.
+La prima CI ha rilevato ripgrep assente su Linux e Python macOS senza caricamento
+estensioni SQLite. Installato ripgrep nei job test/coverage; su macOS mantenuti
+i driver 3.9/3.10/3.12 con interprete Homebrew 3.12 dedicato agli embedding.
+
+Run https://github.com/vincent-vigorito/anjadev/actions/runs/34242506313:
+**8/8 job verdi, 192 test, zero skip; coverage 69,3% (9877 statement, 3031 mancanti)**.
+Q7.1 e Q7.4 chiusi nel perimetro documentato. Q7.2 resta aperto per installazione,
+restart e upgrade negli host reali; il limite di astensione semantica resta esplicito.
+
+Prova crypto ripetuta anche usando un clone effettivo da GitHub: stessi sei
+controlli MCP superati su 86 file, nessun fallback nella ricerca vettoriale mock,
+originali invariati. Non è stato eseguito un backtest o installato il plugin nel
+progetto crypto reale. Distribuzione tramite GitHub; archivio usato solo per QA.
