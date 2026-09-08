@@ -21,8 +21,19 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --quiet pytest sqlite-vec httpx
+      - name: Linux search dependency
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
+      - name: macOS search and SQLite-capable embedding interpreter
+        if: runner.os == 'macOS'
+        run: |
+          brew install ripgrep python@3.12
+          "$(brew --prefix python@3.12)/bin/python3.12" -m venv "$RUNNER_TEMP/anja-embed"
+          "$RUNNER_TEMP/anja-embed/bin/python" -m pip install --quiet sqlite-vec httpx
+          echo "ANJA_TEST_PYTHON=$RUNNER_TEMP/anja-embed/bin/python" >> "$GITHUB_ENV"
       - name: Verify sqlite-vec loads in the test interpreter
-        run: python -c "import sqlite3, sqlite_vec; c = sqlite3.connect(':memory:'); c.enable_load_extension(True); sqlite_vec.load(c); print(c.execute('select vec_version()').fetchone()[0])"
+        run: |
+          "${ANJA_TEST_PYTHON:-python}" -c "import sqlite3, sqlite_vec; c = sqlite3.connect(':memory:'); c.enable_load_extension(True); sqlite_vec.load(c); print(c.execute('select vec_version()').fetchone()[0])"
       - run: python -m pytest --fail-on-skip
 
   lint-and-consistency:
@@ -47,6 +58,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --quiet pytest coverage sqlite-vec httpx
+      - run: sudo apt-get update -qq && sudo apt-get install -y ripgrep
       - name: pytest sotto coverage (sottoprocessi inclusi)
         # coverage ≥ 7 avvia process_startup() da un .pth PRIMA di sitecustomize: le variabili
         # che la config usa (${ANJA_COV_ROOT}) e il file dati vanno esportate esplicitamente.

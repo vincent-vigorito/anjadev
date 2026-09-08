@@ -1,9 +1,9 @@
 # Audit tecnico di `vincent-vigorito/anjadev`
 
-**Repository analizzato:** `vincent-vigorito/anjadev`  
-**Branch:** `main`  
-**Commit esaminato:** `e5604f1`  
-**Versione:** `0.30.0`  
+**Repository analizzato:** `vincent-vigorito/anjadev`
+**Branch:** `main`
+**Commit esaminato:** `e5604f1`
+**Versione:** `0.30.0`
 **Data analisi e riverifica locale:** 6 settembre 2026
 **Stato:** audit della baseline `e5604f1`; fix Q0/Q1–Q5 applicati successivamente, vedi aggiornamento qui sotto. Piano operativo: [PIANO-QUALITA.md](PIANO-QUALITA.md).
 
